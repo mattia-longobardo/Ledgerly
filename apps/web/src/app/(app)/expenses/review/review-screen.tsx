@@ -210,7 +210,6 @@ function useReviewData({
     {
       income: text("categories.macro.income"),
       expense: text("categories.macro.expense"),
-      transfer: text("categories.macro.transfer"),
     },
   );
   return {

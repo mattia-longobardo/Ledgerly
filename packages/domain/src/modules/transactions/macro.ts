@@ -1,8 +1,8 @@
-// modules/transactions/macro.ts — the macro of the category decides how a movement counts
-// (categories-and-rules.md §3.2, CR3). One write puts every movement of a person in line with the
-// rule: each service that changes a category, a pair or a category's macro ends with it, in the
-// same transaction. The rule is `typeByMacro` and `typeMarkerByMacro` (`rules.ts`); the SQL below
-// is the same rule, and the migration of N3.3 runs it once for every person.
+// modules/transactions/macro.ts — what a movement counts as (categories-and-rules.md §3.2): a pair
+// or a leg to an account outside is a transfer, else what was decided here, else the source's
+// transfer, else the sign. One write puts every movement of a person in line with the rule: each
+// service that changes a pair or a type ends with it, in the same transaction. The rule is
+// `typeByMacro` (`rules.ts`); the SQL below is the same rule.
 import { sql } from "drizzle-orm";
 import type { Ctx } from "../../platform/context";
 import type { Tx } from "../../platform/db/client";
@@ -10,35 +10,41 @@ import type { Tx } from "../../platform/db/client";
 /** A transaction, or the database itself for a caller that writes nothing else. */
 type Executor = Pick<Tx, "execute">;
 
-/** The type of `t` under the rule, with its category joined as `c`. */
-const TYPE = sql.raw(`case
-  when t.transfer_group_id is not null then t.type
-  when c.type = 'transfer' then 'transfer'
-  when t.type = 'transfer' and t.origin = 'provider' and not ('type' = any(t.locally_edited)) then 'transfer'
+/** The type of `t` under the rule. */
+const TYPE_SQL = `case
+  when t.transfer_group_id is not null or t.transfer_outside then 'transfer'
+  when 'type' = any(t.locally_edited) then t.type
+  when t.type = 'transfer' and t.origin = 'provider' then 'transfer'
   when t.amount_cents > 0 then 'income'
   when t.amount_cents < 0 then 'expense'
   when t.type = 'transfer' then 'income'
-  else t.type end`);
+  else t.type end`;
+const TYPE = sql.raw(TYPE_SQL);
 
-/** `locally_edited` of `t` under the rule. */
-const MARKER = sql.raw(`case
-  when t.transfer_group_id is not null then t.locally_edited
-  when c.type = 'transfer' then array(select f from unnest(array_append(array_remove(t.locally_edited, 'type'), 'type')) f order by f collate "C")
-  else array_remove(t.locally_edited, 'type') end`);
+/** A row out of line: another type, or a giroconto that still has a category or a suggestion. */
+const OUT_OF_LINE = sql.raw(`(t.type <> ${TYPE_SQL}
+  or (t.type = 'transfer' and (t.category_id is not null or t.suggested_category_id is not null)))`);
 
 /**
  * Writes the rule's type on every movement of the person that disagrees with it, and returns how
- * many changed. Movements already in line are not written: a second call changes nothing.
+ * many changed. A movement that becomes a giroconto loses its category and its suggestion: a
+ * giroconto has accounts, not a category (`transactions_transfer_category_ck`). Movements already
+ * in line are not written: a second call changes nothing.
  */
 export async function retypeMovements(tx: Executor, ctx: Pick<Ctx, "userId">): Promise<number> {
   const result = await tx.execute(sql`
-    update transactions as u set type = n.type, locally_edited = n.marker
-    from (
-      select t.id, ${TYPE} as type, ${MARKER} as marker
-      from transactions t left join categories c on c.id = t.category_id
-      where t.user_id = ${ctx.userId}
-    ) as n
-    where u.id = n.id and (u.type <> n.type or u.locally_edited <> n.marker)`);
+    update transactions as t set
+      type = n.type,
+      category_id = case when n.type = 'transfer' then null else t.category_id end,
+      category_origin = case when n.type = 'transfer' then null else t.category_origin end,
+      category_confidence = case when n.type = 'transfer' then null else t.category_confidence end,
+      category_model_version = case when n.type = 'transfer' then null else t.category_model_version end,
+      category_reason = case when n.type = 'transfer' then null else t.category_reason end,
+      category_reason_params = case when n.type = 'transfer' then null else t.category_reason_params end,
+      category_rule_id = case when n.type = 'transfer' then null else t.category_rule_id end,
+      suggested_category_id = case when n.type = 'transfer' then null else t.suggested_category_id end
+    from (select t.id, ${TYPE} as type from transactions t where t.user_id = ${ctx.userId} and ${OUT_OF_LINE}) as n
+    where t.id = n.id`);
   return result.rowCount ?? 0;
 }
 
@@ -46,7 +52,7 @@ export async function retypeMovements(tx: Executor, ctx: Pick<Ctx, "userId">): P
 export async function movementsOutOfLine(tx: Executor, ctx: Pick<Ctx, "userId">): Promise<number> {
   const result = await tx.execute<{ n: number }>(sql`
     select count(*)::int as n
-    from transactions t left join categories c on c.id = t.category_id
-    where t.user_id = ${ctx.userId} and (t.type <> ${TYPE} or t.locally_edited <> ${MARKER})`);
+    from transactions t
+    where t.user_id = ${ctx.userId} and ${OUT_OF_LINE}`);
   return Number(result.rows[0]?.n ?? 0);
 }

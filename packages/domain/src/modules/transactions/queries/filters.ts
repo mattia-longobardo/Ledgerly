@@ -72,6 +72,13 @@ export interface TransactionRow {
   note: string | null;
   labels: TransactionLabel[];
   transferGroupId: string | null;
+  /** A giroconto with its other side outside Ledgerly ("conto esterno"). */
+  transferOutside: boolean;
+  /**
+   * The other account of a giroconto: its partner's, or the one chosen while the partner has not
+   * arrived. `null` with neither: the leg waits for the person ("Scegli il conto").
+   */
+  transferAccountId: string | null;
   hiddenAt: Date | null;
   removedUpstreamAt: Date | null;
   locallyEdited: string[];

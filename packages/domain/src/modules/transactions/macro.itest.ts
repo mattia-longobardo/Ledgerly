@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
@@ -7,12 +6,12 @@ import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { movementsOutOfLine, retypeMovements } from "./macro";
-import { type IncomingTransaction, typeByMacro, typeMarkerByMacro } from "./rules";
-import { categories, transactions } from "./schema";
-import { setCategory, upsertFromProvider } from "./service";
+import { type IncomingTransaction, typeByMacro } from "./rules";
+import { transactions } from "./schema";
+import { chooseTransferSide, upsertFromProvider } from "./service";
 import { createCategory } from "./taxonomy";
 
-// N3.3 (categories-and-rules.md §3.2, §3.4): the macro of the category decides how a movement counts.
+// What a movement counts as (categories-and-rules.md §3.2, as changed by the giroconti of 2026-11-25).
 
 function contextFor(userId: string): Ctx {
   return {
@@ -68,7 +67,7 @@ beforeEach(async () => {
 });
 afterAll(closeDatabase);
 
-/** Every movement of the person with its category's type, as the pure rule reads it. */
+/** Every movement of the person, as the pure rule reads it. */
 async function rows() {
   return getDb()
     .select({
@@ -77,19 +76,18 @@ async function rows() {
       amountCents: transactions.amountCents,
       origin: transactions.origin,
       transferGroupId: transactions.transferGroupId,
-      categoryType: categories.type,
+      transferOutside: transactions.transferOutside,
+      suggestedCategoryId: transactions.suggestedCategoryId,
       locallyEdited: transactions.locallyEdited,
     })
     .from(transactions)
-    .leftJoin(categories, eq(categories.id, transactions.categoryId))
     .where(eq(transactions.userId, ctx.userId))
     .orderBy(transactions.id);
 }
 
-/** Movements as an image before N3.3 left them: a category written without the type. */
+/** Movements an older image could leave: a giroconto of nobody's, one with a suggestion. */
 async function outOfLine() {
   const groceries = await createCategory(ctx, { name: "Groceries", type: "expense" });
-  const savings = await createCategory(ctx, { name: "Savings", type: "transfer" });
   await upsertFromProvider(
     ctx,
     accountId,
@@ -102,52 +100,36 @@ async function outOfLine() {
     { provider: BANK },
   );
   const [one, two, three, four] = await rows();
-  const file = (id: string, categoryId: string) =>
-    getDb().update(transactions).set({ categoryId }).where(eq(transactions.id, id));
-  await file(two.id, savings.id);
-  await file(three.id, savings.id);
-  await file(one.id, groceries.id);
-  // A transfer this rule wrote, whose category went back to Expenses.
-  await getDb()
-    .update(transactions)
-    .set({ type: "transfer", locallyEdited: ["type"], categoryId: groceries.id })
-    .where(eq(transactions.id, four.id));
-  return { groceries, savings };
+  const set = (id: string, values: Partial<typeof transactions.$inferInsert>) =>
+    getDb().update(transactions).set(values).where(eq(transactions.id, id));
+  // A transfer of no source and no decision: the sign decides.
+  await set(one.id, { origin: "manual", type: "transfer" });
+  await set(three.id, { origin: "manual", type: "transfer" });
+  // A source's giroconto that still holds a suggestion: a giroconto has no category.
+  await set(two.id, { type: "transfer", suggestedCategoryId: groceries.id });
+  // A giroconto the person decided: it stays one.
+  await set(four.id, { type: "transfer", locallyEdited: ["type"] });
+  return { groceries };
 }
 
 describe("retypeMovements", () => {
   it("writes the rule on the movements that disagree with it, and only on those", async () => {
     await outOfLine();
     const before = await rows();
-    const disagreeing = before.filter(
-      (row) =>
-        row.type !== typeByMacro(row) ||
-        JSON.stringify(row.locallyEdited) !== JSON.stringify(typeMarkerByMacro(row)),
-    );
-    expect(disagreeing).toHaveLength(3);
+    expect(before.filter((row) => row.type !== typeByMacro(row))).toHaveLength(2);
     expect(await movementsOutOfLine(getDb(), ctx)).toBe(3);
 
     expect(await retypeMovements(getDb(), ctx)).toBe(3);
 
     const after = await rows();
     for (const row of before) {
-      const now = after.find((one) => one.id === row.id)!;
       // The SQL is the pure rule.
-      expect(now.type).toBe(typeByMacro(row));
-      expect(now.locallyEdited).toEqual(typeMarkerByMacro(row));
+      expect(after.find((one) => one.id === row.id)!.type).toBe(typeByMacro(row));
     }
     expect(after.filter((row) => row.type === "transfer")).toHaveLength(2);
+    expect(after.every((row) => row.type !== "transfer" || row.suggestedCategoryId === null)).toBe(true);
     expect(await movementsOutOfLine(getDb(), ctx)).toBe(0);
     expect(await retypeMovements(getDb(), ctx)).toBe(0);
-  });
-
-  it("is what the migration of N3.3 runs, for every person", async () => {
-    await outOfLine();
-    const other = contextFor((await createTestUser()).id);
-    const statement = readFileSync("drizzle/0060_macro_type.sql", "utf8");
-    await getDb().execute(sql.raw(statement));
-    expect(await movementsOutOfLine(getDb(), ctx)).toBe(0);
-    expect(await movementsOutOfLine(getDb(), other)).toBe(0);
   });
 
   it("leaves another person's movements alone", async () => {
@@ -158,22 +140,24 @@ describe("retypeMovements", () => {
   });
 });
 
-describe("a category of Transfers chosen by the person", () => {
-  it("makes a transfer that the next reading of the bank does not write back", async () => {
-    const savings = await createCategory(ctx, { name: "Savings", type: "transfer" });
+describe("a giroconto chosen by the person", () => {
+  it("is not written back by the next reading of the bank, and «none» gives the sign back", async () => {
     await upsertFromProvider(ctx, accountId, [bankMovement("b-1", -30_000n)], { provider: BANK });
     const [row] = await rows();
 
-    await setCategory(ctx, [row.id], savings.id);
-    expect((await rows())[0]).toMatchObject({ type: "transfer", locallyEdited: ["categoryId", "type"] });
+    await chooseTransferSide(ctx, row.id, { kind: "outside" });
+    expect((await rows())[0]).toMatchObject({
+      type: "transfer",
+      transferOutside: true,
+      locallyEdited: ["type"],
+    });
 
     await upsertFromProvider(ctx, accountId, [{ ...bankMovement("b-1", -30_000n), payee: "Renamed" }], {
       provider: BANK,
     });
     expect((await rows())[0].type).toBe("transfer");
 
-    // Back to no category: the sign decides again, and the marker goes.
-    await setCategory(ctx, [row.id], null);
-    expect((await rows())[0]).toMatchObject({ type: "expense", locallyEdited: ["categoryId"] });
+    await chooseTransferSide(ctx, row.id, { kind: "none" });
+    expect((await rows())[0]).toMatchObject({ type: "expense", transferOutside: false });
   });
 });

@@ -38,6 +38,7 @@ import {
   transactionRow,
 } from "./dto";
 import { serveCsv } from "./csv";
+import { serveGiroconti } from "./giroconti";
 import { serveManual } from "./manual";
 import { serveReview } from "./review";
 import { serveRules } from "./rules";
@@ -212,6 +213,7 @@ export function serveTransactions(
   serveManual(app, guard, cases);
   serveCsv(app, guard, cases);
   serveReview(app, guard, cases);
+  serveGiroconti(app, guard);
   serveOne(app, guard, cases);
   serveRules(app, guard);
   return TRANSACTIONS_ROUTES;

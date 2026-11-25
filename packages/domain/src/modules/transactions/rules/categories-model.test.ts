@@ -153,11 +153,11 @@ describe("the cold start (R6)", () => {
     expect(coldStartThreshold(embedder, prototypes, graded.slice(0, 5), kinds)).toBeNull();
   });
 
-  it("reads a default group by its names and examples too", () => {
+  it("reads a category of the default tree by its names too", () => {
     const [prototype] = prototypesOf(
       embedder,
       [{ id: "food", name: "Cibo" }],
-      new Map([["groceries", "food"]]),
+      new Map([["food_drinks.groceries", "food"]]),
     );
     const [alone] = prototypesOf(embedder, [{ id: "food", name: "Cibo" }], new Map());
     expect(prototype.vector).not.toEqual(alone.vector);

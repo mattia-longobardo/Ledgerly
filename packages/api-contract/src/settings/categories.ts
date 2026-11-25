@@ -66,7 +66,7 @@ export const listCategories = defineRoute({
     title: "Categories",
     description:
       "The user's categories as GET /api/v1/categories: groups and sub-categories in tree order, the " +
-      "macro each counts in (income, expense, transfer) and how many movements use it.",
+      "macro each counts in (income, expense) and how many movements use it. A giroconto has no category.",
   },
   example: { response: { categories: [CATEGORY_EXAMPLE] } },
 });
@@ -256,7 +256,7 @@ export const getMacroMove = defineRoute({
 /**
  * The figures of one category's page (categories-and-rules.md §5.4) for a period, the category and
  * its sub-categories together. `amount` is what the page's KPI says: spent for an expense, received
- * for an income, moved out for a transfer, each positive when the money went that way. A child's
+ * for an income, each positive when the money went that way. A child's
  * `amount` is its total with its sign, as the page's list shows it.
  */
 export const getCategorySummary = defineRoute({
@@ -329,8 +329,7 @@ export const moveToMacro = defineRoute({
   path: "/categories/{id}/macro-move",
   scope: "write",
   capability: "categories",
-  summary:
-    "Moves a group, or a category of Transfers, to another macro. The numbers change; `undo` takes it back.",
+  summary: "Moves a group to the other macro (Income or Expenses). The numbers change; `undo` takes it back.",
   actions: [],
   params: z.object({ id: id() }),
   body: macroPlace,
@@ -338,7 +337,7 @@ export const moveToMacro = defineRoute({
   errors: TAXONOMY_ERRORS,
   example: {
     params: { id: GROUP_ID },
-    body: { type: "transfer", parentId: null },
+    body: { type: "income", parentId: null },
     response: { undo: { id: GROUP_ID } },
   },
 });

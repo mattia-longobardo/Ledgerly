@@ -4,8 +4,8 @@ import type { TransactionOrigin, TransactionState, TransactionType } from "./voc
 
 /**
  * The markers of spec §7.2, in the order the row shows them. `unpaired` takes the place of
- * `transfer` on a giroconto with no other leg here (F2.5): it is still not spending, but it usually
- * means the other account is not linked.
+ * `transfer` on a giroconto that waits for the person ("Scegli il conto", decision 9A): no other
+ * leg here, no account named, not to an account outside. It is still not spending.
  */
 
 export const ROW_BADGES = [
@@ -30,6 +30,30 @@ export interface BadgeSource {
   origin?: TransactionOrigin;
   /** Whether the movement's source gives no category (`TransactionRow.categoryIsOwn`). */
   categoryIsOwn?: boolean;
+  /** The other side of a giroconto, when it is outside or an account is named. */
+  transferOutside?: boolean;
+  transferAccountId?: string | null;
+}
+
+/**
+ * "Edited here": a row left what its provider gave. Not a category chosen where the source gives
+ * none — there is no category of the source it moved away from (ux/n3-categories-manual.md §2.3) —,
+ * nor a giroconto decided here (`type`, a pair by hand): its own badges say it already.
+ */
+function editedHere(row: BadgeSource): boolean {
+  return row.locallyEdited.some(
+    (field) =>
+      field !== "type" &&
+      field !== "transferGroupId" &&
+      !(row.categoryIsOwn === true && field === "categoryId"),
+  );
+}
+
+/** A giroconto's badge: `unpaired` while it waits for the person, else `transfer`. */
+function transferBadge(row: BadgeSource): RowBadge | null {
+  if (row.type !== "transfer") return row.transferGroupId !== null ? "transfer" : null;
+  const waiting = row.transferGroupId === null && row.transferOutside !== true && !row.transferAccountId;
+  return waiting ? "unpaired" : "transfer";
 }
 
 /**
@@ -43,15 +67,9 @@ export function badgesOf(row: BadgeSource): RowBadge[] {
   if (manual) badges.push("manual");
   if (row.hiddenAt !== null) badges.push("hidden");
   if (row.removedUpstreamAt !== null) badges.push("removedUpstream");
-  // "Edited here" says a row left what its provider gave: a manual movement has no provider.
-  // Nor does a category chosen where the source gives none: there is no category of the source
-  // the movement moved away from (ux/n3-categories-manual.md §2.3).
-  const edited = row.categoryIsOwn
-    ? row.locallyEdited.filter((field) => field !== "categoryId")
-    : row.locallyEdited;
-  if (edited.length > 0 && !manual) badges.push("edited");
-  if (row.type === "transfer" && row.transferGroupId === null) badges.push("unpaired");
-  else if (row.type === "transfer" || row.transferGroupId !== null) badges.push("transfer");
+  if (editedHere(row) && !manual) badges.push("edited");
+  const transfer = transferBadge(row);
+  if (transfer !== null) badges.push(transfer);
   if (row.state === "pending") badges.push("pending");
   return badges;
 }

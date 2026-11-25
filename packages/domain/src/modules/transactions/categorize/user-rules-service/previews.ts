@@ -1,9 +1,8 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { getDb, type Tx } from "../../../../platform/db/client";
 import { userScoped } from "../../../../platform/db/scope";
-import { typeByMacro } from "../../rules";
-import { categories, categoryRules, transactions } from "../../schema";
-import { ruleAccountFacts, TransactionError } from "../../service";
+import { categoryRules, transactions } from "../../schema";
+import { requireOwnCategory, ruleAccountFacts, TransactionError } from "../../service";
 import { type RuleFacts, ruleInputSchema, ruleMatches } from "../user-rules";
 import { ruleMovementOf } from "./new-movements";
 import { PREVIEW_ROWS, RULE_COLUMNS, live, type Rule } from "./rules";
@@ -110,36 +109,11 @@ export async function sortMovements(
   };
 }
 
-async function categoryTypeOf(ctx: Who, categoryId: string): Promise<"income" | "expense" | "transfer"> {
-  const [row] = await getDb()
-    .select({ type: categories.type })
-    .from(categories)
-    .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)));
-  if (!row) throw new TransactionError("invalid");
-  return row.type;
-}
-
-/** The type a movement would take with the rule's category (CR3), against the one it has. */
-function retypedOf(changes: readonly MovementRow[], categoryType: "income" | "expense" | "transfer") {
-  const moved = changes.filter(
-    (row) =>
-      typeByMacro({ ...row, categoryType }) !== row.type &&
-      (row.type === "transfer" || categoryType === "transfer"),
-  );
-  const fromType = moved.find((row) => row.type !== "transfer")?.type ?? null;
-  return {
-    count: moved.length,
-    sumCents: moved.reduce(
-      (sum, row) => sum + (row.amountCents < 0n ? -row.amountCents : row.amountCents),
-      0n,
-    ),
-    since: moved.reduce<Date | null>(
-      (first, row) => (first === null || row.occurredAt < first ? row.occurredAt : first),
-      null,
-    ),
-    fromType: fromType === "income" || fromType === "expense" ? fromType : null,
-  };
-}
+/**
+ * A category no longer makes a giroconto (2026-11-25): no rule moves a movement in or out of the
+ * giroconti, so the preview never has one to show. Kept in the answer, empty, for the contract.
+ */
+const NO_RETYPED: RulePreview["retyped"] = { count: 0, sumCents: 0n, since: null, fromType: null };
 
 /**
  * What a rule — saved or still in the editor — finds today. A read: nothing is written. An input
@@ -151,6 +125,8 @@ export async function previewRule(
   ruleId: string | null = null,
 ): Promise<RulePreview> {
   const rule = ruleInputSchema.parse(input);
+  // A rule on another person's category, or a forged id, previews nothing.
+  await requireOwnCategory(ctx, rule.categoryId);
   const sorted = await sortMovements(getDb(), ctx, { id: ruleId ?? "", ...rule }, false);
   return {
     matched: sorted.matched.length,
@@ -163,7 +139,7 @@ export async function previewRule(
       amountCents: row.amountCents,
       categoryId: row.categoryId,
     })),
-    retyped: retypedOf(sorted.changes, await categoryTypeOf(ctx, rule.categoryId)),
+    retyped: NO_RETYPED,
   };
 }
 

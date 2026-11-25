@@ -8,6 +8,12 @@ Il piano ha priorità. Dove questa specifica lo cambia, il punto è una decision
 Mattia il 18/11/2026** («ok i default»): le decisioni CR1-CR9, l'eccezione sui numeri (§3.7) e l'opzione A delle
 domande QC1-QC2 e QC4-QC8 (§11). Nessuna domanda è aperta. Le stime con **[DEV]** le conferma lo sviluppatore.
 
+> **Revisione del 25/11/2026 (giroconti senza categoria e albero di Wallet).** Mattia ha deciso 1A–10A: un giroconto
+> **non ha categoria**, ha il conto di partenza e quello di arrivo (anche «conto esterno»), e i default sono l'albero di
+> Wallet (11 gruppi, 70 categorie). Sostituisce QC1, QC7, CR1 (le macro sono due: Entrate e Uscite), CR2 per la parte
+> Trasferimenti e CR3 per la parte «una categoria di Trasferimenti fa un giroconto». Il modello è in §13; le sezioni
+> sull'interfaccia di Trasferimenti (§2.3, §5) si riscrivono nello stage client.
+
 Revisione del 18/11/2026: i dati veri di Mattia sono cancellati; in produzione ci sono solo dati artificiali (PERS-424).
 Senza storico vero, «Allinea» e la domanda QC3 non servono più: al rilascio di N3.3 una migrazione ricalcola il tipo
 di ogni movimento una volta (§3.4). L'eccezione sui numeri (§3.7) e il rilascio N3.3 (§10) sono riscritti per questo caso.
@@ -708,12 +714,12 @@ Mattia ha scelto l'opzione A di ogni domanda («ok i default»). QC3 (allineamen
 
 | # | Domanda | Esempio | A (scelta) | B (scartata) | Effetto |
 |---|---|---|---|---|---|
-| QC1 | Trasferimenti ha categorie? | Sposti 300 € dal conto corrente al conto deposito di un'altra banca, e 50 € sulla carta prepagata | Sì, categorie senza gruppi: «Risparmio», «Carta prepagata», più la riga fissa «Tra i tuoi conti». Vedi quanto è andato dove | Nessuna categoria: Trasferimenti è un solo insieme; un movimento si segna «giroconto» senza scegliere dove | A: più dettaglio, una scelta in più per movimento. B: più semplice; serve un pulsante «È un giroconto» e la regola ha l'azione «Solo giroconto» e basta |
+| QC1 (sostituita il 25/11/2026, §13) | Trasferimenti ha categorie? | Sposti 300 € dal conto corrente al conto deposito di un'altra banca, e 50 € sulla carta prepagata | Sì, categorie senza gruppi: «Risparmio», «Carta prepagata», più la riga fissa «Tra i tuoi conti». Vedi quanto è andato dove | Nessuna categoria: Trasferimenti è un solo insieme; un movimento si segna «giroconto» senza scegliere dove | A: più dettaglio, una scelta in più per movimento. B: più semplice; serve un pulsante «È un giroconto» e la regola ha l'azione «Solo giroconto» e basta |
 | QC2 | Tra Entrate e Uscite decide il segno o la categoria? | Ricevi 40 € di rimborso da Amazon per un acquisto in «Shopping» | Il segno: il rimborso è un'entrata (esempio: Entrate › Rimborsi). Un accredito non può avere una categoria di Uscite | La categoria: il rimborso va in «Shopping» e abbassa le uscite di Shopping e il suo budget | A: numeri semplici, ma lo speso di Shopping resta 40 € più alto. B: budget più veri; cambia anche il tipo dei movimenti di Wallet e altre righe della fotografia (lista più lunga in §3.5) |
 | QC4 | Le regole valgono anche per i movimenti di Wallet? | Una regola «Testo contiene ricarica → Trasferimenti» e una ricarica registrata su Wallet in «Others» | No: i movimenti di una sorgente che dà le categorie non si ricategorizzano mai (H34). Per Wallet si usa l'associazione delle categorie | Sì: la regola vince sulla categoria di Wallet, e la categoria si scrive anche su Wallet | A: H34 resta vero, nessuna scrittura su Wallet. B: cambia H34 e aggiunge scritture verso Wallet (criterio #8) |
 | QC5 | Più regole corrispondono: chi decide? | «Testo contiene Amazon → Shopping» (1ª) e «Importo > 500 € → Casa» (2ª), movimento Amazon da 600 € | La prima che corrisponde, nell'ordine dell'elenco: Shopping | Tutte, in ordine: ogni regola dopo la prima riempie solo i campi ancora vuoti (etichette, nota) | A: prevedibile, si spiega in una frase. B: più potente, più difficile da capire |
 | QC6 | Dove si modifica la struttura delle categorie? | Vuoi rinominare «Bollette» e spostarla da «Casa» a «Abbonamenti e servizi» | Nella pagina nuova Spese › Categorie, con il menu della riga; Settings tiene etichette, proposte di unione e gruppi predefiniti | La pagina nuova è solo da leggere; la modifica resta in Settings › Categories | A: un posto solo, vedi i numeri mentre sposti. B: meno lavoro in N3.2, ma due pagine con lo stesso albero |
-| QC7 | Gruppi predefiniti per un utente nuovo con Trasferimenti | Un utente nuovo collega la banca | 11 gruppi di Uscite, 2 gruppi di Entrate («Lavoro», «Altre entrate»), 2 categorie di Trasferimenti («Risparmio», «Carta di credito») | Elenco di N3 §7 invariato (12 gruppi), Trasferimenti vuoto | A: struttura a tre livelli pronta. B: nessun cambio a N3; l'utente crea i trasferimenti a mano |
+| QC7 (sostituita il 25/11/2026, §13) | Gruppi predefiniti per un utente nuovo con Trasferimenti | Un utente nuovo collega la banca | 11 gruppi di Uscite, 2 gruppi di Entrate («Lavoro», «Altre entrate»), 2 categorie di Trasferimenti («Risparmio», «Carta di credito») | Elenco di N3 §7 invariato (12 gruppi), Trasferimenti vuoto | A: struttura a tre livelli pronta. B: nessun cambio a N3; l'utente crea i trasferimenti a mano |
 | QC8 | Una categoria con un budget passa a Trasferimenti | «Risparmio» è in Uscite con un budget di 200 € al mese | Il budget si ferma dal mese in corso; i mesi passati restano nello storico di Budgets | Lo spostamento è bloccato finché non togli il budget | A: un passo solo, il dialogo lo dice. B: più sicuro, un passo in più |
 
 ## 12. Decisioni di design prese senza conferma
@@ -728,3 +734,44 @@ Mattia ha scelto l'opzione A di ogni domanda («ok i default»). QC3 (allineamen
 | 6 | Righe a 0 visibili in fondo al gruppo | La pagina serve anche a gestire la struttura |
 | 7 | Nessun ordine a mano delle categorie in N3.2 | Ordine per totale = la risposta a «dove va il denaro». Si aggiunge se serve |
 | 8 | Max 200 regole, nessuna regex | Limite di prestazioni della cascata e dell'anteprima; la regex non è leggibile |
+
+## 13. Giroconti senza categoria e albero di Wallet (25/11/2026)
+
+Decisioni di Mattia 1A–10A (PERS-627). Sostituiscono QC1, QC7 e la parte «Trasferimenti» di CR1–CR3.
+
+**Categorie**
+- Le macro delle categorie sono due: `categories.type` ∈ `income`, `expense` (check `categories_type_ck`). Nessuna
+  categoria di Trasferimenti.
+- Default (`categorize/tables/groups.json`): 11 gruppi con 70 sottocategorie, chiavi stabili (`food_drinks`,
+  `food_drinks.groceries`…), colore del gruppo (solo sul gruppo; una sottocategoria usa il colore del gruppo), nomi
+  en/it scritti una volta nella lingua della persona. Nessuna icona (4B). `createDefaultGroups` crea ogni gruppo
+  scelto con tutte le sue sottocategorie e una `category_group_marks` per ciascuna.
+- Le tabelle della cascata (`brands.json`, `merchant-types.json`, `STRUCTURE_GROUP`, avvio a freddo) puntano alle chiavi
+  nuove, quasi sempre a una sottocategoria. Un nome uguale sotto due gruppi («Mantenimento figli») si riconosce per
+  gruppo + nome + segno (`groupCategories`).
+- Migrazione 1A (`0080`): chi aveva i 15 default li vede spostati nell'albero (stesso id: movimenti, budget e regole
+  li seguono) e riceve i gruppi e le categorie che mancano. Una categoria rinominata o personale non si tocca.
+
+**Giroconti**
+- Un movimento di tipo `transfer` non ha categoria (check `transactions_transfer_category_ck`). Stati: in coppia
+  (`transfer_group_id`), verso un conto esterno (`transfer_outside`), in attesa della gamba di un conto scelto
+  (`transfer_account_id`), «Scegli il conto» (nessuno dei tre; badge `unpaired`).
+- Il tipo (`typeByMacro`, `macro.ts`): coppia o conto esterno → giroconto; un tipo deciso qui (marcatore `type`) resta;
+  il giroconto di una sorgente resta; altrimenti il segno. La categoria non cambia più il tipo.
+- Accoppiamento (`rules/giroconti.ts`), dopo ogni scrittura che può creare un giroconto (lettura, scelta della
+  persona, IBAN salvato) e una volta con `node /app/worker.mjs --link-transfers`:
+  1. riferimento della sorgente (Wallet), come prima;
+  2. IBAN di un altro conto della persona nel testo: il movimento diventa giroconto (anche un'entrata o un'uscita, 8A,
+     se nessuno ha deciso il tipo o scelto la categoria) e si accoppia con l'importo opposto nel conto indicato entro
+     5 giorni; senza gemello resta in attesa in quel conto;
+  3. importo e giorno: conti diversi, importo opposto, stessa valuta, ±3 giorni e almeno un segnale (una gamba già
+     giroconto, un codice banca di bonifico). Si accoppia solo il candidato unico più vicino da entrambi i lati; un
+     pareggio diventa una proposta (`giroconto_proposals`), mai una decisione. Una proposta rifiutata non torna;
+  4. 1-a-N mai automatico; una coppia fatta a mano (marcatore `transferGroupId`) non la tocca nessuna regola.
+- Totali, budget e report: un giroconto, anche verso un conto esterno, è fuori da entrate, uscite e budget (6A). Il
+  netto resta la somma di tutti i movimenti (D3).
+- API: `PUT /transactions/{id}/transfer` (`account`, `outside`, `none`), `POST /transactions/transfer-pairs`,
+  `GET /transactions/transfer-proposals`, `POST /transactions/transfer-proposals/{id}`. Vedi `docs/api-changelog.md`.
+- Migrazione (`0079`): i giroconti perdono categoria e suggerimento; «Risparmio» e «Carta di credito» si eliminano
+  (10A) con i loro budget e regole; i movimenti restano giroconti «Scegli il conto».
+
