@@ -107,7 +107,7 @@ const OVERLAYS: Screen[] = [
   {
     // Decision 14A: the selector with the three likeliest on top (the route's answer given here).
     name: "the category selector with the likeliest on top",
-    session: "history",
+    session: "suggestions",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       const { categories } = await (await page.request.get("/api/v1/categories")).json();
@@ -124,7 +124,7 @@ const OVERLAYS: Screen[] = [
   },
   {
     name: "a group suggestion and its reason",
-    session: "history",
+    session: "suggestions",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await page.goto("/expenses?preset=last3Months");

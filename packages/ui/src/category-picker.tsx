@@ -72,12 +72,28 @@ export function searchCategories(items: readonly PickerItem[], query: string): P
 /** The likeliest categories under their title, in the server's order; an id the list lacks is left out. */
 function likelyItems(
   categories: readonly CategoryOption[],
-  likely: { ids: readonly string[]; title: string } | undefined,
+  likely: { ids: readonly string[] | null; title: string } | undefined,
 ): PickerItem[] {
   return (likely?.ids ?? []).flatMap((id) => {
     const option = categories.find((one) => one.id === id);
     return option ? [{ id, name: option.name, color: option.color, section: likely?.title }] : [];
   });
+}
+
+/**
+ * What the list shows: the likeliest on top while the search is empty, then what the search leaves;
+ * nothing while the likeliest are asked for. `top`: how many of the rows are the likeliest.
+ */
+function listOf(
+  items: readonly PickerItem[],
+  categories: readonly CategoryOption[],
+  likely: { ids: readonly string[] | null; title: string } | undefined,
+  query: string,
+): { shown: PickerItem[]; waiting: boolean; top: number } {
+  const searching = query.trim() !== "";
+  if (!searching && likely?.ids === null) return { shown: [], waiting: true, top: 0 };
+  const top = searching ? [] : likelyItems(categories, likely);
+  return { shown: [...top, ...searchCategories(items, query)], waiting: false, top: top.length };
 }
 
 /** The rows in runs of one title each, in their order: a row with no title is a run of its own. */
@@ -144,9 +160,10 @@ export function CategoryPicker({
   note?: string;
   /**
    * The likeliest categories, the likeliest first, listed again on top under their title while
-   * the search is empty: the ids the server gives, read only, never ranked here.
+   * the search is empty: the ids the server gives, read only, never ranked here. `null` while they
+   * are asked for: the list waits for them rather than jump under the pointer when they arrive.
    */
-  likely?: { ids: readonly string[]; title: string };
+  likely?: { ids: readonly string[] | null; title: string };
   children: ReactNode;
 }) {
   const listId = useId();
@@ -158,12 +175,10 @@ export function CategoryPicker({
       : [{ id: null, name: uncategorisedLabel, color: null, count: uncategorisedCount }];
   const items: PickerItem[] = multiple ? [...categories, ...none] : [...none, ...categories];
   const isSelected = (id: string | null) => (multiple ? multiple.selectedIds.includes(id) : id === currentId);
-  const top = query.trim() === "" ? likelyItems(categories, likely) : [];
-  const shown = [...top, ...searchCategories(items, query)];
-  // -1 until an arrow moves: the likeliest category, else the current one, is where the eye starts,
-  // also when the likeliest arrive after the list opened.
+  const { shown, waiting, top } = listOf(items, categories, likely, query);
+  // -1 until an arrow moves: the likeliest category, else the current one, is where the eye starts.
   const start =
-    top.length > 0
+    top > 0
       ? 0
       : Math.max(
           0,
@@ -254,7 +269,9 @@ export function CategoryPicker({
               aria-multiselectable={multiple ? true : undefined}
               className="max-h-[300px] overflow-y-auto"
             >
-              {shown.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">{noMatchLabel}</li>}
+              {shown.length === 0 && !waiting && (
+                <li className="px-2 py-1.5 text-sm text-muted">{noMatchLabel}</li>
+              )}
               {sectionsOf(shown).map(({ title, items: inSection }) => {
                 const options = inSection.map((item) => {
                   const index = shown.indexOf(item);

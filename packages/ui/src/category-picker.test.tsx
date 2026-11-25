@@ -96,7 +96,7 @@ describe("CategoryPicker, the likeliest on top", () => {
     { id: "spesa", name: "Spesa", color: "#3" },
   ];
 
-  function renderLikely(ids: string[]) {
+  function renderLikely(ids: string[] | null) {
     const onPick = vi.fn();
     render(
       <CategoryPicker
@@ -133,5 +133,11 @@ describe("CategoryPicker, the likeliest on top", () => {
     await userEvent.type(screen.getByRole("combobox"), "sv");
     expect(screen.queryByRole("group", { name: "Most likely" })).toBeNull();
     expect(screen.getAllByRole("option").map((one) => one.textContent)).toEqual(["Svago"]);
+  });
+
+  it("lists nothing while the likeliest are asked for, so the list does not jump when they arrive", () => {
+    renderLikely(null);
+    expect(screen.queryAllByRole("option")).toEqual([]);
+    expect(screen.queryByText("No match")).toBeNull();
   });
 });

@@ -175,6 +175,7 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [["expenses"], seedExpenses],
   [["giroconti"], seedGiroconti],
   [["history"], () => seedHistory()],
+  [["suggestions"], () => seedHistory(USERS.suggestions.email)],
   [["budgets"], seedBudgets],
   [["pockets"], seedPockets],
   [["subscriptions"], seedSubscriptions],

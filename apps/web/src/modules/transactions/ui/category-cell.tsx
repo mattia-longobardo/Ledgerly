@@ -75,7 +75,7 @@ export function CategoryCell({
   const t = useTranslations("expenses");
   const [reasonOpen, setReasonOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [likely, setLikely] = useState<readonly string[]>([]);
+  const [likely, setLikely] = useState<readonly string[] | null>(null);
   const likelyOf = useCategoryActions()?.commands.likely;
   // Asked each time the picker opens: a correction moves the top for the next movement.
   useEffect(() => {
@@ -84,6 +84,7 @@ export function CategoryCell({
     likelyOf(row.id).then((ids) => live && setLikely(ids));
     return () => {
       live = false;
+      setLikely(null);
     };
   }, [open, likelyOf, row.id]);
   const state = onConfirm === undefined ? "chosen" : (row.categoryState ?? "chosen");
@@ -200,7 +201,7 @@ export function CategoryCell({
           option.type === undefined || row.macros === undefined || row.macros.some((m) => m === option.type),
       )}
       currentId={row.categoryId}
-      likely={{ ids: likely, title: t("row.likely") }}
+      likely={likelyOf ? { ids: likely, title: t("row.likely") } : undefined}
       open={open}
       onOpenChange={onOpenChange}
       onPick={onPick}

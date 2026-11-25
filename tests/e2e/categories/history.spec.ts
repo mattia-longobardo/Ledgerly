@@ -1,7 +1,9 @@
 // tests/e2e/categories/history.spec.ts — the import of another app's history and the category
-// selector's top (decision 14A): one test for each state. The `history` user has the default groups
-// and, on an account kept by hand, «Locale Comune» suggested as the group Food & Drinks and
-// «Negozio Nuovo» with nothing (scripts/seed-e2e/categories.ts, `seedHistory`). Synthetic data only.
+// selector's top (decision 14A): one test for each state. The `history` and `suggestions` users have
+// the default groups and, on an account kept by hand, «Locale Comune» suggested as the group Food &
+// Drinks and «Negozio Nuovo» with nothing (scripts/seed-e2e/categories.ts, `seedHistory`). Synthetic
+// data only. `suggestions` is only read: a write trains the model again, and its pass would take
+// the seeded suggestion away; `history` imports and chooses.
 //
 // The selector's top comes from a model trained on a person's labels, which a seed cannot make sure
 // of: the top-3 test answers the one route of the top with three real categories of the person; the
@@ -51,20 +53,24 @@ async function openPicker(page: Page, payee: string) {
   return page.getByRole("listbox", { name: "Edit category" });
 }
 
-test("a group suggestion says to choose the sub-category", async ({ page }) => {
-  await page.goto(EXPENSES);
-  await row(page, "Locale Comune").getByTestId("suggestion-chip").click();
-  const popup = page.getByRole("dialog", { name: "Suggestion" });
-  await expect(popup).toContainText("Food & Drinks");
-  await expect(popup).toContainText("Probably Food & Drinks: choose the sub-category.");
-});
+test.describe("read only", () => {
+  test.use({ storageState: sessionState("suggestions") });
 
-test("with no suggestion the selector lists the tree alone", async ({ page }) => {
-  const answer = page.waitForResponse(/\/category-suggestions$/);
-  const list = await openPicker(page, "Negozio Nuovo");
-  expect(await (await answer).json()).toMatchObject({ categoryId: null, top: [] });
-  await expect(list.getByRole("option", { name: "Groceries" })).toBeVisible();
-  await expect(list.getByRole("group", { name: "Most likely" })).toHaveCount(0);
+  test("a group suggestion says to choose the sub-category", async ({ page }) => {
+    await page.goto(EXPENSES);
+    await row(page, "Locale Comune").getByTestId("suggestion-chip").click();
+    const popup = page.getByRole("dialog", { name: "Suggestion" });
+    await expect(popup).toContainText("Food & Drinks");
+    await expect(popup).toContainText("Probably Food & Drinks: choose the sub-category.");
+  });
+
+  test("with no suggestion the selector lists the tree alone", async ({ page }) => {
+    const answer = page.waitForResponse(/\/category-suggestions$/);
+    const list = await openPicker(page, "Negozio Nuovo");
+    expect(await (await answer).json()).toMatchObject({ categoryId: null, top: [] });
+    await expect(list.getByRole("option", { name: "Groceries" })).toBeVisible();
+    await expect(list.getByRole("group", { name: "Most likely" })).toHaveCount(0);
+  });
 });
 
 test("the three likeliest categories are on top of the selector, the likeliest picked by Enter", async ({
