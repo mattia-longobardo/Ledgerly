@@ -133,8 +133,7 @@ export const MANUAL_CALLS: Required<ManualCommands> = {
     const amount = sizeOf(input.amount, await preferences());
     if (amount === null) return null;
     try {
-      const { categoryId } = await call(manual.suggestManualCategory, { body: { ...input, amount } });
-      return categoryId === null ? null : { categoryId };
+      return await call(manual.suggestManualCategory, { body: { ...input, amount } });
     } catch {
       // A suggestion is a help, never an error.
       return null;

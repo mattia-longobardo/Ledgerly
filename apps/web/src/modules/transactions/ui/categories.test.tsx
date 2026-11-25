@@ -38,6 +38,7 @@ function commandsWith(overrides: Partial<CategoryCommands> = {}): CategoryComman
     choose: vi.fn(async (ids: string[]) => ({ ok: true as const, count: ids.length, undoId: "undo-2" })),
     undo: vi.fn(async () => ({ ok: true as const, count: 1 })),
     similar: vi.fn(async () => ({ text: "", rows: [] })),
+    likely: vi.fn(async () => []),
     ...overrides,
   };
 }

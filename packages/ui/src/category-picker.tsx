@@ -69,6 +69,17 @@ export function searchCategories(items: readonly PickerItem[], query: string): P
   });
 }
 
+/** The likeliest categories under their title, in the server's order; an id the list lacks is left out. */
+function likelyItems(
+  categories: readonly CategoryOption[],
+  likely: { ids: readonly string[]; title: string } | undefined,
+): PickerItem[] {
+  return (likely?.ids ?? []).flatMap((id) => {
+    const option = categories.find((one) => one.id === id);
+    return option ? [{ id, name: option.name, color: option.color, section: likely?.title }] : [];
+  });
+}
+
 /** The rows in runs of one title each, in their order: a row with no title is a run of its own. */
 function sectionsOf(items: readonly PickerItem[]): { title?: string; items: PickerItem[] }[] {
   const runs: { title?: string; items: PickerItem[] }[] = [];
@@ -110,6 +121,7 @@ export function CategoryPicker({
   triggerClassName,
   disabled,
   note,
+  likely,
   children,
 }: {
   categories: readonly CategoryOption[];
@@ -130,6 +142,11 @@ export function CategoryPicker({
   disabled?: boolean;
   /** A sentence above the list, about why it offers what it does (`text-sm text-muted`). */
   note?: string;
+  /**
+   * The likeliest categories, the likeliest first, listed again on top under their title while
+   * the search is empty: the ids the server gives, read only, never ranked here.
+   */
+  likely?: { ids: readonly string[]; title: string };
   children: ReactNode;
 }) {
   const listId = useId();
@@ -141,19 +158,23 @@ export function CategoryPicker({
       : [{ id: null, name: uncategorisedLabel, color: null, count: uncategorisedCount }];
   const items: PickerItem[] = multiple ? [...categories, ...none] : [...none, ...categories];
   const isSelected = (id: string | null) => (multiple ? multiple.selectedIds.includes(id) : id === currentId);
-  const shown = searchCategories(items, query);
-  const highlighted = Math.min(active, shown.length - 1);
+  const top = query.trim() === "" ? likelyItems(categories, likely) : [];
+  const shown = [...top, ...searchCategories(items, query)];
+  // -1 until an arrow moves: the likeliest category, else the current one, is where the eye starts,
+  // also when the likeliest arrive after the list opened.
+  const start =
+    top.length > 0
+      ? 0
+      : Math.max(
+          0,
+          shown.findIndex((item) => isSelected(item.id)),
+        );
+  const highlighted = Math.min(active < 0 ? start : active, shown.length - 1);
 
   function change(next: boolean) {
     if (next) {
       setQuery("");
-      // The current category is where the eye starts, as in the menu this replaced.
-      setActive(
-        Math.max(
-          0,
-          items.findIndex((item) => isSelected(item.id)),
-        ),
-      );
+      setActive(-1);
     }
     onOpenChange(next);
   }
@@ -239,7 +260,7 @@ export function CategoryPicker({
                   const index = shown.indexOf(item);
                   return (
                     <li
-                      key={item.id ?? "none"}
+                      key={index}
                       id={optionId(index)}
                       role="option"
                       aria-selected={isSelected(item.id)}

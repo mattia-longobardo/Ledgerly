@@ -18,6 +18,7 @@ import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { appRoute } from "@/platform/route";
 import { isOn } from "../plugins/plugin-model";
 import { DefaultGroupsButton } from "./default-groups";
+import { HistoryImport } from "./history-import";
 import { LabelsCard } from "./labels-card";
 import { MergeProposals } from "./merge-proposals";
 
@@ -101,6 +102,7 @@ export function CategoriesScreen() {
     <SettingsGrid>
       <MergeSection />
       <CategoriesSection />
+      <HistoryImport />
       <SettingsSection title={text("labels.title")} description={text("labels.description")} padded={false}>
         <Loaded state={rows}>{({ labels: list }) => <LabelsCard rows={list} />}</Loaded>
       </SettingsSection>

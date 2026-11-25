@@ -47,12 +47,13 @@ export interface ManualCommands {
     input: Pick<ManualForm, "kind" | "amount" | "on" | "accountId"> & { editingId?: string },
   ): Promise<ManualPreviewView>;
   /**
-   * The category the cascade would give the movement being written (ux §9.3), or `null`. Left out
-   * where the page has no automatic categories: the dialog then asks for nothing.
+   * The category the cascade would give the movement being written (ux §9.3), or `null`, and the
+   * three likeliest for the top of the picker. Left out where the page has no automatic
+   * categories: the dialog then asks for nothing.
    */
   suggest?(
     input: Pick<ManualForm, "kind" | "amount" | "accountId" | "payee" | "note">,
-  ): Promise<{ categoryId: string } | null>;
+  ): Promise<{ categoryId: string | null; top: readonly string[] } | null>;
   /** `key` is made once for each opening of the dialog: sent twice, it writes once. */
   create(input: ManualForm, key: string): Promise<ManualSaveResult>;
   update(id: string, input: ManualForm): Promise<ManualSaveResult>;

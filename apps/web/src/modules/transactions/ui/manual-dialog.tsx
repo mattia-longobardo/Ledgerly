@@ -97,6 +97,8 @@ export function ManualTransactionDialog({
   const [picking, setPicking] = useState(false);
   /** The category Ledgerly suggests while the person has chosen none; theirs once they save. */
   const [suggestedId, setSuggestedId] = useState<string | null>(null);
+  /** The three likeliest categories, on top of the picker. */
+  const [likely, setLikely] = useState<readonly string[]>([]);
   /** The person touched the category: from then on the dialog asks for no suggestion. */
   const [categoryChosen, setCategoryChosen] = useState(row !== null);
   const [preview, setPreview] = useState<ManualPreviewView>(null);
@@ -167,7 +169,9 @@ export function ManualTransactionDialog({
     const timer = window.setTimeout(() => {
       suggest({ kind, amount, accountId, payee, note })
         .then((answer) => {
-          if (live) setSuggestedId(answer?.categoryId ?? null);
+          if (!live) return;
+          setSuggestedId(answer?.categoryId ?? null);
+          setLikely(answer?.top ?? []);
         })
         // A suggestion is a help: a failed request shows nothing.
         .catch(() => undefined);
@@ -466,6 +470,7 @@ export function ManualTransactionDialog({
           <CategoryPicker
             categories={offered}
             currentId={category?.id ?? null}
+            likely={{ ids: likely, title: t("row.likely") }}
             open={picking}
             onOpenChange={setPicking}
             onPick={(categoryId) => {

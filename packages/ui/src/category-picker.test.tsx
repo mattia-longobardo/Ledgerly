@@ -88,3 +88,50 @@ describe("CategoryPicker, multiple", () => {
     expect(onClear).toHaveBeenCalledOnce();
   });
 });
+
+describe("CategoryPicker, the likeliest on top", () => {
+  const categories = [
+    { id: "casa", name: "Casa", color: "#1" },
+    { id: "svago", name: "Svago", color: "#2" },
+    { id: "spesa", name: "Spesa", color: "#3" },
+  ];
+
+  function renderLikely(ids: string[]) {
+    const onPick = vi.fn();
+    render(
+      <CategoryPicker
+        categories={categories}
+        likely={{ ids, title: "Most likely" }}
+        uncategorisedLabel="Uncategorised"
+        open
+        onOpenChange={vi.fn()}
+        onPick={onPick}
+        searchLabel="Search"
+        noMatchLabel="No match"
+        triggerLabel="Category"
+        triggerClassName=""
+      >
+        Category
+      </CategoryPicker>,
+    );
+    return onPick;
+  }
+
+  it("lists the likeliest first, in the server's order, and Enter picks the first", async () => {
+    const onPick = renderLikely(["spesa", "gone", "casa"]);
+    const group = screen.getByRole("group", { name: "Most likely" });
+    expect([...group.querySelectorAll('[role="option"]')].map((one) => one.textContent)).toEqual([
+      "Spesa",
+      "Casa",
+    ]);
+    await userEvent.keyboard("{Enter}");
+    expect(onPick).toHaveBeenCalledWith("spesa");
+  });
+
+  it("leaves them out while a search is typed", async () => {
+    renderLikely(["spesa"]);
+    await userEvent.type(screen.getByRole("combobox"), "sv");
+    expect(screen.queryByRole("group", { name: "Most likely" })).toBeNull();
+    expect(screen.getAllByRole("option").map((one) => one.textContent)).toEqual(["Svago"]);
+  });
+});
