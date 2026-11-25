@@ -34,10 +34,11 @@ test("each macro totals what the header of Expenses says, for the same period", 
     .textContent();
   await page.goto("/expenses/categories?preset=last3Months");
   await expect(page.getByRole("heading", { name: "Categories", level: 1 })).toBeVisible();
-  // The three macros, Expenses first.
-  for (const macro of ["Income", "Expenses", "Transfers"]) {
+  // The two macros: a giroconto has no category, so there is no macro of Transfers (decision 2026-11-25).
+  for (const macro of ["Income", "Expenses"]) {
     await expect(page.getByRole("button", { name: macro, exact: true })).toBeVisible();
   }
+  await expect(page.getByRole("button", { name: "Transfers", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Expenses", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -125,14 +126,15 @@ test("a person builds groups, moves, merges and archives with Undo, opens a cate
   });
 
   // N3.3 (categories-and-rules.md §5.6): the macro decides how the movements count.
-  await test.step("a group moves to Transfers with its categories, and Undo puts it back", async () => {
+  await test.step("a group moves to Income with its categories, and Undo puts it back", async () => {
     await act(page, first, "Move to another section…");
     const dialog = page.getByRole("dialog", { name: `Move “${first}” to another section` });
     await expect(dialog).toContainText("No transaction counts differently.");
-    await dialog.getByRole("button", { name: "Transfers", exact: true }).click();
-    await expect(dialog).toContainText("Its 2 categories go to Transfers too.");
+    await expect(dialog.getByRole("button", { name: "Transfers", exact: true })).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Income", exact: true }).click();
+    await expect(dialog).toContainText("Its 2 categories go to Income too.");
     await dialog.getByRole("button", { name: "Move", exact: true }).click();
-    await expect(page.getByText(`“${first}” moved to Transfers`)).toBeVisible();
+    await expect(page.getByText(`“${first}” moved to Income`)).toBeVisible();
     await expect(page.getByRole("button", { name: first, exact: true })).toHaveCount(0);
     await undo(page);
     await expect(groupRow(page, first).getByRole("link", { name: a, exact: true })).toBeVisible();

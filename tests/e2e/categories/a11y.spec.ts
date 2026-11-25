@@ -58,11 +58,6 @@ const PAGES: Screen[] = [
   },
   { name: "/expenses/categories (Income)", session: "review", open: go("/expenses/categories?macro=income") },
   {
-    name: "/expenses/categories (Transfers)",
-    session: "review",
-    open: go("/expenses/categories?macro=transfer"),
-  },
-  {
     name: "/expenses/categories/[id]",
     session: "review",
     open: async (page) => {

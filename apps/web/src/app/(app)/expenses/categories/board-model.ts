@@ -50,7 +50,7 @@ export interface BoardMacro {
 
 export type Dialog =
   | { kind: "group"; macro: "income" | "expense" }
-  | { kind: "add"; group: BoardLine | null; macro: Macro }
+  | { kind: "add"; group: BoardLine; macro: Macro }
   | { kind: "color"; line: BoardLine }
   | { kind: "move"; line: BoardLine }
   | { kind: "macro"; line: BoardLine; children: number }

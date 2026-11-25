@@ -70,7 +70,7 @@ function DialogFooter({
   );
 }
 
-/** The colour of a group or of a category of Transfers: automatic until one is picked. */
+/** The colour of a group: automatic until one is picked. */
 function ColorField({ id, initial, disabled }: { id: string; initial: string | null; disabled: boolean }) {
   const settingsText = useTranslations("settings.categories");
   const [color, setColor] = useState<string | null>(initial);
@@ -97,9 +97,7 @@ function CreatePlace({ creating, board }: { creating: Creating; board: DialogCon
   if (creating.kind === "add") {
     return (
       <p className="text-sm text-muted">
-        {creating.group
-          ? text("addIn", { macro: text(`macro.${creating.macro}`), group: creating.group.name })
-          : text(`macro.${creating.macro}`)}
+        {text("addIn", { macro: text(`macro.${creating.macro}`), group: creating.group.name })}
       </p>
     );
   }
@@ -123,12 +121,10 @@ function createTitle(
   creating: Creating | null,
 ) {
   if (creating?.kind === "group") return text("newGroup");
-  return creating?.kind === "add" && creating.group === null
-    ? text("addTransferCategory")
-    : text("addCategory");
+  return text("addCategory");
 }
 
-/** New group, and a new category under a group or under Transfers (§5.5). */
+/** New group, and a new category under a group (§5.5). */
 export function CreateDialog({ board }: { board: DialogContext }) {
   const text = useTranslations("expenses.categories");
   const settingsText = useTranslations("settings.categories");

@@ -133,7 +133,7 @@ function RestRow({ view }: { view: BoardMacro }) {
   );
 }
 
-/** The macro on screen: its total, its groups (a flat list under Transfers) and what is left. */
+/** The macro on screen: its total, its groups and what is left. */
 function MacroSection({
   view,
   open,
@@ -283,17 +283,11 @@ function BoardDialogs({ board }: { board: DialogContext }) {
 
 type BoardState = ReturnType<typeof useBoardState>;
 
-function rowContextOf(
-  ids: string,
-  state: BoardState,
-  lines: readonly BoardLine[],
-  transfer: boolean,
-): RowContext {
+function rowContextOf(ids: string, state: BoardState, lines: readonly BoardLine[]): RowContext {
   return {
     ids,
     renaming: state.renaming,
     pending: state.writes.pending,
-    transfer,
     childrenOf: (id) => lines.filter((line) => line.parentId === id),
     setDialog: state.setDialog,
     setRenaming: state.setRenaming,
@@ -330,7 +324,7 @@ export function CategoriesBoard({
   const view = macros.find((one) => one.macro === macro) ?? macros[0];
   const groupsOf = (type: Macro) =>
     lines.filter((line) => line.parentId === null && line.type === type && !line.archived);
-  const rows = rowContextOf(ids, state, lines, false);
+  const rows = rowContextOf(ids, state, lines);
   const dialogs: DialogContext = {
     ...state,
     ids,
