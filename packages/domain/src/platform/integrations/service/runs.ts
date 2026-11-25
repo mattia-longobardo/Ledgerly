@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lte, lt, ne, or, sql } from "drizzle-orm";
 import type { Ctx } from "../../context";
-import { getDb } from "../../db/client";
+import { getDb, withOwnConnection } from "../../db/client";
 import { closeOrphaned } from "../../db/orphans";
 import { userScoped } from "../../db/scope";
 import { APP_VERSION } from "../../version";
@@ -68,23 +68,25 @@ export async function recordRun(
  * connection, does nothing and throws `run_closed`: the reading writes nothing more. `work` must
  * not close the run itself ({@link finishRun}), which would wait for this hold.
  *
- * shortcut: holds one connection of the pool while `work` writes through others; fine with the
- * worker's 3 slots and a pool of 10, a lock of the session would be needed for many readings at once.
+ * The hold is on a connection of its own, outside the pool that `work` writes through (SEC-09):
+ * many readings at once never leave the pool without a connection.
  */
 export async function holdingRun<T>(
   ctx: Pick<Ctx, "userId">,
   runId: string,
   work: () => Promise<T>,
 ): Promise<T> {
-  return getDb().transaction(async (trx) => {
-    const [run] = await trx
-      .select({ state: syncRuns.state })
-      .from(syncRuns)
-      .where(and(eq(syncRuns.id, runId), userScoped(ctx).owns(syncRuns)))
-      .for("share");
-    if (run?.state !== "running") throw new IntegrationError("run_closed");
-    return work();
-  });
+  return withOwnConnection((own) =>
+    own.transaction(async (trx) => {
+      const [run] = await trx
+        .select({ state: syncRuns.state })
+        .from(syncRuns)
+        .where(and(eq(syncRuns.id, runId), userScoped(ctx).owns(syncRuns)))
+        .for("share");
+      if (run?.state !== "running") throw new IntegrationError("run_closed");
+      return work();
+    }),
+  );
 }
 
 /** Whether `error` says the reading's run was stopped or went with its connection ({@link holdingRun}). */

@@ -1,12 +1,16 @@
 import { desc, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
+import { GET as getHealth } from "@/app/api/health/route";
 import { GET as getMetrics } from "@/app/api/metrics/route";
 import { getDb } from "@domain/platform/db/client";
 import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "@domain/platform/jobs/schema";
 import { runTier } from "./tick";
+import { holdingRun, recordRun, saveConnection } from "@domain/platform/integrations";
+import { createTestUser } from "../../../../../test/users";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 const job = (name: string, run: JobDefinition["run"]): JobDefinition => ({ name, tier: "hourly", run });
 
@@ -124,5 +128,47 @@ describe("jobs", () => {
     expect(body).toContain("# TYPE job_runs_total counter");
     expect(body).toContain('job_runs_total{job="ok",status="success"} 1');
     expect(body).toContain("documents_awaiting_review 0");
+  });
+});
+
+describe("readings at once and the pool (SEC-09)", () => {
+  beforeEach(resetDatabase);
+  afterAll(closeDatabase);
+
+  it("more readings than the pool has connections leave it free, and /api/health answers", async () => {
+    const READINGS = 12; // the pool has 10
+    const { id: userId } = await createTestUser();
+    const ctx = { userId };
+    const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
+    const releases: (() => void)[] = [];
+    let holding!: () => void;
+    const allHolding = new Promise<void>((resolve) => (holding = resolve));
+    const readings = Array.from({ length: READINGS }, async (_, n) => {
+      const run = await recordRun(ctx, { connectionId: connection.id, kind: "transactions" });
+      // As a reading does: the lock of its connection, its run held, a write through the pool.
+      return withJobLock(`plugin-sync:reading-${n}`, () =>
+        holdingRun(ctx, run.id, async () => {
+          await getDb()
+            .insert(jobRuns)
+            .values({ job: `reading-${n}`, tier: "manual", status: "success" });
+          await new Promise<void>((resolve) => {
+            releases.push(resolve);
+            if (releases.length === READINGS) holding();
+          });
+          return n;
+        }),
+      );
+    });
+    await allHolding;
+
+    expect((await getHealth()).status).toBe(200);
+    // A second reading of a connection being read is refused at once, it does not wait in a queue.
+    expect(await withJobLock("plugin-sync:reading-0", async () => "twice")).toEqual({ ran: false });
+
+    releases.forEach((release) => release());
+    expect((await Promise.all(readings)).map((outcome) => outcome.ran)).toEqual(
+      Array.from({ length: READINGS }, () => true),
+    );
+    expect(await getDb().$count(jobRuns)).toBe(READINGS);
   });
 });
