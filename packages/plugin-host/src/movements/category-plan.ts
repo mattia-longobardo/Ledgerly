@@ -25,8 +25,6 @@ type CategoryCaseKind =
   | "conflict"
   /** Linked here, no longer in the source's list. Never deleted here. */
   | "gone_from_source"
-  /** The source files it under its built-in Transfer category and this app does not, or the reverse. */
-  | "type_mismatch"
   /** The source's name does not fit this app's column, so the local name stays (as it did in F2.5). */
   | "name_too_long"
   /** The source's name is already taken by a sibling here: the unique key of §6 wins. */
@@ -162,18 +160,9 @@ function planPush(plan: CategoryPlan, category: ProviderCategory, mirror: Source
 /** One local category the source also publishes (`mirror`). */
 function planMirrored(here: Here, category: ProviderCategory, mirror: SourceCategory): void {
   const plan = here.plan;
-  // The type is never moved by a sync, in either direction: the source publishes none on a
-  // category, and the one thing it does say — that this is its built-in Transfer category — is a
-  // fact this app reads off the movements (spec §7.2). A disagreement is reported and the local
-  // type kept.
-  const sourceSaysTransfer = mirror.transfer;
-  if (sourceSaysTransfer !== (category.type === "transfer")) {
-    plan.cases.push({
-      ...caseOf("type_mismatch", category, mirror),
-      local: category.type,
-      remote: sourceSaysTransfer ? "transfer" : "not transfer",
-    });
-  }
+  // The source's built-in Transfer is no category here: its movements are giroconti without one
+  // (PERS-627). A row still linked to it from before is left as it is, with nothing to report.
+  if (mirror.transfer) return;
   const verdict = mergeName(category, mirror);
   if (verdict === "conflict") plan.cases.push(caseOf("conflict", category, mirror));
   if (verdict === "agreed") {
@@ -206,7 +195,8 @@ function planAdditions(
     local.flatMap((category) => [category.externalId, category.groupExternalId].filter((id) => id !== null)),
   );
   for (const category of remote) {
-    if (category.archived || mirrored.has(category.externalId)) continue;
+    // The source's Transfer is never taken on: a giroconto has no category here.
+    if (category.archived || category.transfer || mirrored.has(category.externalId)) continue;
     if (!fitsHere(category.name, here.nameMax)) {
       here.plan.cases.push({
         kind: "name_too_long",
