@@ -32,8 +32,15 @@ services:
       - "traefik.http.routers.ledgerly-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`) && (PathPrefix(`/api`) || PathPrefix(`/.well-known`))"
       - "traefik.http.routers.ledgerly-router.priority=100"
       - "traefik.http.routers.ledgerly-router.entrypoints=web"
-      - "traefik.http.routers.ledgerly-router.middlewares=ledgerly-https"
+      - "traefik.http.routers.ledgerly-router.middlewares=ledgerly-https,ledgerly-body-limit"
       - "traefik.http.routers.ledgerly-router.service=ledgerly-service"
+      # The ZIP of "Export all" is streamed: its own router keeps it out of the buffering of the
+      # body limit, which would hold the whole answer before sending it. A GET, it carries no body.
+      - "traefik.http.routers.ledgerly-export-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`) && Path(`/api/export.zip`)"
+      - "traefik.http.routers.ledgerly-export-router.priority=200"
+      - "traefik.http.routers.ledgerly-export-router.entrypoints=web"
+      - "traefik.http.routers.ledgerly-export-router.middlewares=ledgerly-https"
+      - "traefik.http.routers.ledgerly-export-router.service=ledgerly-service"
       # The signed addresses of the originals (UI-PAY-2): the token is in the path, so this router
       # keeps them out of the access log (which logs only 400-599 anyway). Same middleware, same service.
       - "traefik.http.routers.ledgerly-originals-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`) && PathPrefix(`/api/v1/originals/`)"
@@ -43,6 +50,10 @@ services:
       - "traefik.http.routers.ledgerly-originals-router.service=ledgerly-service"
       - "traefik.http.routers.ledgerly-originals-router.observability.accessLogs=false"
       - "traefik.http.middlewares.ledgerly-https.headers.customrequestheaders.X-Forwarded-Proto=https"
+      # Every body of `/api` stops at 12 MiB, before the app (SEC R1): also the routes outside
+      # `serve()` (`/api/auth`, `/api/invite`, `/api/web`), open before the login. Above the 11 MiB
+      # of the app's own multipart limit (`BODY_MAX_BYTES`), so its 413 is the one people see.
+      - "traefik.http.middlewares.ledgerly-body-limit.buffering.maxRequestBodyBytes=12582912"
       - "traefik.http.services.ledgerly-service.loadbalancer.server.port=3000"
     networks:
       - proxy_public

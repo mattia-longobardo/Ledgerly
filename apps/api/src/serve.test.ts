@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { CSV_MAX_BYTES } from "@ledgerly/api-contract";
@@ -32,6 +34,13 @@ function chunked(chunks: number, size: number) {
 describe("serve: the size of a body (SEC-04)", () => {
   it("leaves room for the largest file a use case takes", () => {
     expect(BODY_MAX_BYTES.multipart).toBeGreaterThan(Math.max(CSV_MAX_BYTES, MAX_DOCUMENT_BYTES));
+  });
+
+  it("is below the limit of the proxy on every body of /api, which the routes outside serve() have too", () => {
+    const compose = readFileSync(join(__dirname, "../../../docker-compose.yml"), "utf8");
+    expect(compose).toMatch(/ledgerly-router\.middlewares=[\w,-]*ledgerly-body-limit/);
+    const proxyLimit = Number(/ledgerly-body-limit\.buffering\.maxRequestBodyBytes=(\d+)/.exec(compose)?.[1]);
+    expect(proxyLimit).toBeGreaterThan(BODY_MAX_BYTES.multipart);
   });
 
   it.each([
