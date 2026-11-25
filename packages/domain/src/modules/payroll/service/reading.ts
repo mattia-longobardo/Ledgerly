@@ -24,7 +24,7 @@ import {
   type TfrSource,
 } from "../rules";
 import { payrollRawLines, payslips } from "../schema";
-import { PayrollError, codeMapOf, type Payslip, type RawLineRow } from "./codes";
+import { PayrollError, codeMapOf, ofKind, type Payslip, type RawLineRow } from "./codes";
 import { writePairs } from "./fields";
 
 // ——— Reading (spec §7.8, §9.3 step 3) ———
@@ -178,7 +178,7 @@ async function previousOf(
   documentId: string,
   tx: Tx | Db,
 ): Promise<PreviousPayslip | null> {
-  if (identity.type !== "ordinary" || identity.period === null) return null;
+  if (kindOfType(identity.type).kind !== "ordinary" || identity.period === null) return null;
   const period = addMonths(identity.period, -1);
   const [row] = await tx
     .select({ documentId: payslips.documentId })
@@ -188,7 +188,7 @@ async function previousOf(
         userScoped(ctx).owns(payslips),
         eq(payslips.employerKey, identity.employerKey),
         eq(payslips.employeeKey, identity.employeeKey),
-        eq(payslips.type, "ordinary"),
+        eq(payslips.kind, "ordinary"),
         eq(payslips.period, period),
         sql`${payslips.supersededBy} is null`,
         ne(payslips.documentId, documentId),
@@ -211,7 +211,7 @@ async function historyOf(ctx: Pick<Ctx, "userId">, identity: Identity, tx: Tx | 
       and(
         userScoped(ctx).owns(payslips),
         eq(payslips.active, true),
-        eq(payslips.type, "ordinary"),
+        eq(payslips.kind, "ordinary"),
         eq(payslips.employerKey, identity.employerKey),
         eq(payslips.employeeKey, identity.employeeKey),
       ),
@@ -345,7 +345,7 @@ export async function activeWithKey(ctx: Pick<Ctx, "userId">, identity: Identity
         eq(payslips.employerKey, identity.employerKey),
         eq(payslips.employeeKey, identity.employeeKey),
         eq(payslips.year, identity.year),
-        eq(payslips.type, identity.type),
+        ofKind(kindOfType(identity.type)),
         identity.period === null ? sql`${payslips.period} is null` : eq(payslips.period, identity.period),
       ),
     );

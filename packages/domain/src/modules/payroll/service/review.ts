@@ -8,11 +8,11 @@ import { userScoped } from "../../../platform/db/scope";
 import { centsToDecimal, parseCents } from "../../../shared/money";
 import { FIELDS, type FieldName, isDerived, isFieldName, LEAVE_COLUMNS, LEAVE_KINDS, leaveField } from "../fields";
 import { hasBlockingFailure } from "../parse/checks";
-import { usagePeriodOf } from "../rules";
+import { kindOfType, usagePeriodOf } from "../rules";
 import { appliedEventOf } from "../applied";
 import { payslipApplied, payslipWithdrawn } from "../events";
 import { leaveBalanceSnapshots, payrollLeaveEvents, payslips } from "../schema";
-import { PayrollError, type Payslip } from "./codes";
+import { ACTIVE_KEYS, PayrollError, type Payslip } from "./codes";
 import { activeOfMonth, deleteManualPayslip, manualOfDocument } from "./manual";
 import { activeWithKey, computeState, linesOf, processPayslip, recompute, type Recomputed } from "./reading";
 
@@ -114,7 +114,8 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
       const { payslip, identity } = await recompute(ctx, documentId, tx);
       if (!payslip || !identity) throw new PayrollError("no_identity");
       // A month typed by hand is not superseded by a reading: the person deletes one of the two.
-      if ((await activeOfMonth(ctx, identity, tx, payslip.id))?.source === "manual") throw new PayrollError("conflict");
+      const month = { ...identity, ...kindOfType(identity.type) };
+      if ((await activeOfMonth(ctx, month, tx, payslip.id))?.source === "manual") throw new PayrollError("conflict");
       const replaced = await activeWithKey(ctx, identity, tx);
       if (replaced && replaced.id !== payslip.id) {
         await tx
@@ -137,7 +138,7 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
       return applied;
     });
   } catch (error) {
-    if (hasPgError(error, UNIQUE_VIOLATION, "payslips_active_key_uq")) throw new PayrollError("conflict");
+    if (ACTIVE_KEYS.some((key) => hasPgError(error, UNIQUE_VIOLATION, key))) throw new PayrollError("conflict");
     throw error;
   }
 }
@@ -149,7 +150,7 @@ async function announce(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Pro
 
 /** The next month's payslip, if applied, confirms its uses of leave against this one: read them again. */
 async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
-  if (payslip.type !== "ordinary" || payslip.period === null || payslip.documentId === null) return;
+  if (payslip.kind !== "ordinary" || payslip.period === null || payslip.documentId === null) return;
   const [next] = await tx
     .select()
     .from(payslips)
@@ -157,7 +158,7 @@ async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): P
       and(
         userScoped(ctx).owns(payslips),
         eq(payslips.active, true),
-        eq(payslips.type, "ordinary"),
+        eq(payslips.kind, "ordinary"),
         eq(payslips.employerKey, payslip.employerKey),
         eq(payslips.employeeKey, payslip.employeeKey),
         eq(payslips.period, addMonths(payslip.period, 1)),
@@ -258,7 +259,7 @@ async function clearLeave(ctx: Pick<Ctx, "userId">, payslipId: string, tx: Tx): 
  */
 async function writeLeave(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
   await clearLeave(ctx, payslip.id, tx);
-  if (payslip.type !== "ordinary" || payslip.period === null || payslip.documentId === null) return;
+  if (payslip.kind !== "ordinary" || payslip.period === null || payslip.documentId === null) return;
   const { assembled, profile } = await computeState(ctx, payslip.documentId, tx);
   const values = assembled.values;
   for (const kind of LEAVE_KINDS) {

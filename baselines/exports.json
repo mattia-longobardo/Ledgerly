@@ -750,6 +750,7 @@
     "payrollLeaveBalances",
     "payslipsAwaitingReview",
     "processPayslip",
+    "registerAmount",
     "registerView",
     "rejectPayslip",
     "renamePayslip",

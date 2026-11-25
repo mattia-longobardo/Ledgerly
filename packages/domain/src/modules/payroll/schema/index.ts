@@ -109,6 +109,18 @@ export const payslips = pgTable(
         sql`coalesce(${table.period}, '0001-01-01'::date)`,
       )
       .where(sql`${table.active}`),
+    // The key the code checks since R5f.1: kind and extra payment, not the old type.
+    uniqueIndex("payslips_active_kind_uq")
+      .on(
+        table.userId,
+        table.employerKey,
+        table.employeeKey,
+        table.year,
+        table.kind,
+        sql`coalesce(${table.extraNumber}, 0)`,
+        sql`coalesce(${table.period}, '0001-01-01'::date)`,
+      )
+      .where(sql`${table.active}`),
     index("payslips_user_year_idx").on(table.userId, table.year),
     ...legacyPayslipChecks(table),
     check("payslips_kind_ck", sql`${table.kind} is null or ${table.kind} in (${sql.raw(inList(PAYSLIP_KINDS))})`),

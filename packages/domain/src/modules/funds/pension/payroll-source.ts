@@ -13,7 +13,10 @@ export interface AppliedPayslip {
   payslipId: string;
   year: number;
   period: string | null;
+  /** Deprecated (R5f.1): the old type, still stored beside the kind until R5f. */
   type: string;
+  kind: string;
+  extraNumber: number | null;
   printedOn: string | null;
   workerCents: Cents | null;
   employerCents: Cents | null;
@@ -47,15 +50,19 @@ export const FUND_ROLES: readonly string[] = [
  * the day it was printed; a 15th with no such day, having no fixed month, falls back to the fourth.
  * `null` when no quarter can be told.
  */
+/** The employer's n-th extra payment: the first is a 13th, the third a 15th. */
+const extraPayment = (payslip: AppliedPayslip, number: number) =>
+  payslip.kind === "extra" && payslip.extraNumber === number;
+
 export function competenceOf(payslip: AppliedPayslip): CompetenceInput | null {
   const quarter =
     payslip.period !== null
       ? quarterOfMonth(payslip.period)
-      : payslip.type === "thirteenth"
+      : extraPayment(payslip, 1)
         ? 4
         : payslip.printedOn !== null && payslip.printedOn.startsWith(String(payslip.year))
           ? quarterOfMonth(payslip.printedOn)
-          : payslip.type === "fifteenth"
+          : extraPayment(payslip, 3)
             ? 4
             : null;
   if (quarter === null) return null;
@@ -63,6 +70,8 @@ export function competenceOf(payslip: AppliedPayslip): CompetenceInput | null {
     payslipId: payslip.payslipId,
     payrollPeriod: payslip.period,
     payslipType: payslip.type,
+    kind: payslip.kind,
+    extraNumber: payslip.extraNumber,
     year: payslip.year,
     quarter,
     workerCents: payslip.workerCents,

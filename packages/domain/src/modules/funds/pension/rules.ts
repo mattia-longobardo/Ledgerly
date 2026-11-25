@@ -95,6 +95,8 @@ export interface CompetenceInput {
   /** The month paid (1st of the month); `null` for a 13th. */
   payrollPeriod: CivilDate | null;
   payslipType: string;
+  kind: string;
+  extraNumber: number | null;
   year: number;
   quarter: Quarter;
   workerCents: Cents | null;
