@@ -259,3 +259,74 @@ export const createDefaultGroups = defineRoute({
   errors: TRANSACTION_ERRORS,
   example: { body: { keys: ["food_drinks"] }, response: { count: 4 } },
 });
+
+/** The selector of a movement's category (PERS-634, decision 14A): the cascade's answer and the top three. */
+const categorySuggestions = z.object({
+  /** Automatic or suggested; a group — a category with no parent — when the sub-category is uncertain. */
+  categoryId: id().nullable(),
+  /** The three likeliest categories of the movement's kind, the likeliest first: the selector's top. */
+  top: z.array(id()).max(3),
+});
+
+export const getCategorySuggestions = defineRoute({
+  id: "get_category_suggestions",
+  method: "GET",
+  path: "/transactions/{id}/category-suggestions",
+  scope: "read",
+  capability: "transactions",
+  summary:
+    "What the category selector of a movement puts first: the cascade's answer (a group when the " +
+    "sub-category is uncertain) and the three likeliest categories. Nothing is learnt or written. A " +
+    "giroconto, or another person's movement, is `not_found`.",
+  actions: [],
+  params: byTransaction,
+  response: categorySuggestions,
+  errors: ["invalid", "not_found"],
+  example: {
+    params: { id: TRANSACTION_ID },
+    response: { categoryId: CATEGORY_ID, top: [CATEGORY_ID] },
+  },
+});
+
+/** The largest export of labels the import reads. */
+export const LABELS_MAX_BYTES = 5 * 1024 * 1024;
+
+export const importCategoryLabels = defineRoute({
+  id: "import_category_labels",
+  method: "POST",
+  path: "/categories/labels",
+  scope: "write",
+  capability: "transactions",
+  summary:
+    "Reads the CSV export of the app the person used before (`multipart/form-data`: `file`; the header " +
+    "names `category`, `amount`, `type`, `note`, `date`, `transfer` and `payee`) as labels the automatic categories " +
+    "learn from: each categorised row, under the person's category of the same name and sign. No " +
+    "movement is written; giroconti, the export's «Unknown» and a row already a movement here (same sign " +
+    "and amount within 3 days) are left out. A new import replaces the last; the model is trained " +
+    "again after the answer. `invalid` with `reason` `columns` for another file; `too_large` past " +
+    "5 MiB or 20,000 rows (`reason` `too_many_rows`).",
+  actions: [],
+  bodyFormat: "multipart",
+  body: z.object({ file: z.file() }),
+  response: z.object({
+    imported: z.number().int(),
+    transfers: z.number().int(),
+    unknown: z.number().int(),
+    unreadable: z.number().int(),
+    unmapped: z.number().int(),
+    duplicates: z.number().int(),
+  }),
+  errors: ["invalid", "too_large"],
+  example: {
+    body: {
+      file: new File(
+        [
+          "account;category;currency;amount;ref_currency_amount;type;payment_type;note;date;transfer;payee;labels\n",
+        ],
+        "records.csv",
+        { type: "text/csv" },
+      ),
+    },
+    response: { imported: 1, transfers: 0, unknown: 0, unreadable: 0, unmapped: 0, duplicates: 0 },
+  },
+});

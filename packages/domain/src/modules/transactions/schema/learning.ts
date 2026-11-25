@@ -1,5 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -52,11 +55,45 @@ export const categoryModels = pgTable("category_models", {
   labelledThrough: moment("labelled_through"),
   automaticThreshold: real("automatic_threshold"),
   suggestionThreshold: real("suggestion_threshold"),
+  /** PERS-634: the least confidence at which a group is suggested, when the sub-category is not. */
+  groupThreshold: real("group_threshold"),
   model: jsonb("model"),
   preparing: boolean("preparing").notNull().default(false),
   trainedAt: moment("trained_at"),
   updatedAt: updatedAtColumn(),
 });
+
+/**
+ * Labels with no movement (PERS-634, decision 13A): a category a person gave a text somewhere else
+ * — the export of the app they kept their money in before — that the classifier and the memory learn from like a
+ * confirmed movement. No movement, no balance and no total is ever made from one. A new import of
+ * a source replaces its rows.
+ */
+export const categoryLabels = pgTable(
+  "category_labels",
+  {
+    id: idColumn(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Where the labels came from: `export`, the only one today. */
+    source: text("source").notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"income" | "expense">().notNull(),
+    payee: text("payee"),
+    note: text("note"),
+    /** Signed as a movement's: an expense is negative. */
+    amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
+    occurredAt: moment("occurred_at").notNull(),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    index("category_labels_user_idx").on(table.userId, table.source),
+    check("category_labels_kind_ck", sql`${table.kind} in ('income', 'expense')`),
+  ],
+);
 
 /** The category a person made from a default group: what a static table points at for them. */
 export const categoryGroupMarks = pgTable(

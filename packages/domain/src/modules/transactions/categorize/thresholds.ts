@@ -133,3 +133,18 @@ export function measure(
     coverage: taken.length / trials.length,
   };
 }
+
+/** The precision a suggested group has to have: it stands in for a sub-category nobody could tell. */
+const GROUP_PRECISION = 0.9;
+
+/**
+ * The threshold of the group suggested when the sub-category is uncertain (PERS-634, decision 14A),
+ * from the same predictions out of sample read at the level of the group. `null`: no group is
+ * suggested.
+ */
+export function groupThresholdFor(trials: readonly Trial[]): number | null {
+  return thresholdFor(
+    trials.flatMap((trial) => (trial.group === undefined ? [] : [trial.group])),
+    GROUP_PRECISION,
+  );
+}

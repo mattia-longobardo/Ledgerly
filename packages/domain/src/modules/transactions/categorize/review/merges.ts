@@ -8,6 +8,7 @@ import type { UiLocale } from "../../../../platform/format";
 import {
   categories,
   categoryGroupMarks,
+  categoryLabels,
   categoryMemory,
   categoryMergeDismissals,
   transactions,
@@ -231,6 +232,12 @@ export async function mergeCategories(
     .set({ suggestedCategoryId: keepId })
     .where(and(userScoped(ctx).owns(transactions), eq(transactions.suggestedCategoryId, dropId)))
     .returning({ id: transactions.id });
+  // The labels imported with no movement (PERS-634) follow, or the training would lose them. An undo
+  // of the merge leaves them on the kept category.
+  await tx
+    .update(categoryLabels)
+    .set({ categoryId: keepId })
+    .where(and(userScoped(ctx).owns(categoryLabels), eq(categoryLabels.categoryId, dropId)));
   // The memory is rewritten at the next training; until then what it knew of the one is the other's.
   await tx
     .delete(categoryMemory)

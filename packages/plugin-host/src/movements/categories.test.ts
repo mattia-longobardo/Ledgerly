@@ -291,7 +291,7 @@ describe("planCategorySync", () => {
     expect(plan.create).toEqual([]);
   });
 
-  it("never changes a type: Wallet filing it as a transfer is reported, not applied", () => {
+  it("leaves Wallet's Transfer alone: no category here, nothing reported, nothing added", () => {
     const plan = planHere(
       [
         group(),
@@ -303,19 +303,15 @@ describe("planCategorySync", () => {
           providerName: "Giroconto",
         }),
       ],
-      [remote({ externalId: "wc-1", name: "Giroconto", transfer: true })],
+      [
+        remote({ externalId: "wc-1", name: "Trasferimento", transfer: true }),
+        remote({ externalId: "wc-2", name: "Transfer", transfer: true }),
+      ],
     );
-    expect(plan.cases).toEqual([
-      {
-        kind: "type_mismatch",
-        categoryId: "cat-1",
-        externalId: "wc-1",
-        local: "expense",
-        remote: "transfer",
-      },
-    ]);
+    expect(plan.cases).toEqual([]);
     expect(plan.adopt).toEqual([]);
     expect(plan.push).toEqual([]);
+    expect(plan.add).toEqual([]);
   });
 
   it("keeps the local name when Wallet's does not fit this app's column", () => {

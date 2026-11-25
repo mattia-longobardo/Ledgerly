@@ -11,7 +11,7 @@
       "updated": 0,
       "skipped": 0,
       "removed": 0,
-      "categoriesAdded": 5,
+      "categoriesAdded": 4,
       "categoriesAdopted": 0,
       "categoriesPushed": 0,
       "categoriesCreated": 0,
@@ -650,7 +650,7 @@
       "currency": "EUR",
       "type": "income",
       "state": "cleared",
-      "category_id": "categories#6",
+      "category_id": "categories#5",
       "payee": "ACME",
       "note": "premio",
       "transfer_group_id": null,
@@ -674,7 +674,7 @@
       "category_key": null,
       "send_state": null,
       "send_asked_on": null,
-      "source_category_id": "source_categories#3",
+      "source_category_id": "source_categories#2",
       "category_rule_id": null,
       "time_known": true,
       "transfer_outside": false,
@@ -713,7 +713,7 @@
       "category_key": null,
       "send_state": null,
       "send_asked_on": null,
-      "source_category_id": "source_categories#1",
+      "source_category_id": null,
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
@@ -791,7 +791,7 @@
       "category_key": null,
       "send_state": null,
       "send_asked_on": null,
-      "source_category_id": "source_categories#4",
+      "source_category_id": null,
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
@@ -884,7 +884,7 @@
       "currency": "EUR",
       "type": "expense",
       "state": "cleared",
-      "category_id": "categories#5",
+      "category_id": "categories#4",
       "payee": "Panificio Rossi",
       "note": "pane e latte",
       "transfer_group_id": null,
@@ -908,7 +908,7 @@
       "category_key": null,
       "send_state": null,
       "send_asked_on": null,
-      "source_category_id": "source_categories#2",
+      "source_category_id": "source_categories#1",
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
@@ -1025,7 +1025,7 @@
       "category_key": null,
       "send_state": null,
       "send_asked_on": null,
-      "source_category_id": "source_categories#5",
+      "source_category_id": "source_categories#3",
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
@@ -1242,22 +1242,6 @@
     {
       "id": "categories#3",
       "user_id": "user",
-      "name": "Giroconto",
-      "type": "expense",
-      "color": null,
-      "archived_at": null,
-      "created_at": "<now>",
-      "updated_at": "<now>",
-      "parent_id": null,
-      "is_root": true,
-      "parent_is_root": null,
-      "parent_set_locally": false,
-      "locally_edited": [],
-      "provider_name": "Giroconto"
-    },
-    {
-      "id": "categories#4",
-      "user_id": "user",
       "name": "Lavoro",
       "type": "expense",
       "color": null,
@@ -1272,7 +1256,7 @@
       "provider_name": "Lavoro"
     },
     {
-      "id": "categories#5",
+      "id": "categories#4",
       "user_id": "user",
       "name": "Spesa",
       "type": "expense",
@@ -1288,7 +1272,7 @@
       "provider_name": "Spesa"
     },
     {
-      "id": "categories#6",
+      "id": "categories#5",
       "user_id": "user",
       "name": "Stipendio",
       "type": "expense",
@@ -1296,28 +1280,12 @@
       "archived_at": null,
       "created_at": "<now>",
       "updated_at": "<now>",
-      "parent_id": "categories#4",
+      "parent_id": "categories#3",
       "is_root": false,
       "parent_is_root": true,
       "parent_set_locally": false,
       "locally_edited": [],
       "provider_name": "Stipendio"
-    },
-    {
-      "id": "categories#7",
-      "user_id": "user",
-      "name": "Trasferimento",
-      "type": "expense",
-      "color": null,
-      "archived_at": null,
-      "created_at": "<now>",
-      "updated_at": "<now>",
-      "parent_id": null,
-      "is_root": true,
-      "parent_is_root": null,
-      "parent_set_locally": false,
-      "locally_edited": [],
-      "provider_name": "Trasferimento"
     }
   ],
   "source_categories": [
@@ -1338,11 +1306,11 @@
       "id": "source_categories#1",
       "user_id": "user",
       "provider": "plugin:wallet",
-      "external_id": "wc-giro",
-      "name": "Giroconto",
-      "group_name": null,
-      "category_id": "categories#3",
-      "added_category_id": "categories#3",
+      "external_id": "wc-groceries",
+      "name": "Spesa",
+      "group_name": "Casa",
+      "category_id": "categories#4",
+      "added_category_id": "categories#4",
       "seen_at": null,
       "created_at": "<now>",
       "updated_at": "<now>"
@@ -1351,9 +1319,9 @@
       "id": "source_categories#2",
       "user_id": "user",
       "provider": "plugin:wallet",
-      "external_id": "wc-groceries",
-      "name": "Spesa",
-      "group_name": "Casa",
+      "external_id": "wc-salary",
+      "name": "Stipendio",
+      "group_name": "Lavoro",
       "category_id": "categories#5",
       "added_category_id": "categories#5",
       "seen_at": null,
@@ -1362,32 +1330,6 @@
     },
     {
       "id": "source_categories#3",
-      "user_id": "user",
-      "provider": "plugin:wallet",
-      "external_id": "wc-salary",
-      "name": "Stipendio",
-      "group_name": "Lavoro",
-      "category_id": "categories#6",
-      "added_category_id": "categories#6",
-      "seen_at": null,
-      "created_at": "<now>",
-      "updated_at": "<now>"
-    },
-    {
-      "id": "source_categories#4",
-      "user_id": "user",
-      "provider": "plugin:wallet",
-      "external_id": "wc-transfer",
-      "name": "Trasferimento",
-      "group_name": null,
-      "category_id": "categories#7",
-      "added_category_id": "categories#7",
-      "seen_at": null,
-      "created_at": "<now>",
-      "updated_at": "<now>"
-    },
-    {
-      "id": "source_categories#5",
       "user_id": "user",
       "provider": "plugin:wallet",
       "external_id": "wc-unsorted",
@@ -1420,7 +1362,7 @@
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "category_group",
-      "entity_id": "categories#4",
+      "entity_id": "categories#3",
       "external_id": "wcg-lavoro",
       "metadata": null,
       "first_seen_at": "<now>",
@@ -1448,8 +1390,8 @@
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "category",
-      "entity_id": "categories#3",
-      "external_id": "wc-giro",
+      "entity_id": "categories#4",
+      "external_id": "wc-groceries",
       "metadata": null,
       "first_seen_at": "<now>",
       "last_seen_at": "<now>",
@@ -1463,20 +1405,6 @@
       "provider": "plugin:wallet",
       "entity_type": "category",
       "entity_id": "categories#5",
-      "external_id": "wc-groceries",
-      "metadata": null,
-      "first_seen_at": "<now>",
-      "last_seen_at": "<now>",
-      "missing_since": null,
-      "created_at": "<now>",
-      "updated_at": "<now>"
-    },
-    {
-      "id": "provider_links#5",
-      "user_id": "user",
-      "provider": "plugin:wallet",
-      "entity_type": "category",
-      "entity_id": "categories#6",
       "external_id": "wc-salary",
       "metadata": null,
       "first_seen_at": "<now>",
@@ -1486,21 +1414,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#6",
-      "user_id": "user",
-      "provider": "plugin:wallet",
-      "entity_type": "category",
-      "entity_id": "categories#7",
-      "external_id": "wc-transfer",
-      "metadata": null,
-      "first_seen_at": "<now>",
-      "last_seen_at": "<now>",
-      "missing_since": null,
-      "created_at": "<now>",
-      "updated_at": "<now>"
-    },
-    {
-      "id": "provider_links#7",
+      "id": "provider_links#5",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "category",
@@ -1514,7 +1428,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#8",
+      "id": "provider_links#6",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1528,7 +1442,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#9",
+      "id": "provider_links#7",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1542,7 +1456,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#10",
+      "id": "provider_links#8",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1556,7 +1470,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#11",
+      "id": "provider_links#9",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1570,7 +1484,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#12",
+      "id": "provider_links#10",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1584,7 +1498,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#13",
+      "id": "provider_links#11",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1598,7 +1512,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#14",
+      "id": "provider_links#12",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1612,7 +1526,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#15",
+      "id": "provider_links#13",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1626,7 +1540,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#16",
+      "id": "provider_links#14",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1640,7 +1554,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#17",
+      "id": "provider_links#15",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1654,7 +1568,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#18",
+      "id": "provider_links#16",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1668,7 +1582,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#19",
+      "id": "provider_links#17",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1682,7 +1596,7 @@
       "updated_at": "<now>"
     },
     {
-      "id": "provider_links#20",
+      "id": "provider_links#18",
       "user_id": "user",
       "provider": "plugin:wallet",
       "entity_type": "transaction",
@@ -1790,7 +1704,7 @@
         "removed": 0,
         "skipped": 0,
         "updated": 0,
-        "categoriesAdded": 5,
+        "categoriesAdded": 4,
         "categoriesPushed": 0,
         "categoriesAdopted": 0,
         "categoriesCreated": 0,
