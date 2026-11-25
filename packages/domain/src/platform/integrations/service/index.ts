@@ -20,6 +20,8 @@ export type { DueConnection } from "./schedule";
 export {
   lastMovementChangeAt,
   recordRun,
+  holdingRun,
+  isRunClosed,
   finishRun,
   skipRun,
   listRuns,
@@ -42,6 +44,7 @@ export {
   saveSyncJob,
   sourceSkippedIds,
   stopReadings,
+  holdReadings,
   changeSourceSkippedIds,
   skippedAccounts,
   saveSkippedAccounts,

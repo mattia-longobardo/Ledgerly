@@ -19,6 +19,8 @@
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   finishRun,
+  holdingRun,
+  isRunClosed,
   markConnection,
   PLUGIN_KINDS,
   recordRun,
@@ -188,7 +190,9 @@ async function runKind(
   const { ctx, connection, now } = input;
   const run = await recordRun(ctx, { connectionId: connection.id, kind });
   try {
-    const { counts, sendFailure } = await passKind(input, kind, carried);
+    // The pass reads and writes in turn: it holds its run all along, so a reading stopped
+    // meanwhile, or whose source was turned off, writes nothing (SEC-08).
+    const { counts, sendFailure } = await holdingRun(ctx, run.id, () => passKind(input, kind, carried));
     if (kind === "accounts" || kind === "transactions") result[kind] = counts;
     // A connection that failed while sending fails the pass of the movements, with what it read.
     if (sendFailure === undefined) await finishRun(ctx, run.id, { counts }, now);
@@ -199,6 +203,8 @@ async function runKind(
     if (kind === "transactions") await movementsSink().rebuildDerivedBalances(ctx);
     return { failure: sendFailure, refused: false };
   } catch (error) {
+    // Stopped by «Stop the reading», or gone with its source: the run is closed already.
+    if (isRunClosed(error)) return { failure: error, refused: false };
     const message = describeError(error);
     // A refused verdict still imported everything it read: the run says so, and says why.
     const counts = error instanceof RemovalRefusedError ? error.counts : {};

@@ -24,11 +24,12 @@ import { sourceCategoryCount } from "@domain/modules/transactions/source-categor
 import type { Ctx } from "@domain/platform/context";
 import { addDays } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
-import { sourceSettings, sourceSkippedAccounts } from "@domain/platform/integrations/schema";
+import { sourceSettings, sourceSkippedAccounts, syncRuns } from "@domain/platform/integrations/schema";
 import { pluginActivations } from "@domain/platform/plugins/schema";
 import {
   deletedSourceAccounts,
   deleteConnection,
+  holdingRun,
   listConnections,
   recordRun,
   saveConnection,
@@ -466,6 +467,90 @@ describe("Turn off a bank's plugin", () => {
     ]);
     expect(await movementCount()).toBe(movements);
   });
+
+  it("a reading stopped by «Stop the reading and deactivate» writes nothing after the conversion (SEC-08)", async () => {
+    const plugin = fakePlugin();
+    await refreshManifests(BANK_NOW, plugin.deps);
+    const connectionId = await bankAccess(ctx, plugin);
+    const target = { pluginId: PLUGIN, connectionId };
+    const decision = { providerAccountId: "hash-1", currency: "EUR" };
+    await chooseAccounts(
+      ctx,
+      { ...target, decisions: [{ ...decision, target: { kind: "new", name: "Zeta", type: "checking" } }] },
+      bankSink,
+      BANK_NOW,
+    );
+    // The reading waits at the bank, as one that hangs, until the turn-off is over.
+    let atBank!: () => void;
+    let release!: () => void;
+    const reached = new Promise<void>((resolve) => (atBank = resolve));
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const fetchFn: typeof fetch = async (input, init) => {
+      if (String(input).endsWith(PLUGIN_PATHS.sync)) {
+        atBank();
+        await held;
+      }
+      return plugin.deps.fetchFn(input, init);
+    };
+    const reading = readBank(ctx, { ...target, presence: null }, bankSink, BANK_NOW, { fetchFn }).catch(
+      (error: unknown) => error,
+    );
+    await reached;
+    const now = new Date();
+    await getDb()
+      .update(syncRuns)
+      .set({ startedAt: new Date(now.getTime() - 20 * 60_000) });
+    const source = (await sourceOf(ctx, PLUGIN))!;
+    expect(
+      await deactivateSource(ctx, source, { ...deps, plugin: plugin.deps, stopReading: true }, now),
+    ).toEqual({
+      accounts: 1,
+    });
+    const converted = await listAccounts(ctx, { includeArchived: true });
+
+    release();
+    await reading;
+    // The account stays as the conversion left it, with no movement of the stopped reading.
+    expect(await movementCount()).toBe(0);
+    expect(await listAccounts(ctx, { includeArchived: true })).toEqual(converted);
+  });
+
+  // 20 minutes: refused before the conversion; 2 hours, an orphan for the checks before it: by
+  // the transaction itself.
+  it.each([20, 120])(
+    "a reading that is writing since %i minutes is not stopped: «Turn off» refuses at once and changes nothing (SEC-08)",
+    async (minutes) => {
+      const plugin = fakePlugin();
+      await refreshManifests(BANK_NOW, plugin.deps);
+      const connectionId = await bankAccess(ctx, plugin);
+      const run = await recordRun(ctx, { connectionId, kind: "transactions" });
+      const now = new Date();
+      await getDb()
+        .update(syncRuns)
+        .set({ startedAt: new Date(now.getTime() - minutes * 60_000) });
+      let writing!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => (writing = resolve));
+      const held = holdingRun(ctx, run.id, () => {
+        writing();
+        return new Promise<void>((resolve) => (release = resolve));
+      });
+      await started;
+      const source = (await sourceOf(ctx, PLUGIN))!;
+      const refused = await deactivateSource(
+        ctx,
+        source,
+        { ...deps, plugin: plugin.deps, stopReading: true },
+        now,
+      ).catch((error: unknown) => error);
+      release();
+      await held;
+      expect(refused).toBeInstanceOf(DeactivateError);
+      expect((refused as DeactivateError).refusal?.reason).toBe("reading_in_progress");
+      expect(await isPluginActive(ctx, PLUGIN)).toBe(true);
+      expect((await listConnections(ctx)).map((one) => one.id)).toEqual([connectionId]);
+    },
+  );
 
   it("an account of the bank deleted here is listed for Bring back and does not come back by itself", async () => {
     const plugin = fakePlugin();

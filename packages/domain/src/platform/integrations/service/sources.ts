@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, notInArray } from "drizzle-orm";
 import type { Ctx } from "../../context";
 import { getDb, type Tx } from "../../db/client";
 import { userScoped } from "../../db/scope";
@@ -276,12 +276,65 @@ export async function stopReadings(
   now: Date = new Date(),
 ): Promise<number> {
   if (connectionIds.length === 0) return 0;
+  // A reading that is writing holds its run (`holdingRun`): it is alive, so it is not stopped and
+  // "Turn off" still waits for it (SEC-08). The others are stopped without waiting for anyone.
+  const free = getDb()
+    .select({ id: syncRuns.id })
+    .from(syncRuns)
+    .where(and(runningRunsOf(ctx, connectionIds), lt(syncRuns.startedAt, before)))
+    .for("update", { skipLocked: true });
   const rows = await getDb()
     .update(syncRuns)
     .set({ state: "failed", finishedAt: now })
-    .where(and(runningRunsOf(ctx, connectionIds), lt(syncRuns.startedAt, before)))
+    .where(inArray(syncRuns.id, free))
     .returning({ id: syncRuns.id });
   return rows.length;
+}
+
+/**
+ * Inside the transaction of "Turn off" (SEC-08): holds the connections and their running runs
+ * until it ends, so no reading writes the source's rows while they are converted. A reading that
+ * starts to write waits for the end, and then finds its run gone with the connection. Returns
+ * when the reading that is writing now started, or `null` when none is: "Turn off" waits for it.
+ */
+export async function holdReadings(
+  trx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  connectionIds: readonly string[],
+): Promise<Date | null> {
+  if (connectionIds.length === 0) return null;
+  await trx
+    .select({ id: integrationConnections.id })
+    .from(integrationConnections)
+    .where(
+      and(
+        inArray(integrationConnections.id, [...connectionIds]),
+        userScoped(ctx).owns(integrationConnections),
+      ),
+    )
+    .for("update");
+  const free = await trx
+    .select({ id: syncRuns.id })
+    .from(syncRuns)
+    .where(runningRunsOf(ctx, connectionIds))
+    .for("update", { skipLocked: true });
+  const [writing] = await trx
+    .select({ startedAt: syncRuns.startedAt })
+    .from(syncRuns)
+    .where(
+      and(
+        runningRunsOf(ctx, connectionIds),
+        free.length === 0
+          ? undefined
+          : notInArray(
+              syncRuns.id,
+              free.map((one) => one.id),
+            ),
+      ),
+    )
+    .orderBy(asc(syncRuns.startedAt))
+    .limit(1);
+  return writing?.startedAt ?? null;
 }
 
 /**
