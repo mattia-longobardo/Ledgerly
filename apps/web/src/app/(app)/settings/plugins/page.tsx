@@ -55,18 +55,7 @@ export async function generateMetadata({ params }: IntegrationsProps): Promise<M
 
 const INTEGRATIONS = "/settings/plugins";
 
-type PluginKind = "bank" | "source" | "calendar";
-
-/**
- * What a plugin reads, in the words of the runs (`settings.integrations.kinds`), from what
- * `GET /plugins` says it is (UX review, point 6). shortcut: by `kind`, not by the manifest; a
- * plugin that reads something else needs the manifest's list in `GET /plugins` (server).
- */
-const READS: Record<PluginKind, readonly ("accounts" | "transactions" | "leave")[]> = {
-  bank: ["accounts", "transactions"],
-  source: ["accounts", "transactions"],
-  calendar: ["leave"],
-};
+type Plugin = NonNullable<Awaited<ReturnType<typeof pluginsOf>>>["plugins"][number];
 
 /**
  * Settings › Integrations (ux/n2-connection-status.md, plugin-settings.md §2): the list has one
@@ -87,7 +76,8 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   const ctx = await requireSession();
   const { source } = await params;
   const t = await getTranslations("settings.integrations");
-  const readsOf = (kind: PluginKind) => READS[kind].map((one) => t(`kinds.${one}`));
+  /** What a plugin reads, from its manifest (`GET /plugins` `kinds`), in the words of the runs. */
+  const readsOf = (one: Plugin) => one.kinds.map((kind) => t(`kinds.${kind}`));
   const text = await getTranslations("settings.connections");
   const plugin = await getTranslations("settings.plugin");
   const day = (instant: string) =>
@@ -374,7 +364,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                 status={row.status.value}
                 summary={row.detail}
                 href={hrefOf(one.id)}
-                reads={readsOf(one.kind)}
+                reads={readsOf(one)}
               />
             </li>
           ))}
@@ -391,7 +381,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                   status={activeStatus.get(one.id) ?? "absent"}
                   summary={one.description}
                   href={hrefOf(one.id)}
-                  reads={readsOf(one.kind)}
+                  reads={readsOf(one)}
                 />
               ) : (
                 <>
@@ -403,7 +393,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                     pausedSince={one.pausedSince ? day(one.pausedSince) : null}
                     hasCredentials={one.credentials.saved}
                     connections={one.connections}
-                    reads={<SourceReads reads={readsOf(one.kind)} />}
+                    reads={<SourceReads reads={readsOf(one)} />}
                   />
                   {(pausedRows.get(one.id) ?? []).length > 0 && (
                     <ul className="flex flex-col">

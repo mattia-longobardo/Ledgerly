@@ -66,7 +66,7 @@ test.describe("the rows of the connections", () => {
         // Read only by hand: «Manual only», not «Paused» (UX review, point 2).
         await expect(sources.filter({ hasText: "Trek" })).toHaveAttribute("data-status", "manual");
         await expect(sources.filter({ hasText: "Wallet" })).toHaveAttribute("data-status", "manual");
-        // What each source reads, from its kind (point 6).
+        // What each source reads, from `kinds` of `GET /plugins` (point 6).
         await expect(sources.filter({ hasText: "Trek" }).getByTestId("source-reads")).toHaveText(
           "Leave days",
         );
