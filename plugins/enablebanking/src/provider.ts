@@ -182,6 +182,8 @@ export function createProvider(applicationId: string, key: KeyObject, fetchFn: F
           ...request.headers,
         },
         body: request.body === undefined ? undefined : JSON.stringify(request.body),
+        // A redirect would leave the egress proxy for the plugins' network (SEC-05).
+        redirect: "error",
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch {

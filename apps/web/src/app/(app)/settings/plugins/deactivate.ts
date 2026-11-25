@@ -16,6 +16,7 @@ import { isBankPlugin, pluginProvider } from "@ledgerly/domain/platform/integrat
 import { countTransactions } from "@ledgerly/domain/transactions";
 import {
   forgetSource,
+  holdReadings,
   listConnections,
   runningSince,
   stopReadings,
@@ -237,6 +238,10 @@ export async function deactivateSource(
       : await prepareAccessClosing(ctx, source.pluginId, deps.plugin, { force: deps.force === true });
 
   const released = await getDb().transaction(async (tx) => {
+    // A reading that is writing now (one «Stop the reading» left alone) refuses, and undoes nothing.
+    const writing = await holdReadings(tx, ctx, ids);
+    if (writing !== null)
+      throw new DeactivateError("failed", { reason: "reading_in_progress", startedAt: writing });
     const accounts = await releaseSourceAccounts(tx, ctx, source.provider, now);
     const accountIds = accounts.map((account) => account.id);
     await stopPublishingOnAccounts(tx, ctx, accountIds);

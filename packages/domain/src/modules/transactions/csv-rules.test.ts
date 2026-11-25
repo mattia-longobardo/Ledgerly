@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { csvMapSchema } from "@ledgerly/api-contract";
+import { csvDocument } from "@ledgerly/format/csv";
 import { type CsvMap, csvRows, decodeText, detectDelimiter, parseRecords, proposeMap } from "./rules/csv";
 import { detectDateFormat, detectDecimal, parseAmountCell, parseDateCell } from "./rules/csv/values";
 
@@ -211,5 +212,25 @@ describe("the rows as movements", () => {
     expect(
       "movement" in row && [row.movement.payee?.length, row.movement.note?.length, row.movement.category],
     ).toEqual([255, 2000, "Food"]);
+  });
+
+  it("reads back a file of the export as it left: the quote before a formula's start is not the text (SEC-07)", () => {
+    const file = csvDocument(
+      ["Data", "Descrizione", "Importo"],
+      [
+        ["14/10/2026", '=HYPERLINK("http://x")', "-1,50"],
+        ["15/10/2026", "-Bar", "+2,00"],
+      ],
+    );
+    expect(file).toContain("'=HYPERLINK");
+    const rows = rowsOf(decodeText(new TextEncoder().encode(file)));
+    expect(
+      rows.map(
+        (row) => "movement" in row && [row.movement.payee, row.movement.kind, row.movement.amountCents],
+      ),
+    ).toEqual([
+      ['=HYPERLINK("http://x")', "expense", 150n],
+      ["-Bar", "income", 200n],
+    ]);
   });
 });

@@ -3,7 +3,7 @@
     {
       "id": "enablebanking",
       "image": "ledgerly-plugin-enablebanking",
-      "digest": "sha256:271229c599561a3f820193f2012c9344bacc589993a0e266d15af4ec383e04d6",
+      "digest": "sha256:9c3ad0f109640d4e956c28eb3ebdc55af2c462b8951759c04321aad5acac3780",
       "egress": ["api.enablebanking.com"]
     },
     {
@@ -15,14 +15,14 @@
     {
       "id": "trek",
       "image": "ledgerly-plugin-trek",
-      "digest": "sha256:dbac403e171b5ec036da172f3a1ba9a653748d76b0cb311a17d20cebd3bcc0f4",
+      "digest": "sha256:46cfa2f424cfa21917065f997dfc0b86204c4aece26a1f1a0ca605047e88fd86",
       "egress": [],
       "dynamicHost": { "credential": "baseUrl" }
     },
     {
       "id": "wallet",
       "image": "ledgerly-plugin-wallet",
-      "digest": "sha256:09daf4b5c601254634cf4fddd289ea1eadc2c45868ed3043d2f92a20e675a293",
+      "digest": "sha256:6c709d8e51970a9efd333d00d9765288991612b084ab2eb4b27d3540d81ca230",
       "egress": ["rest.budgetbakers.com"]
     }
   ]

@@ -16,6 +16,8 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
   finishRun,
+  holdingRun,
+  isRunClosed,
   markConnection,
   readSyncJob,
   recordRun,
@@ -371,9 +373,13 @@ async function calendarPass(
   const run = await recordRun(ctx, { connectionId: connection.id, kind: "leave" });
   try {
     const calls = options.calls ?? (await connectionCalendar(ctx, connection));
-    // What `/verify` or an earlier pass found: a calendar that takes no writes is only read.
-    const pass = await passYears(ctx, calls, years, { now, readOnly: connection.errorCode === READ_ONLY });
-    const figures = await readFigures(ctx, connection, calls, { year: years.at(-1) ?? years[0], now });
+    // Held all along: a pass stopped meanwhile, or whose source was turned off, writes nothing (SEC-08).
+    const { pass, figures } = await holdingRun(ctx, run.id, async () => {
+      // What `/verify` or an earlier pass found: a calendar that takes no writes is only read.
+      const pass = await passYears(ctx, calls, years, { now, readOnly: connection.errorCode === READ_ONLY });
+      const figures = await readFigures(ctx, connection, calls, { year: years.at(-1) ?? years[0], now });
+      return { pass, figures };
+    });
     const counts = countsOf(pass.outcomes, pass.readOnly);
     const error = runError(counts, pass.readOnly, await providerName(connection.provider));
     await finishRun(ctx, run.id, error === undefined ? { counts } : { counts, error }, now);
@@ -381,7 +387,8 @@ async function calendarPass(
     return { years, counts, figures, refused: null, conflicts };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await finishRun(ctx, run.id, { counts: {}, error: message, cause: error }, now);
+    // A run stopped by «Stop the reading», or gone with its source, is closed already.
+    if (!isRunClosed(error)) await finishRun(ctx, run.id, { counts: {}, error: message, cause: error }, now);
     if (isClientRefused(error)) await markConnection(ctx, connection.id, "revoked", message, now);
     throw error;
   }

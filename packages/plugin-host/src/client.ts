@@ -35,6 +35,27 @@ interface CallOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+/** The largest answer the core reads from a plugin (SEC-06); over it, the call fails closed. */
+export const MAX_ANSWER_BYTES = 10 * 1024 * 1024;
+
+/** The body as JSON, read until `MAX_ANSWER_BYTES` and no further: over it, it throws. */
+async function readJson(response: Response): Promise<unknown> {
+  if (Number(response.headers.get("content-length") ?? 0) > MAX_ANSWER_BYTES) {
+    await response.body?.cancel();
+    throw new Error("answer too large");
+  }
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for await (const chunk of response.body ?? []) {
+    size += chunk.byteLength;
+    if (size > MAX_ANSWER_BYTES) {
+      await response.body?.cancel();
+      throw new Error("answer too large");
+    }
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
 
 export async function callPlugin<T>(
   plugin: ConfiguredPlugin,
@@ -55,8 +76,10 @@ export async function callPlugin<T>(
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       cache: "no-store",
+      // A plugin answers itself: a redirect could send the core's secret elsewhere (SEC-05).
+      redirect: "error",
     });
-    json = await response.json();
+    json = await readJson(response);
   } catch {
     throw new PluginCallError("plugin_down");
   }

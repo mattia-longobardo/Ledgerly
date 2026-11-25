@@ -63,6 +63,35 @@ export async function recordRun(
 }
 
 /**
+ * Does `work` while the run is open, and holds the run until `work` ends (SEC-08): «Stop the
+ * reading» leaves it alone, and "Turn off" waits for it. A run already stopped, or gone with its
+ * connection, does nothing and throws `run_closed`: the reading writes nothing more. `work` must
+ * not close the run itself ({@link finishRun}), which would wait for this hold.
+ *
+ * shortcut: holds one connection of the pool while `work` writes through others; fine with the
+ * worker's 3 slots and a pool of 10, a lock of the session would be needed for many readings at once.
+ */
+export async function holdingRun<T>(
+  ctx: Pick<Ctx, "userId">,
+  runId: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  return getDb().transaction(async (trx) => {
+    const [run] = await trx
+      .select({ state: syncRuns.state })
+      .from(syncRuns)
+      .where(and(eq(syncRuns.id, runId), userScoped(ctx).owns(syncRuns)))
+      .for("share");
+    if (run?.state !== "running") throw new IntegrationError("run_closed");
+    return work();
+  });
+}
+
+/** Whether `error` says the reading's run was stopped or went with its connection ({@link holdingRun}). */
+export const isRunClosed = (error: unknown): boolean =>
+  error instanceof IntegrationError && error.code === "run_closed";
+
+/**
  * Closes the attempt {@link recordRun} opened, and with it everything that depends on the
  * attempt: the run's own row, the schedule of its `sync_jobs` entry, and the connection's health.
  * One transaction, no provider call inside it (spec §4.3) — the caller has already finished

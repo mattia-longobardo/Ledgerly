@@ -42,6 +42,8 @@ export {
   readSyncJob,
   recentRuns,
   recordRun,
+  holdingRun,
+  isRunClosed,
   rescheduleConnections,
   runningSince,
   saveConnection,
@@ -55,6 +57,7 @@ export {
   skippedAccounts,
   sourceSkippedIds,
   stopReadings,
+  holdReadings,
 } from "./service";
 export type { Connection, DueConnection, RecentRun } from "./service";
 export {

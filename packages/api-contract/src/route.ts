@@ -31,7 +31,7 @@ export interface RouteContract {
   status?: 200 | 201 | 202 | 204;
   /** A second success with the same body, and when it answers (a file already received: 200). */
   otherStatus?: { status: 200; when: string };
-  /** The codes of `errors.ts` the route answers with, besides `unauthorized`, `forbidden`, `rate_limited`. */
+  /** The codes of `errors.ts` the route answers with, besides `unauthorized`, `forbidden`, `rate_limited` and, with a body, `too_large`. */
   errors: readonly ApiErrorCode[];
   /**
    * A read that is also an MCP tool: its title and the sentence the model reads. `arguments` are the

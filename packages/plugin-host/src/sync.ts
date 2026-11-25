@@ -15,6 +15,8 @@ import {
   changeSourceSkippedIds,
   type Connection,
   finishRun,
+  holdingRun,
+  isRunClosed,
   markConnection,
   readCredentials,
   readSyncJob,
@@ -359,18 +361,9 @@ async function reading(
     );
   }
 
-  const written = await write(ctx, { connection, accounts, linked, batches }, sink, now);
-  // The bank gives the number of each account with the access: the domain keeps the IBANs (H39).
-  await sink.saveIbans(
-    ctx,
-    accounts.flatMap((account) => {
-      const local = linked.get(providerAccountIdOf(account));
-      return local ? [{ accountId: local.id, iban: account.identifier }] : [];
-    }),
-  );
-  const today = civilDateIn(now, ctx.timeZone);
   // The next reading starts from here only when this one read everything it asked for.
   const complete = cursor === null;
+  const today = civilDateIn(now, ctx.timeZone);
   // A reading of the fresh accounts alone moves nothing for the others: it only takes them off the
   // list, once it read everything it asked for.
   const cursorAfter: Record<string, string> | null =
@@ -385,7 +378,27 @@ async function reading(
         : coveredTo === null
           ? null
           : { coveredTo };
-  await saveSyncJob(ctx, connection.id, "transactions", { cursor: cursorAfter });
+  let written: Awaited<ReturnType<typeof write>>;
+  try {
+    // Written while the run is held: a reading stopped meanwhile, or whose source was turned off,
+    // writes nothing (SEC-08).
+    written = await holdingRun(ctx, run.id, async () => {
+      const done = await write(ctx, { connection, accounts, linked, batches }, sink, now);
+      // The bank gives the number of each account with the access: the domain keeps the IBANs (H39).
+      await sink.saveIbans(
+        ctx,
+        accounts.flatMap((account) => {
+          const local = linked.get(providerAccountIdOf(account));
+          return local ? [{ accountId: local.id, iban: account.identifier }] : [];
+        }),
+      );
+      await saveSyncJob(ctx, connection.id, "transactions", { cursor: cursorAfter });
+      return done;
+    });
+  } catch (error) {
+    if (isRunClosed(error)) return refusal("failed");
+    throw error;
+  }
   const counts = {
     created: written.created,
     updated: written.updated,
