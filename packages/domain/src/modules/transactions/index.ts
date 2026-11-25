@@ -22,6 +22,7 @@ export {
   isPreparing,
   measureCategories,
   suggestFor,
+  suggestionsFor,
   suggestionsForMovement,
 } from "./categorize/service";
 export { setEmbedder } from "./categorize/service";

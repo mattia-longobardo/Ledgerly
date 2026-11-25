@@ -1099,6 +1099,7 @@
     "spendingLayers",
     "spendingOverTime",
     "suggestFor",
+    "suggestionsFor",
     "suggestionsForMovement",
     "transactions",
     "transactionsByIds",

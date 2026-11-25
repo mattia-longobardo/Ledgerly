@@ -13,7 +13,7 @@ import { setCategory, upsertFromProvider } from "../service";
 import { listCategories } from "../taxonomy";
 import { createDefaultGroups } from "./review";
 import { importCategoryLabels } from "./labels";
-import { categorise, suggestFor, suggestionsForMovement } from "./service";
+import { categorise, suggestionsFor, suggestionsForMovement } from "./service";
 import { DEFAULT_GROUPS } from "./tables";
 
 // PERS-634: the labels of an export, and the cascade learning from every correction — the memory
@@ -223,7 +223,7 @@ describe("a correction (PERS-634, Mattia's condition on 15A)", () => {
       merchantCategoryCode: null,
       bankTransactionCode: null,
     };
-    const unseen = await suggestFor(ctx, probe);
+    const unseen = await suggestionsFor(ctx, probe);
     expect(unseen.top[0]).not.toBe(id("Fuel"));
 
     // A shop never seen, filed by the person under Fuel once.
@@ -236,7 +236,7 @@ describe("a correction (PERS-634, Mattia's condition on 15A)", () => {
     )[0];
     expect(after.version).toBe(before.version + 1);
     expect(after.examples).toBe(before.examples + 1);
-    const learnt = await suggestFor(ctx, probe);
+    const learnt = await suggestionsFor(ctx, probe);
     expect(learnt.top[0]).toBe(id("Fuel"));
     // The selector of the movement reads the same.
     expect((await suggestionsForMovement(ctx, first.id))?.top[0]).toBe(id("Fuel"));
