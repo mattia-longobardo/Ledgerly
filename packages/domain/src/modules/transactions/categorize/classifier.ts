@@ -238,13 +238,18 @@ interface Prediction {
   confidence: number;
 }
 
+/** The probability of each of the model's categories, in the order of `model.classes`. */
+function probabilitiesOf(model: Model, movement: MovementText, embedder: Embedder | null): Float64Array {
+  const dense = model.embedder === null ? null : denseOf(embedder, movement);
+  return softmax(scores(model, vectorOf(featureCounts(movement), model.idf, dense)));
+}
+
 /**
  * A model trained with an embedding model needs the same one: `embedder` must be it (the cascade
  * checks, `usableModel`). Without one it is ignored.
  */
 export function predict(model: Model, movement: MovementText, embedder: Embedder | null = null): Prediction {
-  const dense = model.embedder === null ? null : denseOf(embedder, movement);
-  const probabilities = softmax(scores(model, vectorOf(featureCounts(movement), model.idf, dense)));
+  const probabilities = probabilitiesOf(model, movement, embedder);
   let best = 0;
   for (let klass = 1; klass < probabilities.length; klass += 1) {
     if (probabilities[klass] > probabilities[best]) best = klass;
@@ -252,20 +257,47 @@ export function predict(model: Model, movement: MovementText, embedder: Embedder
   return { categoryId: model.classes[best], confidence: probabilities[best] };
 }
 
-/** Every category of the model, the likeliest first: what the measure's top-k reads (R6). */
+/** Every category of the model, the likeliest first: what the measure's top-k and the selector read. */
 export function ranked(model: Model, movement: MovementText, embedder: Embedder | null = null): string[] {
-  const dense = model.embedder === null ? null : denseOf(embedder, movement);
-  const probabilities = softmax(scores(model, vectorOf(featureCounts(movement), model.idf, dense)));
+  const probabilities = probabilitiesOf(model, movement, embedder);
   return model.classes
     .map((categoryId, klass) => ({ categoryId, probability: probabilities[klass] }))
     .sort((left, right) => right.probability - left.probability)
     .map((one) => one.categoryId);
 }
 
+/** The group of a category: its parent, or itself for a group; `undefined` for one not known. */
+type GroupOf = (categoryId: string) => string | undefined;
+
+/**
+ * The likeliest group (PERS-634, decision 14A): the probabilities of a group's categories summed,
+ * so a model unsure between two kinds of food can still be sure it is food.
+ */
+export function predictGroup(
+  model: Model,
+  movement: MovementText,
+  groupOf: GroupOf,
+  embedder: Embedder | null = null,
+): Prediction | null {
+  const probabilities = probabilitiesOf(model, movement, embedder);
+  const sums = new Map<string, number>();
+  model.classes.forEach((categoryId, klass) => {
+    const group = groupOf(categoryId);
+    if (group !== undefined) sums.set(group, (sums.get(group) ?? 0) + probabilities[klass]);
+  });
+  let best: Prediction | null = null;
+  for (const [categoryId, confidence] of sums) {
+    if (best === null || confidence > best.confidence) best = { categoryId, confidence };
+  }
+  return best;
+}
+
 /** A prediction made on an example the model did not see, and whether it was right. */
 export interface Trial {
   confidence: number;
   correct: boolean;
+  /** The same prediction at the level of the group, when the groups were given. */
+  group?: Trial;
 }
 
 const FOLDS = 5;
@@ -285,6 +317,7 @@ export const HOLD_OUT_FROM = 1_000;
 function* outOfSampleSteps(
   examples: readonly Example[],
   embedder: Embedder | null,
+  groupOf?: GroupOf,
 ): Generator<void, Trial[]> {
   const trials: Trial[] = [];
   const order = shuffled(examples.length, 7);
@@ -297,9 +330,18 @@ function* outOfSampleSteps(
     if (model === null) continue;
     for (const example of held) {
       const prediction = predict(model, example, embedder);
+      const group = groupOf === undefined ? null : predictGroup(model, example, groupOf, embedder);
       trials.push({
         confidence: prediction.confidence,
         correct: prediction.categoryId === example.categoryId,
+        ...(group === null
+          ? {}
+          : {
+              group: {
+                confidence: group.confidence,
+                correct: group.categoryId === groupOf?.(example.categoryId),
+              },
+            }),
       });
     }
     yield;
@@ -307,16 +349,21 @@ function* outOfSampleSteps(
   return trials;
 }
 
-export function outOfSample(examples: readonly Example[], embedder: Embedder | null = null): Trial[] {
-  return finish(outOfSampleSteps(examples, embedder));
+export function outOfSample(
+  examples: readonly Example[],
+  embedder: Embedder | null = null,
+  groupOf?: GroupOf,
+): Trial[] {
+  return finish(outOfSampleSteps(examples, embedder, groupOf));
 }
 
 /** {@link outOfSample}, in turns: what the server calls. */
 export function outOfSampleInTurns(
   examples: readonly Example[],
   embedder: Embedder | null = null,
+  groupOf?: GroupOf,
 ): Promise<Trial[]> {
-  return finishInTurns(outOfSampleSteps(examples, embedder));
+  return finishInTurns(outOfSampleSteps(examples, embedder, groupOf));
 }
 
 /* Storage */

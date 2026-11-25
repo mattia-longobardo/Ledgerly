@@ -52,6 +52,38 @@ export function memoryKey(
     .trim();
 }
 
+/**
+ * The words a bank writes around the merchant in the text of a payment (PERS-630: a median of 15
+ * words, most of them these): never what tells two shops apart. Generic words only, no shop.
+ */
+const BANK_WORDS = new Set(
+  (
+    "pagamento pagam pos carta card pfm mcc cod codice tramite presso effettuato mediante transazione " +
+    "abi pan ind ser alle ore il la lo le di del della dal da al su per con in e ed n nr num " +
+    "addebito diretto sdd bonifico sepa sct rif id favore ordinante beneficiario causale " +
+    "operazione acquisto payment purchase debit contactless online web eur euro"
+  ).split(" "),
+);
+/** How many words of the merchant the memory keeps: the name, not the town after it. */
+const MERCHANT_WORDS = 2;
+
+/**
+ * The key of the strict memory (PERS-634): the merchant, not the whole text. The first words of
+ * {@link memoryKey} that are not the bank's own (`BANK_WORDS`), a letter alone or a masked card
+ * number: two payments at one shop share it, whatever the bank wrote around them. A text with none
+ * of these keeps its whole key.
+ */
+export function merchantKey(
+  movement: Pick<MovementText, "payee" | "counterparty" | "rawText" | "note">,
+): string {
+  const whole = memoryKey(movement);
+  const words = whole
+    .split(" ")
+    .filter((word) => word.length > 1 && !BANK_WORDS.has(word) && !/^x+$/.test(word))
+    .slice(0, MERCHANT_WORDS);
+  return words.length === 0 ? whole : words.join(" ");
+}
+
 /** The size of an amount as a band: a coffee and a rent are different things at the same shop. */
 const AMOUNT_BANDS = [500n, 1_500n, 5_000n, 15_000n, 50_000n, 150_000n] as const;
 
