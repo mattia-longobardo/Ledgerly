@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callPlugin, type Fetch, PluginCallError } from "./client";
+import { callPlugin, type Fetch, MAX_ANSWER_BYTES, PluginCallError } from "./client";
 import { SECRET_HEADER, verifyResponseSchema } from "@plugin-contract/calls";
 import { acceptsContract, hasCapability, manifestSchema } from "@plugin-contract/manifest";
 
@@ -144,5 +144,45 @@ describe("a redirect from a plugin (SEC-05)", () => {
     } finally {
       server.close();
     }
+  });
+});
+
+describe("the size of a plugin's answer (SEC-06)", () => {
+  it("is read up to its limit, and over it the call is `plugin_down`", async () => {
+    let pulled = 0;
+    const chunk = new TextEncoder().encode(" ".repeat(64 * 1024));
+    const endless: Fetch = async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull(controller) {
+            pulled += 1;
+            controller.enqueue(chunk);
+          },
+        }),
+      );
+    const error = await codeOf(callPlugin(PLUGIN, "/verify", verifyResponseSchema, { fetchFn: endless }));
+    expect(error.code).toBe("plugin_down");
+    expect(pulled * chunk.byteLength).toBeLessThan(MAX_ANSWER_BYTES + 4 * chunk.byteLength);
+  });
+
+  it("is refused from its content-length, before a byte of it is read", async () => {
+    const { fetchFn } = answering(200, { access: "write" });
+    const large: Fetch = async (input, init) => {
+      const answer = await fetchFn(input, init);
+      return new Response(answer.body, {
+        headers: { "content-length": String(MAX_ANSWER_BYTES + 1) },
+      });
+    };
+    expect((await codeOf(callPlugin(PLUGIN, "/verify", verifyResponseSchema, { fetchFn: large }))).code).toBe(
+      "plugin_down",
+    );
+  });
+
+  it("is read whole when it is within the limit", async () => {
+    const padding = "x".repeat(MAX_ANSWER_BYTES - 100);
+    const { fetchFn } = answering(200, { access: "write", padding });
+    expect(await callPlugin(PLUGIN, "/verify", verifyResponseSchema, { fetchFn })).toEqual({
+      access: "write",
+    });
   });
 });
