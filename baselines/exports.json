@@ -1596,6 +1596,7 @@
     "syncSourceFor",
     "syncSourceNow",
     "tieBack",
+    "timeOn",
     "wireCalendar",
     "wireSinks",
     "wireSource"

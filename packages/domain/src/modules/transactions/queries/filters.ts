@@ -59,6 +59,8 @@ export interface TransactionRow {
   occurredAt: Date;
   /** The day the person saw it, in their own time zone (spec §4.3): never a UTC day. */
   on: CivilDate;
+  /** `occurredAt` carries a real time of day; otherwise only `on` means something. */
+  timeKnown: boolean;
   amountCents: Cents;
   currency: string;
   type: TransactionType;

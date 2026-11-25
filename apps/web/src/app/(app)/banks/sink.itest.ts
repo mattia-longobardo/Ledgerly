@@ -538,6 +538,58 @@ describe("the identity of a movement", () => {
   });
 });
 
+describe("the day and the time of a movement", () => {
+  it("of a plugin without the operation's day and time is noon of the booking day, with no time", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target } = await chosen(plugin);
+    plugin.gives(answer([movement()]));
+    expect(await read(ctx, target, plugin)).toMatchObject({ ok: true, created: 1 });
+    const [row] = await rowsOf(ctx);
+    expect(row.occurredAt).toEqual(new Date("2026-11-10T11:00:00Z"));
+    expect(row.timeKnown).toBe(false);
+  });
+
+  it("is the operation's day and instant when the bank gives them, and only its day when it gives no time", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target } = await chosen(plugin);
+    plugin.gives(
+      answer([
+        movement({ externalId: "ref-1", transactionDate: "2026-11-08", instant: "2026-11-08T13:32:00.000Z" }),
+        movement({ externalId: "ref-2", transactionDate: "2026-11-07" }),
+      ]),
+    );
+    expect(await read(ctx, target, plugin)).toMatchObject({ ok: true, created: 2 });
+    const [dayOnly, timed] = await rowsOf(ctx);
+    expect(dayOnly).toMatchObject({ occurredAt: new Date("2026-11-07T11:00:00Z"), timeKnown: false });
+    expect(timed).toMatchObject({ occurredAt: new Date("2026-11-08T13:32:00Z"), timeKnown: true });
+  });
+
+  it("drops an instant that is not on the operation's day in the person's zone", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target } = await chosen(plugin);
+    plugin.gives(answer([movement({ transactionDate: "2026-11-08", instant: "2026-11-08T23:30:00.000Z" })]));
+    await read(ctx, target, plugin);
+    const [row] = await rowsOf(ctx);
+    expect(row).toMatchObject({ occurredAt: new Date("2026-11-08T11:00:00Z"), timeKnown: false });
+  });
+
+  it("of a movement already here is corrected at the next reading that gives them, and still one row", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target } = await chosen(plugin);
+    plugin.gives(answer([movement({ externalId: null })]));
+    await read(ctx, target, plugin);
+    plugin.gives(
+      answer([
+        movement({ externalId: null, transactionDate: "2026-11-08", instant: "2026-11-08T13:32:00.000Z" }),
+      ]),
+    );
+    expect(await read(ctx, target, plugin, later(1))).toMatchObject({ ok: true, created: 0, updated: 1 });
+    const rows = await rowsOf(ctx);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ occurredAt: new Date("2026-11-08T13:32:00Z"), timeKnown: true });
+  });
+});
+
 describe("the readings after the first", () => {
   it("start ten days before the last day covered, and say who asks only when a person does", async () => {
     const plugin = fakePlugin();

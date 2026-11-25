@@ -34,6 +34,8 @@ export function toNewTransaction(
   return {
     accountId: resolution.accountId,
     occurredAt: incoming.occurredAt,
+    // Absent: the column's own default, a day without a time.
+    ...(incoming.timeKnown === undefined ? {} : { timeKnown: incoming.timeKnown }),
     amountCents: incoming.amountCents,
     currency: incoming.currency,
     type: resolveType(incoming),
@@ -105,6 +107,11 @@ export function planProviderMerge(
     incoming.occurredAt,
     current.occurredAt.getTime() === incoming.occurredAt.getTime(),
   );
+  // Whether the time is known follows the instant it describes, under the same marker.
+  const timeKnown = incoming.timeKnown ?? false;
+  if (!isLocallyEdited(current.locallyEdited, "occurredAt") && (current.timeKnown ?? false) !== timeKnown) {
+    patch.timeKnown = timeKnown;
+  }
   take("amountCents", "amountCents", incoming.amountCents, current.amountCents === incoming.amountCents);
   take("currency", "currency", incoming.currency, current.currency === incoming.currency);
   const type = resolveType(incoming);

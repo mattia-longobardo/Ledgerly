@@ -28,6 +28,7 @@ import {
   type Provider,
   type transactionsSchema,
 } from "./provider";
+import { timeFromText } from "./times";
 
 const SECONDS_PER_DAY = 86_400;
 /** The pages of movements one call reads before it hands back a cursor. */
@@ -207,16 +208,26 @@ export function toTransaction(account: string, row: ProviderTransaction): Plugin
   const direction = row.credit_debit_indicator === "CRDT" ? "credit" : "debit";
   const code = row.bank_transaction_code;
   const bankCode = code ? [code.code, code.sub_code, code.description].filter(Boolean).join(" · ") : "";
+  const text = (row.remittance_information ?? []).map((line) => line.slice(0, 2000)).slice(0, 40);
+  const bookingDate = dateOrNull(row.booking_date);
+  // The bank's text wins over `transaction_date`: it carries the time too. A day after the booking
+  // is not the operation's: an operation is never booked before it happens.
+  const written = timeFromText(text.join(" "));
+  const stamped = written !== null && (bookingDate === null || written.day <= bookingDate) ? written : null;
+  const transactionDate = stamped?.day ?? dateOrNull(row.transaction_date);
   return {
     accountExternalId: account,
     externalId: textOrNull(row.entry_reference, 200),
     status,
-    bookingDate: dateOrNull(row.booking_date),
+    bookingDate,
     valueDate: dateOrNull(row.value_date) ?? dateOrNull(row.transaction_date),
+    // Absent rather than `null`: the answer of a movement with neither stays the one of before.
+    ...(transactionDate === null ? {} : { transactionDate }),
+    ...(stamped === null ? {} : { instant: stamped.instant }),
     amount: row.transaction_amount.amount.replace(/^[-+]/, ""),
     direction,
     currency: row.transaction_amount.currency,
-    text: (row.remittance_information ?? []).map((line) => line.slice(0, 2000)).slice(0, 40),
+    text,
     counterparty: textOrNull(direction === "debit" ? row.creditor?.name : row.debtor?.name, 400),
     merchantCategoryCode: textOrNull(row.merchant_category_code, 10),
     bankTransactionCode: textOrNull(bankCode, 120),

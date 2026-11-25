@@ -244,6 +244,8 @@ function toMovement(
   return {
     externalId,
     day,
+    operationDay: transaction.transactionDate ?? null,
+    instant: transaction.instant ? new Date(transaction.instant) : null,
     amount: transaction.amount,
     direction: transaction.direction,
     currency: transaction.currency,

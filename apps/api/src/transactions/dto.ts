@@ -51,6 +51,7 @@ export function transactionRow(row: TransactionRow): Row {
     id: row.id,
     on: row.on,
     occurredAt: row.occurredAt.toISOString(),
+    timeKnown: row.timeKnown,
     accountId: row.accountId,
     accountName: row.accountName,
     amount: money(row.amountCents),
