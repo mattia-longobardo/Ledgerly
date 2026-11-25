@@ -1,7 +1,7 @@
 // Transactions · the giroconti between a person's accounts (decisions 6A–10A of 2026-11-25): the other
 // side of a movement, a pair by hand, and the proposals that wait for the person.
 import type { Hono } from "hono";
-import { TRANSACTIONS } from "@ledgerly/api-contract";
+import { giroconti } from "@ledgerly/api-contract/transactions";
 import {
   answerTransferProposal,
   chooseTransferSide,
@@ -12,8 +12,6 @@ import {
 import { type ApiEnv, type Guard, serve } from "../serve";
 import { refusing } from "./cases";
 import { money } from "./dto";
-
-const { giroconti } = TRANSACTIONS;
 
 const leg = ({ amountCents, ...rest }: TransferProposal["out"]) => ({ ...rest, amount: money(amountCents) });
 
