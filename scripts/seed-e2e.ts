@@ -14,6 +14,7 @@ import { and, count, eq, inArray, isNull, like, notInArray } from "drizzle-orm";
 import { createAuth } from "@domain/platform/auth/auth";
 import { oauthClients } from "@domain/platform/auth/oauth/schema";
 import { rateLimits, users } from "@domain/platform/auth/schema";
+import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
 import { userPreferences } from "@domain/modules/users/schema";
 import { ADDONS } from "@ledgerly/api-contract";
 import { getDb } from "@domain/platform/db/client";
@@ -224,6 +225,13 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [["currency"], seedCurrency],
 ];
 
+const REGION = {
+  timeZone: DEFAULT_PREFERENCES.timeZone,
+  locale: DEFAULT_PREFERENCES.locale,
+  numberFormat: DEFAULT_PREFERENCES.numberFormat,
+  displayCurrency: DEFAULT_PREFERENCES.displayCurrency,
+};
+
 async function seed(): Promise<void> {
   mkdirSync(STATE_DIR, { recursive: true });
   // Written before the first user exists, and readable by this account only.
@@ -245,10 +253,11 @@ async function seed(): Promise<void> {
 
   // A sign-up since R5a has the first start ahead of it, with every addon off: the journeys of the test
   // users are those of a person who already finished it with every addon on. The two users of the first
-  // start keep it ahead of them, as the sign-up left them (tests/e2e/welcome/).
+  // start keep it ahead of them, as the sign-up left them (tests/e2e/welcome/). Their format is the
+  // app's default, not the instance's: an admin who changes the instance's defaults moves no spec.
   await getDb()
     .update(userPreferences)
-    .set({ onboardedAt: new Date(), modules: [...ADDONS] })
+    .set({ onboardedAt: new Date(), modules: [...ADDONS], ...REGION })
     .where(
       inArray(
         userPreferences.userId,
