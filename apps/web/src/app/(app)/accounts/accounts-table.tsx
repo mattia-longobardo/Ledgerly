@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { views } from "@ledgerly/api-contract/accounts";
 import type { RouteOutput } from "@ledgerly/api-client";
+import { civilDateIn } from "@ledgerly/format/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
 import { Sparkline } from "@ledgerly/ui/charts/sparkline";
@@ -26,15 +27,7 @@ export interface Row extends ViewRow {
   stoppedSince: string | null;
 }
 
-/**
- * The rows, with the day each stopped account stopped: `GET /accounts` says it (`sourceState`,
- * `stoppedSince`), `GET /net-worth` does not.
- */
-export function rowsOf(
-  view: NetWorth,
-  format: CardFormat,
-  stopped: ReadonlyMap<string, string> = new Map(),
-): Row[] {
+export function rowsOf(view: NetWorth, format: CardFormat): Row[] {
   return view.accounts.map((row, index) => ({
     ...row,
     color: colorFor(row, index),
@@ -45,7 +38,11 @@ export function rowsOf(
     ),
     // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
     syncedAt: row.service?.lastSyncedAt ?? row.lastSyncedAt,
-    stoppedSince: stopped.get(row.id) ?? null,
+    // A stopped account says since when (H56): `GET /net-worth` gives `sourceState` and `stoppedSince`.
+    stoppedSince:
+      row.sourceState === "stopped" && row.stoppedSince !== null
+        ? formatDate(civilDateIn(new Date(row.stoppedSince), format.timeZone), "long", format.locale)
+        : null,
   }));
 }
 
