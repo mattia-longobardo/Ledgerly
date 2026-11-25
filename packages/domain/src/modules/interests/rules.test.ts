@@ -484,7 +484,6 @@ describe("ruleInputOf (INT-5)", () => {
       { upTo: null, rate: "1.5" },
     ],
     tax: "26",
-    dayBasis: "365",
     settlement: "monthly",
     payeeMatch: "",
     mode: "analyze_only",
@@ -502,17 +501,14 @@ describe("ruleInputOf (INT-5)", () => {
     expect(input.payeeMatch).toBeNull();
   });
 
-  it("reads the old day basis as the day count, and writes the day basis back from it", () => {
-    const old = ruleInputSchema.parse(ruleInputOf({ ...plain, dayBasis: "360" }));
-    expect(old).toMatchObject({
+  it("takes the day count, 365 when none is given", () => {
+    expect(ruleInputSchema.parse(ruleInputOf({ ...plain, dayCount: "360" }))).toMatchObject({
       dayCount: "360",
-      dayBasis: "360",
       periodAnchor: "calendar",
       paymentWindowDays: null,
     });
-    const actual = ruleInputSchema.parse(ruleInputOf({ ...plain, dayBasis: "360", dayCount: "act_act" }));
-    expect(actual).toMatchObject({ dayCount: "act_act", dayBasis: "365" });
-    expect(ruleInputSchema.parse(ruleInputOf({ ...plain, dayBasis: undefined })).dayCount).toBe("365");
+    expect(ruleInputSchema.parse(ruleInputOf({ ...plain, dayCount: "act_act" })).dayCount).toBe("act_act");
+    expect(ruleInputSchema.parse(ruleInputOf(plain)).dayCount).toBe("365");
     expect(() => ruleInputSchema.parse(ruleInputOf({ ...plain, paymentWindowDays: 91 }))).toThrow();
   });
 

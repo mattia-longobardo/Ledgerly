@@ -25,7 +25,7 @@ const TABLES = [
   "source_skipped_accounts",
   "accounts",
   "account_switches",
-  "leave_days",
+  // `leave_days` is left out since R5f: the schema no longer takes a day of `trek` to rename.
   "interest_rules",
 ] as const;
 
@@ -94,11 +94,6 @@ async function seedBefore(userId: string, other: string): Promise<void> {
     [userId, general, wallet],
   );
   await query(
-    `insert into leave_days (user_id, "on", kind, fraction, origin)
-     values ($1, '2026-08-10', 'vacation', 1.0, 'trek'), ($1, '2026-08-11', 'vacation', 1.0, 'manual')`,
-    [userId],
-  );
-  await query(
     `insert into interest_rules (user_id, account_id, valid_from, mode)
      values ($1, $2, '2026-01-01', 'post_to_provider'), ($1, $2, '2025-01-01', 'analyze_only')`,
     [userId, general],
@@ -136,7 +131,6 @@ describe("the data of R5c P3a (06-data.md, H30, H37)", () => {
     expect(await values("account_switches", "from_provider || ' > ' || to_provider")).toEqual([
       "plugin:wallet > plugin:enablebanking",
     ]);
-    expect(await values("leave_days", "origin")).toEqual(["external", "manual"]);
     expect(await values("interest_rules", "mode")).toEqual(["analyze_only", "analyze_only"]);
     // H30: on for the person who has a connection, and for nobody else; a bank's plugin is not touched.
     expect(

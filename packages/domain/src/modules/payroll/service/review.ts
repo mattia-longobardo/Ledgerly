@@ -12,7 +12,7 @@ import { kindOfType, usagePeriodOf } from "../rules";
 import { appliedEventOf } from "../applied";
 import { payslipApplied, payslipWithdrawn } from "../events";
 import { leaveBalanceSnapshots, payrollLeaveEvents, payslips } from "../schema";
-import { ACTIVE_KEYS, PayrollError, type Payslip } from "./codes";
+import { ACTIVE_KEY, PayrollError, type Payslip } from "./codes";
 import { activeOfMonth, deleteManualPayslip, manualOfDocument } from "./manual";
 import { activeWithKey, computeState, linesOf, processPayslip, recompute, type Recomputed } from "./reading";
 
@@ -138,7 +138,7 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
       return applied;
     });
   } catch (error) {
-    if (ACTIVE_KEYS.some((key) => hasPgError(error, UNIQUE_VIOLATION, key))) throw new PayrollError("conflict");
+    if (hasPgError(error, UNIQUE_VIOLATION, ACTIVE_KEY)) throw new PayrollError("conflict");
     throw error;
   }
 }

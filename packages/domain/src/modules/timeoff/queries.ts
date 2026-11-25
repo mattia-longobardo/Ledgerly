@@ -33,11 +33,9 @@ import {
   yearTotals,
 } from "./rules";
 import {
-  type Allowance,
   type LeaveDay,
   type LeaveTypeView,
   type TypeAllowance,
-  allowanceOf,
   leaveContext,
   leaveYearWindow,
   listLeaveDays,
@@ -51,15 +49,11 @@ export type LeaveRow =
       source: "day";
       id: string;
       on: CivilDate;
-      /** The day's type; empty for a row the image before R5g wrote, which has none. */
       typeId: string;
-      /** The old kind the row still carries, for the API's deprecated field. */
-      kind: string | null;
       /** Half a day or a whole one; for a type counted in hours, the nearest of the two. */
       fraction: number;
       minutes: number | null;
       note: string | null;
-      /** The old origin until the rename of R5c P3, `external` after it: the API says `external` for both. */
       origin: (typeof leaveDays.$inferSelect)["origin"];
       status: "taken" | "planned";
       /** What the next pass of the calendar still owes this row, for the badge that says so. */
@@ -99,8 +93,6 @@ interface TimeOffView {
   yearStartMonth: number;
   window: YearWindow;
   types: LeaveTypeView[];
-  /** The year's old row, for the API's deprecated fields; nothing else reads it. */
-  allowance: Allowance | null;
   /** What the person stated for the year, by type. */
   allowances: TypeAllowance[];
   balances: TypeBalance[];
@@ -154,8 +146,7 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
   );
 
   const from = [window.from, ...[...openings.values()].map((one) => one.spentFrom)].sort()[0];
-  const [allowance, everyAllowance, everyDay, ...eventsByYear] = await Promise.all([
-    allowanceOf(ctx, year),
+  const [everyAllowance, everyDay, ...eventsByYear] = await Promise.all([
     listTypeAllowances(ctx),
     listLeaveDays(ctx, { from, to: window.to }),
     ...yearsOf(window).map((one) => leaveBalances().eventsOf(ctx, one)),
@@ -224,8 +215,7 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
       source: "day",
       id: day.id,
       on: day.on,
-      typeId: day.typeId ?? "",
-      kind: day.kind,
+      typeId: day.typeId,
       fraction: Number(day.fraction),
       minutes: day.minutes,
       note: day.note,
@@ -254,7 +244,6 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
     yearStartMonth: settings.yearStartMonth,
     window,
     types,
-    allowance,
     allowances,
     balances,
     bars: monthBars(views, year, minutesPerDay, countedThrough, options),

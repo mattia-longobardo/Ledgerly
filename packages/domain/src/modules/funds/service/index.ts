@@ -16,9 +16,4 @@ export { deleteValuation, recordValuation, updateValuation } from "./valuations"
 export { addContribution, deleteContribution, updateContribution } from "./operations";
 export type { ContributionInput } from "./operations";
 export { matchDebits, movementCandidates, proposeDebitMatch } from "./debits";
-export {
-  fundsOnAccount,
-  moveFundAccount,
-  moveFundSourceAccount,
-  releaseFormerAccountReferences,
-} from "./accounts";
+export { fundsOnAccount, moveFundAccount, moveFundSourceAccount } from "./accounts";

@@ -22,7 +22,7 @@ type PayrollErrorCode =
   | "llm_not_configured"
   | "llm_failed";
 
-/** The rows of one kind and extra payment: the old `type` is no longer read (R5f.1). */
+/** The rows of one kind and extra payment. */
 export function ofKind(key: { kind: PayslipKind; extraNumber: number | null }) {
   return and(
     eq(payslips.kind, key.kind),
@@ -30,8 +30,8 @@ export function ofKind(key: { kind: PayslipKind; extraNumber: number | null }) {
   );
 }
 
-/** The two unique keys of an applied month: the old one, by type, goes with the type in R5f. */
-export const ACTIVE_KEYS = ["payslips_active_key_uq", "payslips_active_kind_uq"] as const;
+/** The unique key of an applied month: one applied payslip per kind, extra payment and month. */
+export const ACTIVE_KEY = "payslips_active_kind_uq";
 
 export class PayrollError extends Error {
   constructor(readonly code: PayrollErrorCode) {

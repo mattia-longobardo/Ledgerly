@@ -13,65 +13,15 @@ import {
   leaveInputSchema,
 } from "../rules";
 import { leaveDays } from "../schema";
-import { legacyKind, timeoffAllowances } from "../schema/legacy";
 import { TimeOffError } from "./errors";
 import { type LeaveTypeView, leaveContext, yearsOf } from "./types";
 
-export type Allowance = typeof timeoffAllowances.$inferSelect;
 export type LeaveDay = typeof leaveDays.$inferSelect;
 
 export { MAX_RANGE_DAYS, TimeOffError };
 
-/* The year's old row (R5g: read by the API's deprecated fields only) */
-
-/** The old row of a year, or `null` when nobody has stated one. */
-export async function allowanceOf(ctx: Pick<Ctx, "userId">, year: number): Promise<Allowance | null> {
-  const [row] = await getDb()
-    .select()
-    .from(timeoffAllowances)
-    .where(and(userScoped(ctx).owns(timeoffAllowances), eq(timeoffAllowances.year, year)));
-  return row ?? null;
-}
-
-/** Every old row of a year, oldest first. */
-export async function listAllowances(ctx: Pick<Ctx, "userId">): Promise<Allowance[]> {
-  return getDb()
-    .select()
-    .from(timeoffAllowances)
-    .where(userScoped(ctx).owns(timeoffAllowances))
-    .orderBy(asc(timeoffAllowances.year));
-}
-
-/** The total and the note of a year's old row, which only the API's deprecated route still states. */
-export async function saveYearNote(
-  ctx: Pick<Ctx, "userId">,
-  year: number,
-  input: { totalDays: number | null; note: string | null },
-): Promise<Allowance> {
-  if (!Number.isInteger(year) || year < 1990 || year > 2200) throw new TimeOffError("invalid_input");
-  const total = input.totalDays;
-  if (total !== null && !(total >= 0 && total <= 400)) throw new TimeOffError("invalid_input");
-  if ((input.note?.trim().length ?? 0) > 200) throw new TimeOffError("invalid_input");
-  const values = {
-    totalDays: input.totalDays === null ? null : input.totalDays.toFixed(2),
-    note: input.note?.trim() || null,
-  };
-  const [row] = await getDb()
-    .insert(timeoffAllowances)
-    .values(userScoped(ctx).stamp({ year, ...values }))
-    .onConflictDoUpdate({
-      target: [timeoffAllowances.userId, timeoffAllowances.year],
-      set: { ...values, updatedAt: new Date() },
-    })
-    .returning();
-  return row;
-}
-
-/* What a row of a type is written as */
-
 /**
- * The columns of a row of `type`: its size by the type's unit, the old kind it still writes, and
- * what it owes the calendar. A size the unit does not take is `invalid_input`.
+ * The columns of a row of `type`: its size by the type's unit and what it owes the calendar. A size the unit does not take is `invalid_input`.
  */
 export function rowOf(
   type: LeaveTypeView,
@@ -86,7 +36,6 @@ export function rowOf(
   const fraction = size.minutes === null ? size.fraction : fractionOfMinutes(size.minutes, minutesPerDay);
   return {
     typeId: type.id,
-    kind: legacyKind(type.legacyKind),
     fraction: fraction.toFixed(1),
     minutes: size.minutes,
     pending: type.toCalendar ? ("upsert" as const) : ("none" as const),

@@ -28,7 +28,7 @@ describe("preferences service", () => {
     const user = await createTestUser();
     const saved = await updatePreferences(
       { userId: user.id },
-      { ...DEFAULT_PREFERENCES, locale: "it", theme: "dark", patronSaint: { month: 12, day: 7 } },
+      { ...DEFAULT_PREFERENCES, locale: "it", theme: "dark" },
     );
     expect(saved.locale).toBe("it");
     expect(await getPreferences({ userId: user.id })).toEqual(saved);
@@ -37,11 +37,10 @@ describe("preferences service", () => {
   it("keeps Time off's values when the Profile form saves, even from a stale page", async () => {
     const user = await createTestUser();
     const ctx = { userId: user.id };
-    await updateTimeOffPreferences(ctx, { minutesPerDay: 450, patronSaint: { month: 12, day: 7 } });
+    await updateTimeOffPreferences(ctx, { minutesPerDay: 450 });
     const saved = await updateProfilePreferences(ctx, { ...DEFAULT_PREFERENCES, locale: "it" });
     expect(saved.locale).toBe("it");
     expect(saved.minutesPerDay).toBe(450);
-    expect(saved.patronSaint).toEqual({ month: 12, day: 7 });
   });
 
   it("saves one Time off value and leaves the rest of the row", async () => {
@@ -50,12 +49,10 @@ describe("preferences service", () => {
     await updatePreferences(ctx, {
       ...DEFAULT_PREFERENCES,
       locale: "it",
-      patronSaint: { month: 6, day: 24 },
     });
     const saved = await updateTimeOffPreferences(ctx, { minutesPerDay: 420 });
     expect(saved.minutesPerDay).toBe(420);
     expect(saved.locale).toBe("it");
-    expect(saved.patronSaint).toEqual({ month: 6, day: 24 });
   });
 
   it("refuses a Time off save that names any other preference", async () => {

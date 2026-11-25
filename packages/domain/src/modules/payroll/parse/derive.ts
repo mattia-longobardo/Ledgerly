@@ -1,6 +1,6 @@
 import { centsToDecimal, type Cents, parseCents } from "../../../shared/money";
 import { type FieldName, type MoneyField } from "../fields";
-import { isExtra, type PayslipType, type TfrSource } from "../rules";
+import { kindOfType, type PayslipType, type TfrSource } from "../rules";
 import type { Warning } from "./checks";
 
 /** The values of a payslip's fields as they stand: the correction when there is one, else as read. */
@@ -94,7 +94,7 @@ export function deriveFields(values: Values, type: PayslipType): Derived {
   // adjustment of the ordinary months and no quota of its own — so there is nothing to review and
   // nothing to say: the amount stands on its own line and is kept apart. On an ordinary month the
   // same shape is unexpected, and only there is it worth a word.
-  if (employerPrinted === null && employerAdjustments !== null && !isExtra({ type })) {
+  if (employerPrinted === null && employerAdjustments !== null && kindOfType(type).kind !== "extra") {
     out.warnings.push({ code: "employer_fund_adjustment_only", field: "employerFundAdjustments" });
   }
 

@@ -41,9 +41,8 @@ async function seed(ctx: Ctx): Promise<void> {
   await deleteLeaveDay(ctx, (await settle("2026-03-12", 1)).id);
   await settle("2026-07-01", 1);
   await saveLeaveDay(ctx, { from: "2026-07-01", typeId: types.vacation, fraction: 0.5 });
-  // A day of sickness as migration 0074 left it: the type "other", the old kind "sick" (the golden's).
-  const [sick] = await saveLeaveDay(ctx, { from: "2026-04-01", typeId: types.other, fraction: 1 });
-  await getDb().execute(sql`update leave_days set kind = 'sick' where id = ${sick.id}`);
+  // A day of sickness as migration 0074 left it: the type "other".
+  await saveLeaveDay(ctx, { from: "2026-04-01", typeId: types.other, fraction: 1 });
   for (const from of ["2026-06-16", "2026-06-19", "2026-06-22", "2025-12-15"]) {
     await saveLeaveDay(ctx, { from, typeId: types.vacation, fraction: 1 });
   }
@@ -61,8 +60,10 @@ async function snapshot(ctx: Ctx) {
   const user = `'${ctx.userId}'`;
   return {
     leaveDays: await rows(
-      `select "on"::text, kind, fraction::text, note, origin, pending, synced_at::text,
-        trek_fraction::text, trek_kind from leave_days where user_id = ${user} order by "on", kind`,
+      `select "on"::text, t.name as type, fraction::text, note, origin, pending, synced_at::text,
+        external_fraction::text, external_kind, external_state
+        from leave_days d join leave_types t on t.id = d.type_id
+        where d.user_id = ${user} order by "on", t.name`,
     ),
     runs: await rows(
       `select kind, state, counts, error, error_code from sync_runs where user_id = ${user}
@@ -122,18 +123,5 @@ describe("a leave pass on the fixtures", () => {
       throw new Error(`no golden: written to ${GOLDEN}, check it and commit it`);
     }
     expect(JSON.parse(text)).toEqual(JSON.parse(readFileSync(GOLDEN, "utf8")));
-
-    // Dual write (P2): every row's pair of contract 2 is its `trek_*` pair, and a day the calendar
-    // does not take says so.
-    const pairs = await rows(
-      `select "on"::text, trek_kind, external_kind, trek_fraction::text, external_fraction::text,
-        external_state from leave_days where user_id = '${ctx.userId}' order by "on", kind`,
-    );
-    for (const row of pairs) {
-      expect([row.external_kind, row.external_fraction]).toEqual([row.trek_kind, row.trek_fraction]);
-      expect(row.external_state).toBe(
-        row.on === "2026-06-19" ? "refused" : row.trek_kind === null ? null : "synced",
-      );
-    }
   });
 });

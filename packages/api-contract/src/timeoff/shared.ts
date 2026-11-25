@@ -7,9 +7,6 @@ import { civilDate, id } from "../primitives";
 
 // The vocabularies are the domain's (`@ledgerly/domain/timeoff`): the contract imports zod only
 // (10-modularity.md §10.2), so `tools/contract.test.ts` holds the lists equal.
-export const LEAVE_KINDS = ["vacation", "rol", "comp", "sick", "other"] as const;
-/** The two kinds with an allowance, a residual and a forecast. */
-export const COUNTED_KINDS = ["vacation", "rol"] as const;
 /** What a payslip reports leave as, by month. */
 export const PAYROLL_LEAVE_KINDS = ["vacation", "rol", "permit"] as const;
 /** Which formula gave a residual (TOF-4): the payslip's RES., the allowance, or neither. */
@@ -57,8 +54,6 @@ export const byCalendar = z.object({ id: id() });
 /** One day of leave as the residual and the forecast weigh it. */
 const dayView = z.object({
   on: civilDate(),
-  /** Deprecated (R5g): the day's old kind; `other` for a type made since. Read `typeId`. */
-  kind: z.enum(LEAVE_KINDS),
   fraction: z.number(),
   /** The id of the day's type (R5g). */
   typeId: z.string(),
@@ -90,15 +85,6 @@ export const typeAllowance = z.object({
 });
 
 const typeMinutes = z.object({ typeId: z.string(), minutes: minutes() });
-
-/** The allowance of a year as stated, in days; null for a part nobody stated. */
-export const allowance = z.object({
-  year: z.number().int(),
-  vacationDays: z.number().nullable(),
-  rolDays: z.number().nullable(),
-  totalDays: z.number().nullable(),
-  note: z.string().nullable(),
-});
 
 /** One residual (TOF-4: one formula, `basis` says which). Null `remainingMinutes`: nobody knows. */
 const residual = z.object({
@@ -140,21 +126,12 @@ const forecastInput = z.object({
   minutesPerDay: minutes(),
 });
 
-/** Deprecated (R5g): one of the two old kinds; `balances` has every type. */
-const kindView = z.object({
-  residual,
-  allowanceMinutes: minutes().nullable(),
-  carriedMinutes: minutes(),
-});
-
 /** One row of the table: a day of ours, or a month a payslip reported. */
 const leaveRow = z.discriminatedUnion("source", [
   z.object({
     source: z.literal("day"),
     id: id(),
     on: civilDate(),
-    /** Deprecated (R5g): read `typeId`. */
-    kind: z.enum(LEAVE_KINDS),
     typeId: z.string(),
     fraction: z.number(),
     minutes: minutes().nullable(),
@@ -226,48 +203,21 @@ export const timeOffYear = z.object({
   minutesPerDay: minutes(),
   /** 0 Sunday … 6 Saturday. */
   weekStart: z.number().int().min(0).max(6),
-  allowance: allowance.nullable(),
-  vacation: kindView,
-  rol: kindView,
   /** Twelve, one per month. */
   bars: z.array(z.object({ month: z.number().int(), takenMinutes: minutes(), plannedMinutes: minutes() })),
   rows: z.array(leaveRow),
   /** The years the picker offers, oldest first. */
   years: z.array(z.number().int()),
-  /** Months whose payslip counted more leave than the days here add up to. */
-  unrecorded: z.array(
-    z.object({
-      month: month(),
-      kind: z.enum(COUNTED_KINDS),
-      payrollMinutes: minutes(),
-      recordedMinutes: minutes(),
-      missingMinutes: minutes(),
-    }),
-  ),
-  /** Kinds booked past what was left. */
-  overdrawn: z.array(
-    z.object({
-      kind: z.enum(COUNTED_KINDS),
-      byMinutes: minutes(),
-      basis: z.enum(RESIDUAL_BASES),
-      snapshotPeriod: month().nullable(),
-      onDate: civilDate().nullable(),
-    }),
-  ),
   totals: z.object({
     takenMinutes: minutes(),
     plannedMinutes: minutes(),
     totalMinutes: minutes(),
-    /** Deprecated (R5g): read `byType`. */
-    byKind: z.array(z.object({ kind: z.enum(LEAVE_KINDS), minutes: minutes() })),
     byType: z.array(typeMinutes),
   }),
   countedThrough: month().nullable(),
   months: z.array(
     z.object({
       month: month(),
-      payroll: z.object({ vacationMinutes: minutes(), rolMinutes: minutes() }).nullable(),
-      recorded: z.object({ vacationMinutes: minutes(), rolMinutes: minutes(), otherMinutes: minutes() }),
       /** What the payslips counted, per type (R5g); null when no payslip covers the month. */
       payrollByType: z.array(typeMinutes).nullable(),
       /** What is recorded here, per type with something (R5g). */
@@ -277,19 +227,10 @@ export const timeOffYear = z.object({
       counted: z.boolean(),
     }),
   ),
-  totalAllowanceMinutes: minutes().nullable(),
-  /** Parts minus total, in days; null when there is nothing to compare. */
-  allowanceMismatch: z.number().nullable(),
   /** The days of the year this person does not work, ascending. */
   holidays: z.array(civilDate()),
-  residualInputs: z.object({ vacation: residualInput, rol: residualInput }),
   /** The external calendar's own figures of the year, in days, from its last pass; null without one. */
   external: z.object({ used: z.number(), remaining: z.number(), totalAvailable: z.number() }).nullable(),
-  accrual: z.object({
-    vacation: accrualView(),
-    rol: accrualView(),
-  }),
-  forecastInputs: z.object({ vacation: forecastInput, rol: forecastInput }),
 });
 
 function accrualView() {
@@ -306,17 +247,13 @@ export const leaveUndo = z.object({
   dates: z.array(civilDate()).min(1).max(366),
   rows: z
     .array(
-      z
-        .object({
-          on: civilDate(),
-          /** Deprecated (R5g): a client that sends no `typeId` names the type by its old kind. */
-          kind: z.enum(LEAVE_KINDS).optional(),
-          typeId: id().optional(),
-          fraction: z.number(),
-          minutes: minutes().nullish(),
-          note: z.string().max(MAX_NOTE).nullable(),
-        })
-        .refine((row) => row.kind !== undefined || row.typeId !== undefined, "a row names its type"),
+      z.object({
+        on: civilDate(),
+        typeId: id(),
+        fraction: z.number(),
+        minutes: minutes().nullish(),
+        note: z.string().max(MAX_NOTE).nullable(),
+      }),
     )
     .max(366 * 8),
 });

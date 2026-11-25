@@ -17,10 +17,8 @@ import { leaveDays } from "./schema";
 import {
   MAX_RANGE_DAYS,
   TimeOffError,
-  allowanceOf,
   closePendingDeletes,
   deleteLeaveDay,
-  listAllowances,
   listLeaveDays,
   markSynced,
   pendingForCalendar,
@@ -34,7 +32,6 @@ import {
   saveLeaveDay,
   saveLeaveType,
   saveTypeAllowance,
-  saveYearNote,
   yearWindow,
 } from "./service";
 
@@ -99,55 +96,20 @@ async function rowOf(id: string) {
 describe("allowances", () => {
   it("states a year, replaces it, and keeps users apart", async () => {
     await allowance(ctx, YEAR, 26, 4);
-    let row = await allowanceOf(ctx, YEAR);
-    // The old row of the year is still written beside the allowances by type (R5g, until R5f).
-    expect(row).toMatchObject({ vacationDays: "26.00", rolDays: "4.00" });
-
     // The same year again replaces the row rather than failing on the unique key.
     await allowance(ctx, YEAR, 28, null);
-    row = await allowanceOf(ctx, YEAR);
-    expect(row).toMatchObject({ vacationDays: "28.00", rolDays: null });
-    expect(await listAllowances(ctx)).toHaveLength(1);
     expect(await listTypeAllowances(ctx)).toEqual([
       { typeId: types.vacation, year: YEAR, days: 28, carriedDays: null },
       { typeId: types.rol, year: YEAR, days: null, carriedDays: null },
     ]);
 
-    expect(await allowanceOf(other, YEAR)).toBeNull();
     expect(await listTypeAllowances(other)).toEqual([]);
-  });
-
-  it("is null for a year nobody has stated, rather than a zero nobody meant", async () => {
-    expect(await allowanceOf(ctx, YEAR)).toBeNull();
   });
 
   it("lists the years oldest first", async () => {
     await saveTypeAllowance(ctx, types.vacation, 2027, { days: 26 });
     await saveTypeAllowance(ctx, types.vacation, 2025, { days: 24 });
     expect((await listTypeAllowances(ctx)).map((one) => one.year)).toEqual([2025, 2027]);
-    expect((await listAllowances(ctx)).map((one) => one.year)).toEqual([2025, 2027]);
-  });
-
-  it("records the contract's total beside the two parts it is made of (N7)", async () => {
-    // Both parts in days since N9: ROL is no longer the one figure stated in another unit.
-    await allowance(ctx, YEAR, 26, 4);
-    await saveYearNote(ctx, YEAR, { totalDays: 30, note: "CCNL" });
-    expect(await allowanceOf(ctx, YEAR)).toMatchObject({
-      vacationDays: "26.00",
-      rolDays: "4.00",
-      totalDays: "30.00",
-      note: "CCNL",
-    });
-  });
-
-  it("clears the ROL days and the total when the year is stated again without them", async () => {
-    // The upsert replaces the figure: a figure removed from the modal is a figure removed from
-    // the allowance, not one that quietly survives from the version before.
-    await allowance(ctx, YEAR, 26, 4);
-    await saveYearNote(ctx, YEAR, { totalDays: 30, note: null });
-    await allowance(ctx, YEAR, 26, null);
-    await saveYearNote(ctx, YEAR, { totalDays: null, note: null });
-    expect(await allowanceOf(ctx, YEAR)).toMatchObject({ rolDays: null, totalDays: null });
   });
 
   it("refuses an impossible year and a negative allowance", async () => {
@@ -157,8 +119,6 @@ describe("allowances", () => {
     await expect(saveTypeAllowance(ctx, types.rol, YEAR, { carriedDays: -401 })).rejects.toThrow(
       TimeOffError,
     );
-    await expect(saveYearNote(ctx, 1800, { totalDays: 30, note: null })).rejects.toThrow(TimeOffError);
-    await expect(saveYearNote(ctx, YEAR, { totalDays: 401, note: null })).rejects.toThrow(TimeOffError);
   });
 
   it("refuses a type that is not the person's", async () => {
@@ -345,7 +305,7 @@ describe("the life of a pending state (plan §3.4.7)", () => {
     expect((await pendingForCalendar(ctx, WINDOW)).map((one) => one.id)).toEqual([day.id]);
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
     const synced = await rowOf(day.id);
-    expect(synced).toMatchObject({ pending: "none", observedFraction: "1.0", observedKind: "vacation" });
+    expect(synced).toMatchObject({ pending: "none", externalFraction: "1.0", externalKind: "vacation" });
     expect(synced.syncedAt).not.toBeNull();
     expect(await pendingForCalendar(ctx, WINDOW)).toHaveLength(0);
 
@@ -383,7 +343,7 @@ describe("the life of a pending state (plan §3.4.7)", () => {
     expect(edited.pending).toBe("upsert");
     expect(edited.fraction).toBe("0.5");
     // The observed pair is untouched: the pass still has to send the whole day to remove it.
-    expect(edited.observedFraction).toBe("1.0");
+    expect(edited.externalFraction).toBe("1.0");
     expect(edited.syncedAt).not.toBeNull();
   });
 
@@ -403,8 +363,7 @@ describe("what a pass brings back", () => {
       origin: "external",
       pending: "none",
       fraction: "0.5",
-      observedFraction: "0.5",
-      observedKind: "vacation",
+      externalFraction: "0.5",
       externalKind: "vacation",
     });
     expect(recorded.syncedAt).not.toBeNull();

@@ -141,11 +141,6 @@ describe("the one list of Investments", () => {
       // Investments rounds a ratio to 6 decimals.
       rate: Number(fundsHome.body.summary.rate.toFixed(6)),
     });
-    // The legacy field of the home keeps its rows (R5f removes it).
-    expect(home.body.funds).toEqual({
-      total: "5300.00",
-      rows: [{ id: fundId, name: "Fondo Pensione", value: "5300.00" }],
-    });
   });
 
   it("answers GET /investments as before without include=funds, and adds the list with it", async () => {

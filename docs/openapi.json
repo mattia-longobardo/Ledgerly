@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ledgerly API",
-    "version": "1"
+    "version": "2"
   },
   "servers": [
     {
@@ -19458,9 +19458,6 @@
                               "null"
                             ]
                           },
-                          "payslipType": {
-                            "type": "string"
-                          },
                           "kind": {
                             "type": "string",
                             "enum": [
@@ -19569,7 +19566,6 @@
                           "payslipId",
                           "documentId",
                           "month",
-                          "payslipType",
                           "kind",
                           "extraNumber",
                           "year",
@@ -25956,9 +25952,7 @@
                   "kind": {
                     "type": "string",
                     "enum": [
-                      "payslip",
-                      "cometa_operations",
-                      "cometa_position"
+                      "payslip"
                     ]
                   },
                   "file": {
@@ -25991,9 +25985,7 @@
                     "kind": {
                       "type": "string",
                       "enum": [
-                        "payslip",
-                        "cometa_operations",
-                        "cometa_position"
+                        "payslip"
                       ]
                     },
                     "fileName": {
@@ -26044,9 +26036,7 @@
                     "kind": {
                       "type": "string",
                       "enum": [
-                        "payslip",
-                        "cometa_operations",
-                        "cometa_position"
+                        "payslip"
                       ]
                     },
                     "fileName": {
@@ -26422,13 +26412,6 @@
                             "type": "string",
                             "pattern": "^\\d{1,3}(\\.\\d{1,4})?$"
                           },
-                          "dayBasis": {
-                            "type": "string",
-                            "enum": [
-                              "360",
-                              "365"
-                            ]
-                          },
                           "dayCount": {
                             "type": "string",
                             "enum": [
@@ -26520,7 +26503,6 @@
                           "runHour",
                           "tiers",
                           "tax",
-                          "dayBasis",
                           "dayCount",
                           "periodAnchor",
                           "paymentWindowDays",
@@ -26711,13 +26693,6 @@
                   "tax": {
                     "type": "string",
                     "pattern": "^\\s*\\d{1,3}(\\.\\d{1,4})?\\s*$"
-                  },
-                  "dayBasis": {
-                    "type": "string",
-                    "enum": [
-                      "360",
-                      "365"
-                    ]
                   },
                   "dayCount": {
                     "type": "string",
@@ -27006,13 +26981,6 @@
                           "type": "string",
                           "pattern": "^\\d{1,3}(\\.\\d{1,4})?$"
                         },
-                        "dayBasis": {
-                          "type": "string",
-                          "enum": [
-                            "360",
-                            "365"
-                          ]
-                        },
                         "dayCount": {
                           "type": "string",
                           "enum": [
@@ -27104,7 +27072,6 @@
                         "runHour",
                         "tiers",
                         "tax",
-                        "dayBasis",
                         "dayCount",
                         "periodAnchor",
                         "paymentWindowDays",
@@ -27458,13 +27425,6 @@
                   "tax": {
                     "type": "string",
                     "pattern": "^\\s*\\d{1,3}(\\.\\d{1,4})?\\s*$"
-                  },
-                  "dayBasis": {
-                    "type": "string",
-                    "enum": [
-                      "360",
-                      "365"
-                    ]
                   },
                   "dayCount": {
                     "type": "string",
@@ -37924,7 +37884,7 @@
     "/investments/catalog": {
       "get": {
         "operationId": "get_investments_catalog",
-        "summary": "The providers a service can be added from, with the accounts each is connected to (no entry `planned` since R5b: the value stays in the schema until R5f), and the investment and crypto accounts a service can use, with why one cannot.",
+        "summary": "The providers a service can be added from, with the accounts each is connected to, and the investment and crypto accounts a service can use, with why one cannot.",
         "tags": [
           "investments"
         ],
@@ -38020,8 +37980,7 @@
                           "status": {
                             "type": "string",
                             "enum": [
-                              "available",
-                              "planned"
+                              "available"
                             ]
                           },
                           "connected": {
@@ -39777,58 +39736,6 @@
                         ]
                       }
                     },
-                    "funds": {
-                      "type": "object",
-                      "properties": {
-                        "total": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "rows": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "value": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "pattern": "^-?\\d+\\.\\d{2}$"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "name",
-                              "value"
-                            ]
-                          }
-                        }
-                      },
-                      "required": [
-                        "total",
-                        "rows"
-                      ]
-                    },
                     "total": {
                       "type": "object",
                       "properties": {
@@ -40068,7 +39975,6 @@
                     "byClass",
                     "byService",
                     "byCurrency",
-                    "funds",
                     "total",
                     "groups"
                   ]
@@ -43240,7 +43146,7 @@
                       ]
                     },
                     "extraMonths": {
-                      "maxItems": 3,
+                      "maxItems": 12,
                       "type": "array",
                       "items": {
                         "type": "integer",
@@ -43312,7 +43218,7 @@
       },
       "put": {
         "operationId": "set_payroll_employer",
-        "summary": "Saves how the employer pays; at most 3 extra payments.",
+        "summary": "Saves how the employer pays; at most 12 extra payments.",
         "tags": [
           "payroll"
         ],
@@ -43333,7 +43239,7 @@
                     ]
                   },
                   "extraMonths": {
-                    "maxItems": 3,
+                    "maxItems": 12,
                     "type": "array",
                     "items": {
                       "type": "integer",
@@ -43369,7 +43275,7 @@
                       ]
                     },
                     "extraMonths": {
-                      "maxItems": 3,
+                      "maxItems": 12,
                       "type": "array",
                       "items": {
                         "type": "integer",
@@ -43613,7 +43519,7 @@
                       {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 3
+                        "maximum": 12
                       },
                       {
                         "type": "null"
@@ -43731,17 +43637,6 @@
                         }
                       ]
                     },
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "ordinary",
-                        "thirteenth",
-                        "fourteenth",
-                        "fifteenth",
-                        "bonus",
-                        "settlement"
-                      ]
-                    },
                     "paidOn": {
                       "type": [
                         "string",
@@ -43837,7 +43732,6 @@
                     "period",
                     "kind",
                     "extraNumber",
-                    "type",
                     "paidOn",
                     "gross",
                     "taxes",
@@ -44095,17 +43989,6 @@
                         }
                       ]
                     },
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "ordinary",
-                        "thirteenth",
-                        "fourteenth",
-                        "fifteenth",
-                        "bonus",
-                        "settlement"
-                      ]
-                    },
                     "paidOn": {
                       "type": [
                         "string",
@@ -44201,7 +44084,6 @@
                     "period",
                     "kind",
                     "extraNumber",
-                    "type",
                     "paidOn",
                     "gross",
                     "taxes",
@@ -44329,7 +44211,7 @@
                       {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 3
+                        "maximum": 12
                       },
                       {
                         "type": "null"
@@ -44447,17 +44329,6 @@
                         }
                       ]
                     },
-                    "type": {
-                      "type": "string",
-                      "enum": [
-                        "ordinary",
-                        "thirteenth",
-                        "fourteenth",
-                        "fifteenth",
-                        "bonus",
-                        "settlement"
-                      ]
-                    },
                     "paidOn": {
                       "type": [
                         "string",
@@ -44553,7 +44424,6 @@
                     "period",
                     "kind",
                     "extraNumber",
-                    "type",
                     "paidOn",
                     "gross",
                     "taxes",
@@ -44690,17 +44560,6 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
-                                },
-                                "type": {
-                                  "type": "string",
-                                  "enum": [
-                                    "ordinary",
-                                    "thirteenth",
-                                    "fourteenth",
-                                    "fifteenth",
-                                    "bonus",
-                                    "settlement"
                                   ]
                                 },
                                 "kind": {
@@ -44994,7 +44853,6 @@
                                 "payslipId",
                                 "year",
                                 "period",
-                                "type",
                                 "kind",
                                 "extraNumber",
                                 "source",
@@ -45800,17 +45658,6 @@
                                 }
                               ]
                             },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "ordinary",
-                                "thirteenth",
-                                "fourteenth",
-                                "fifteenth",
-                                "bonus",
-                                "settlement"
-                              ]
-                            },
                             "kind": {
                               "type": "string",
                               "enum": [
@@ -45881,7 +45728,6 @@
                             "id",
                             "year",
                             "period",
-                            "type",
                             "kind",
                             "extraNumber",
                             "source",
@@ -46703,17 +46549,6 @@
                                 }
                               ]
                             },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "ordinary",
-                                "thirteenth",
-                                "fourteenth",
-                                "fifteenth",
-                                "bonus",
-                                "settlement"
-                              ]
-                            },
                             "kind": {
                               "type": "string",
                               "enum": [
@@ -46784,7 +46619,6 @@
                             "id",
                             "year",
                             "period",
-                            "type",
                             "kind",
                             "extraNumber",
                             "source",
@@ -51276,32 +51110,6 @@
                       "type": "integer",
                       "minimum": 60,
                       "maximum": 720
-                    },
-                    "patronSaint": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "month": {
-                              "type": "integer",
-                              "minimum": 1,
-                              "maximum": 12
-                            },
-                            "day": {
-                              "type": "integer",
-                              "minimum": 1,
-                              "maximum": 31
-                            }
-                          },
-                          "required": [
-                            "month",
-                            "day"
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
                     }
                   },
                   "required": [
@@ -51316,8 +51124,7 @@
                     "defaultRange",
                     "monthlySummary",
                     "hideAmounts",
-                    "minutesPerDay",
-                    "patronSaint"
+                    "minutesPerDay"
                   ]
                 }
               }
@@ -51463,32 +51270,6 @@
                     "type": "integer",
                     "minimum": 60,
                     "maximum": 720
-                  },
-                  "patronSaint": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "month": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 12
-                          },
-                          "day": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 31
-                          }
-                        },
-                        "required": [
-                          "month",
-                          "day"
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
                   }
                 },
                 "additionalProperties": false
@@ -51593,32 +51374,6 @@
                       "type": "integer",
                       "minimum": 60,
                       "maximum": 720
-                    },
-                    "patronSaint": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "month": {
-                              "type": "integer",
-                              "minimum": 1,
-                              "maximum": 12
-                            },
-                            "day": {
-                              "type": "integer",
-                              "minimum": 1,
-                              "maximum": 31
-                            }
-                          },
-                          "required": [
-                            "month",
-                            "day"
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
                     }
                   },
                   "required": [
@@ -51633,8 +51388,7 @@
                     "defaultRange",
                     "monthlySummary",
                     "hideAmounts",
-                    "minutesPerDay",
-                    "patronSaint"
+                    "minutesPerDay"
                   ]
                 }
               }
@@ -59872,7 +59626,7 @@
     "/timeoff/{year}": {
       "get": {
         "operationId": "get_time_off",
-        "summary": "One year of time off: the residual of vacation and ROL with the formula that gave it, the year's totals by month and kind, the days and the payslips' months, the forecasts and the warnings.",
+        "summary": "One year of time off: the residual of each type with an allowance and the formula that gave it, the year's totals by month and type, the days and the payslips' months, the forecasts and the warnings.",
         "tags": [
           "timeoff"
         ],
@@ -60129,16 +59883,6 @@
                                     "on": {
                                       "type": "string"
                                     },
-                                    "kind": {
-                                      "type": "string",
-                                      "enum": [
-                                        "vacation",
-                                        "rol",
-                                        "comp",
-                                        "sick",
-                                        "other"
-                                      ]
-                                    },
                                     "fraction": {
                                       "type": "number"
                                     },
@@ -60160,7 +59904,6 @@
                                   },
                                   "required": [
                                     "on",
-                                    "kind",
                                     "fraction",
                                     "typeId",
                                     "minutes"
@@ -60267,16 +60010,6 @@
                                     "on": {
                                       "type": "string"
                                     },
-                                    "kind": {
-                                      "type": "string",
-                                      "enum": [
-                                        "vacation",
-                                        "rol",
-                                        "comp",
-                                        "sick",
-                                        "other"
-                                      ]
-                                    },
                                     "fraction": {
                                       "type": "number"
                                     },
@@ -60298,7 +60031,6 @@
                                   },
                                   "required": [
                                     "on",
-                                    "kind",
                                     "fraction",
                                     "typeId",
                                     "minutes"
@@ -60526,238 +60258,6 @@
                       "minimum": 0,
                       "maximum": 6
                     },
-                    "allowance": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "year": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "vacationDays": {
-                              "type": [
-                                "number",
-                                "null"
-                              ]
-                            },
-                            "rolDays": {
-                              "type": [
-                                "number",
-                                "null"
-                              ]
-                            },
-                            "totalDays": {
-                              "type": [
-                                "number",
-                                "null"
-                              ]
-                            },
-                            "note": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "year",
-                            "vacationDays",
-                            "rolDays",
-                            "totalDays",
-                            "note"
-                          ]
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "vacation": {
-                      "type": "object",
-                      "properties": {
-                        "residual": {
-                          "type": "object",
-                          "properties": {
-                            "basis": {
-                              "type": "string",
-                              "enum": [
-                                "payslip",
-                                "allowance",
-                                "unknown"
-                              ]
-                            },
-                            "remainingMinutes": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "takenMinutes": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "plannedMinutes": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "snapshotPeriod": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "countedThrough": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "basis",
-                            "remainingMinutes",
-                            "takenMinutes",
-                            "plannedMinutes",
-                            "snapshotPeriod",
-                            "countedThrough"
-                          ]
-                        },
-                        "allowanceMinutes": {
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "carriedMinutes": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        }
-                      },
-                      "required": [
-                        "residual",
-                        "allowanceMinutes",
-                        "carriedMinutes"
-                      ]
-                    },
-                    "rol": {
-                      "type": "object",
-                      "properties": {
-                        "residual": {
-                          "type": "object",
-                          "properties": {
-                            "basis": {
-                              "type": "string",
-                              "enum": [
-                                "payslip",
-                                "allowance",
-                                "unknown"
-                              ]
-                            },
-                            "remainingMinutes": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "takenMinutes": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "plannedMinutes": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "snapshotPeriod": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "countedThrough": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "basis",
-                            "remainingMinutes",
-                            "takenMinutes",
-                            "plannedMinutes",
-                            "snapshotPeriod",
-                            "countedThrough"
-                          ]
-                        },
-                        "allowanceMinutes": {
-                          "anyOf": [
-                            {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "carriedMinutes": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        }
-                      },
-                      "required": [
-                        "residual",
-                        "allowanceMinutes",
-                        "carriedMinutes"
-                      ]
-                    },
                     "bars": {
                       "type": "array",
                       "items": {
@@ -60804,16 +60304,6 @@
                               },
                               "on": {
                                 "type": "string"
-                              },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "vacation",
-                                  "rol",
-                                  "comp",
-                                  "sick",
-                                  "other"
-                                ]
                               },
                               "typeId": {
                                 "type": "string"
@@ -60866,7 +60356,6 @@
                               "source",
                               "id",
                               "on",
-                              "kind",
                               "typeId",
                               "fraction",
                               "minutes",
@@ -60933,99 +60422,6 @@
                         "maximum": 9007199254740991
                       }
                     },
-                    "unrecorded": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "month": {
-                            "type": "string",
-                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                          },
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "vacation",
-                              "rol"
-                            ]
-                          },
-                          "payrollMinutes": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          },
-                          "recordedMinutes": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          },
-                          "missingMinutes": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          }
-                        },
-                        "required": [
-                          "month",
-                          "kind",
-                          "payrollMinutes",
-                          "recordedMinutes",
-                          "missingMinutes"
-                        ]
-                      }
-                    },
-                    "overdrawn": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "vacation",
-                              "rol"
-                            ]
-                          },
-                          "byMinutes": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          },
-                          "basis": {
-                            "type": "string",
-                            "enum": [
-                              "payslip",
-                              "allowance",
-                              "unknown"
-                            ]
-                          },
-                          "snapshotPeriod": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "onDate": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "byMinutes",
-                          "basis",
-                          "snapshotPeriod",
-                          "onDate"
-                        ]
-                      }
-                    },
                     "totals": {
                       "type": "object",
                       "properties": {
@@ -61043,33 +60439,6 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
-                        },
-                        "byKind": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "vacation",
-                                  "rol",
-                                  "comp",
-                                  "sick",
-                                  "other"
-                                ]
-                              },
-                              "minutes": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "minutes"
-                            ]
-                          }
                         },
                         "byType": {
                           "type": "array",
@@ -61096,7 +60465,6 @@
                         "takenMinutes",
                         "plannedMinutes",
                         "totalMinutes",
-                        "byKind",
                         "byType"
                       ]
                     },
@@ -61119,57 +60487,6 @@
                           "month": {
                             "type": "string",
                             "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                          },
-                          "payroll": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "vacationMinutes": {
-                                    "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "rolMinutes": {
-                                    "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "vacationMinutes",
-                                  "rolMinutes"
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "recorded": {
-                            "type": "object",
-                            "properties": {
-                              "vacationMinutes": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              },
-                              "rolMinutes": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              },
-                              "otherMinutes": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              }
-                            },
-                            "required": [
-                              "vacationMinutes",
-                              "rolMinutes",
-                              "otherMinutes"
-                            ]
                           },
                           "payrollByType": {
                             "anyOf": [
@@ -61234,8 +60551,6 @@
                         },
                         "required": [
                           "month",
-                          "payroll",
-                          "recorded",
                           "payrollByType",
                           "recordedByType",
                           "plannedMinutes",
@@ -61244,282 +60559,11 @@
                         ]
                       }
                     },
-                    "totalAllowanceMinutes": {
-                      "anyOf": [
-                        {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
-                    "allowanceMismatch": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
                     "holidays": {
                       "type": "array",
                       "items": {
                         "type": "string"
                       }
-                    },
-                    "residualInputs": {
-                      "type": "object",
-                      "properties": {
-                        "vacation": {
-                          "type": "object",
-                          "properties": {
-                            "snapshot": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "period": {
-                                      "type": "string",
-                                      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                    },
-                                    "remainingHours": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "period",
-                                    "remainingHours"
-                                  ]
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "allowanceMinutes": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "carriedMinutes": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "days": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "on": {
-                                    "type": "string"
-                                  },
-                                  "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "vacation",
-                                      "rol",
-                                      "comp",
-                                      "sick",
-                                      "other"
-                                    ]
-                                  },
-                                  "fraction": {
-                                    "type": "number"
-                                  },
-                                  "typeId": {
-                                    "type": "string"
-                                  },
-                                  "minutes": {
-                                    "anyOf": [
-                                      {
-                                        "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "on",
-                                  "kind",
-                                  "fraction",
-                                  "typeId",
-                                  "minutes"
-                                ]
-                              }
-                            },
-                            "countedThrough": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "today": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "minutesPerDay": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "snapshot",
-                            "allowanceMinutes",
-                            "carriedMinutes",
-                            "days",
-                            "countedThrough",
-                            "today",
-                            "minutesPerDay"
-                          ]
-                        },
-                        "rol": {
-                          "type": "object",
-                          "properties": {
-                            "snapshot": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "period": {
-                                      "type": "string",
-                                      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                    },
-                                    "remainingHours": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "period",
-                                    "remainingHours"
-                                  ]
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "allowanceMinutes": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "carriedMinutes": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            },
-                            "days": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "on": {
-                                    "type": "string"
-                                  },
-                                  "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "vacation",
-                                      "rol",
-                                      "comp",
-                                      "sick",
-                                      "other"
-                                    ]
-                                  },
-                                  "fraction": {
-                                    "type": "number"
-                                  },
-                                  "typeId": {
-                                    "type": "string"
-                                  },
-                                  "minutes": {
-                                    "anyOf": [
-                                      {
-                                        "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "on",
-                                  "kind",
-                                  "fraction",
-                                  "typeId",
-                                  "minutes"
-                                ]
-                              }
-                            },
-                            "countedThrough": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "today": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "minutesPerDay": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "snapshot",
-                            "allowanceMinutes",
-                            "carriedMinutes",
-                            "days",
-                            "countedThrough",
-                            "today",
-                            "minutesPerDay"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "vacation",
-                        "rol"
-                      ]
                     },
                     "external": {
                       "anyOf": [
@@ -61546,386 +60590,6 @@
                           "type": "null"
                         }
                       ]
-                    },
-                    "accrual": {
-                      "type": "object",
-                      "properties": {
-                        "vacation": {
-                          "type": "object",
-                          "properties": {
-                            "rate": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "minutesPerMonth": {
-                                      "type": "number"
-                                    },
-                                    "source": {
-                                      "type": "string",
-                                      "enum": [
-                                        "payslip",
-                                        "allowance"
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "minutesPerMonth",
-                                    "source"
-                                  ]
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "yearEndMinutes": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "payslipPeriod": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "leads": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "rate",
-                            "yearEndMinutes",
-                            "payslipPeriod",
-                            "leads"
-                          ]
-                        },
-                        "rol": {
-                          "type": "object",
-                          "properties": {
-                            "rate": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "minutesPerMonth": {
-                                      "type": "number"
-                                    },
-                                    "source": {
-                                      "type": "string",
-                                      "enum": [
-                                        "payslip",
-                                        "allowance"
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "minutesPerMonth",
-                                    "source"
-                                  ]
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "yearEndMinutes": {
-                              "anyOf": [
-                                {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "payslipPeriod": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "leads": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": [
-                            "rate",
-                            "yearEndMinutes",
-                            "payslipPeriod",
-                            "leads"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "vacation",
-                        "rol"
-                      ]
-                    },
-                    "forecastInputs": {
-                      "type": "object",
-                      "properties": {
-                        "vacation": {
-                          "type": "object",
-                          "properties": {
-                            "rate": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "minutesPerMonth": {
-                                      "type": "number"
-                                    },
-                                    "source": {
-                                      "type": "string",
-                                      "enum": [
-                                        "payslip",
-                                        "allowance"
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "minutesPerMonth",
-                                    "source"
-                                  ]
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "opening": {
-                              "type": "object",
-                              "properties": {
-                                "source": {
-                                  "type": "string",
-                                  "enum": [
-                                    "payslip",
-                                    "year"
-                                  ]
-                                },
-                                "minutes": {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                "accruedThrough": {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                "spentFrom": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "source",
-                                "minutes",
-                                "accruedThrough",
-                                "spentFrom"
-                              ]
-                            },
-                            "days": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "on": {
-                                    "type": "string"
-                                  },
-                                  "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "vacation",
-                                      "rol",
-                                      "comp",
-                                      "sick",
-                                      "other"
-                                    ]
-                                  },
-                                  "fraction": {
-                                    "type": "number"
-                                  },
-                                  "typeId": {
-                                    "type": "string"
-                                  },
-                                  "minutes": {
-                                    "anyOf": [
-                                      {
-                                        "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "on",
-                                  "kind",
-                                  "fraction",
-                                  "typeId",
-                                  "minutes"
-                                ]
-                              }
-                            },
-                            "minutesPerDay": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "rate",
-                            "opening",
-                            "days",
-                            "minutesPerDay"
-                          ]
-                        },
-                        "rol": {
-                          "type": "object",
-                          "properties": {
-                            "rate": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "minutesPerMonth": {
-                                      "type": "number"
-                                    },
-                                    "source": {
-                                      "type": "string",
-                                      "enum": [
-                                        "payslip",
-                                        "allowance"
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "minutesPerMonth",
-                                    "source"
-                                  ]
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "opening": {
-                              "type": "object",
-                              "properties": {
-                                "source": {
-                                  "type": "string",
-                                  "enum": [
-                                    "payslip",
-                                    "year"
-                                  ]
-                                },
-                                "minutes": {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                },
-                                "accruedThrough": {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
-                                },
-                                "spentFrom": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "source",
-                                "minutes",
-                                "accruedThrough",
-                                "spentFrom"
-                              ]
-                            },
-                            "days": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "on": {
-                                    "type": "string"
-                                  },
-                                  "kind": {
-                                    "type": "string",
-                                    "enum": [
-                                      "vacation",
-                                      "rol",
-                                      "comp",
-                                      "sick",
-                                      "other"
-                                    ]
-                                  },
-                                  "fraction": {
-                                    "type": "number"
-                                  },
-                                  "typeId": {
-                                    "type": "string"
-                                  },
-                                  "minutes": {
-                                    "anyOf": [
-                                      {
-                                        "type": "integer",
-                                        "minimum": -9007199254740991,
-                                        "maximum": 9007199254740991
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "on",
-                                  "kind",
-                                  "fraction",
-                                  "typeId",
-                                  "minutes"
-                                ]
-                              }
-                            },
-                            "minutesPerDay": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
-                            }
-                          },
-                          "required": [
-                            "rate",
-                            "opening",
-                            "days",
-                            "minutesPerDay"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "vacation",
-                        "rol"
-                      ]
                     }
                   },
                   "required": [
@@ -61942,24 +60606,14 @@
                     "today",
                     "minutesPerDay",
                     "weekStart",
-                    "allowance",
-                    "vacation",
-                    "rol",
                     "bars",
                     "rows",
                     "years",
-                    "unrecorded",
-                    "overdrawn",
                     "totals",
                     "countedThrough",
                     "months",
-                    "totalAllowanceMinutes",
-                    "allowanceMismatch",
                     "holidays",
-                    "residualInputs",
-                    "external",
-                    "accrual",
-                    "forecastInputs"
+                    "external"
                   ]
                 }
               }
@@ -62022,316 +60676,6 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "timeoff"
-      }
-    },
-    "/timeoff/allowances": {
-      "get": {
-        "operationId": "list_time_off_allowances",
-        "summary": "The allowance stated for each year, newest first.",
-        "tags": [
-          "timeoff"
-        ],
-        "responses": {
-          "200": {
-            "description": "Done",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "allowances": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "year": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          },
-                          "vacationDays": {
-                            "type": [
-                              "number",
-                              "null"
-                            ]
-                          },
-                          "rolDays": {
-                            "type": [
-                              "number",
-                              "null"
-                            ]
-                          },
-                          "totalDays": {
-                            "type": [
-                              "number",
-                              "null"
-                            ]
-                          },
-                          "note": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "year",
-                          "vacationDays",
-                          "rolDays",
-                          "totalDays",
-                          "note"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "allowances"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "module_inactive",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "rate_limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "x-scope": "read",
-        "x-addon": "timeoff"
-      }
-    },
-    "/timeoff/allowances/{year}": {
-      "put": {
-        "operationId": "save_time_off_allowance",
-        "summary": "States the allowance of a year, in days; null for a part nobody states.",
-        "tags": [
-          "timeoff"
-        ],
-        "parameters": [
-          {
-            "name": "year",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d{4}$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "vacationDays": {
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 400
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "rolDays": {
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 400
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "totalDays": {
-                    "anyOf": [
-                      {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 400
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "note": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 200
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "vacationDays",
-                  "rolDays",
-                  "totalDays",
-                  "note"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Done",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "year": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    "vacationDays": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "rolDays": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "totalDays": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    },
-                    "note": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "year",
-                    "vacationDays",
-                    "rolDays",
-                    "totalDays",
-                    "note"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "invalid",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "module_inactive",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "rate_limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "x-scope": "write",
         "x-addon": "timeoff"
       }
     },
@@ -62380,16 +60724,6 @@
                               "on": {
                                 "type": "string"
                               },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "vacation",
-                                  "rol",
-                                  "comp",
-                                  "sick",
-                                  "other"
-                                ]
-                              },
                               "typeId": {
                                 "type": "string",
                                 "format": "uuid",
@@ -62424,6 +60758,7 @@
                             },
                             "required": [
                               "on",
+                              "typeId",
                               "fraction",
                               "note"
                             ]
@@ -63296,16 +61631,6 @@
                               "on": {
                                 "type": "string"
                               },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "vacation",
-                                  "rol",
-                                  "comp",
-                                  "sick",
-                                  "other"
-                                ]
-                              },
                               "typeId": {
                                 "type": "string",
                                 "format": "uuid",
@@ -63340,6 +61665,7 @@
                             },
                             "required": [
                               "on",
+                              "typeId",
                               "fraction",
                               "note"
                             ]
@@ -63463,16 +61789,6 @@
                   "to": {
                     "type": "string"
                   },
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "vacation",
-                      "rol",
-                      "comp",
-                      "sick",
-                      "other"
-                    ]
-                  },
                   "typeId": {
                     "type": "string",
                     "format": "uuid",
@@ -63513,46 +61829,12 @@
                       }
                     ]
                   },
-                  "editedKind": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "vacation",
-                          "rol",
-                          "comp",
-                          "sick",
-                          "other"
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
                   "editedTypeId": {
                     "anyOf": [
                       {
                         "type": "string",
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "otherKind": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "vacation",
-                          "rol",
-                          "comp",
-                          "sick",
-                          "other"
-                        ]
                       },
                       {
                         "type": "null"
@@ -63575,6 +61857,7 @@
                 "required": [
                   "from",
                   "to",
+                  "typeId",
                   "fraction",
                   "note"
                 ],
@@ -63611,16 +61894,6 @@
                               "on": {
                                 "type": "string"
                               },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "vacation",
-                                  "rol",
-                                  "comp",
-                                  "sick",
-                                  "other"
-                                ]
-                              },
                               "typeId": {
                                 "type": "string",
                                 "format": "uuid",
@@ -63655,6 +61928,7 @@
                             },
                             "required": [
                               "on",
+                              "typeId",
                               "fraction",
                               "note"
                             ]
@@ -63807,16 +62081,6 @@
                               "on": {
                                 "type": "string"
                               },
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "vacation",
-                                  "rol",
-                                  "comp",
-                                  "sick",
-                                  "other"
-                                ]
-                              },
                               "typeId": {
                                 "type": "string",
                                 "format": "uuid",
@@ -63851,6 +62115,7 @@
                             },
                             "required": [
                               "on",
+                              "typeId",
                               "fraction",
                               "note"
                             ]
@@ -63987,16 +62252,6 @@
                         "on": {
                           "type": "string"
                         },
-                        "kind": {
-                          "type": "string",
-                          "enum": [
-                            "vacation",
-                            "rol",
-                            "comp",
-                            "sick",
-                            "other"
-                          ]
-                        },
                         "typeId": {
                           "type": "string",
                           "format": "uuid",
@@ -64031,6 +62286,7 @@
                       },
                       "required": [
                         "on",
+                        "typeId",
                         "fraction",
                         "note"
                       ]

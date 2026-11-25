@@ -15,7 +15,7 @@ import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platfo
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
-import { MOVEMENT_KINDS, POCKET_STATES } from "./rules";
+import { POCKET_STATES, STORED_MOVEMENT_KINDS } from "./rules";
 import { inList } from "../../platform/db/checks";
 
 /**
@@ -74,7 +74,7 @@ export const pocketMovements = pgTable(
     pocketId: uuid("pocket_id")
       .notNull()
       .references(() => pockets.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: MOVEMENT_KINDS }).notNull(),
+    kind: text("kind", { enum: STORED_MOVEMENT_KINDS }).notNull(),
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     on: date("on").notNull(),
     reason: text("reason"),
@@ -92,7 +92,7 @@ export const pocketMovements = pgTable(
     uniqueIndex("pocket_movements_accrual_month_uq")
       .on(table.pocketId, sql`date_trunc('month', ${table.on}::timestamp)`)
       .where(sql`${table.kind} = 'accrual'`),
-    check("pocket_movements_kind_ck", sql`${table.kind} in (${sql.raw(inList(MOVEMENT_KINDS))})`),
+    check("pocket_movements_kind_ck", sql`${table.kind} in (${sql.raw(inList(STORED_MOVEMENT_KINDS))})`),
     check(
       "pocket_movements_sign_ck",
       sql`case ${table.kind} when 'accrual' then ${table.amountCents} > 0 when 'deposit' then ${table.amountCents} > 0 when 'withdrawal' then ${table.amountCents} < 0 else ${table.amountCents} <> 0 end`,

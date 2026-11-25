@@ -4,11 +4,9 @@ import { z } from "zod";
 import { civilDate, optionalText } from "../../shared/inputs";
 import { type Cents, centsToDecimal, parseCents, percentToFraction } from "../../shared/money";
 
-export const DAY_BASES = ["365", "360"] as const;
 /**
  * The day-count convention of a rule (11-standardization.md §11.5, E6): a year of 365 or 360 days,
- * or `act_act`, the actual days of the day's own year (366 in a leap year). It replaces `day_basis`,
- * which stays written until R5f: equal for 365 and 360, "365" for `act_act`.
+ * or `act_act`, the actual days of the day's own year (366 in a leap year).
  */
 export const DAY_COUNTS = ["365", "360", "act_act"] as const;
 /** How a rule's periods are cut: `calendar`, months, quarters and years of the calendar. */
@@ -72,9 +70,7 @@ export const ruleInputSchema = z
   .object({
     accountId: z.uuid(),
     taxRate: fraction,
-    /** Deprecated (R5g): read only when `dayCount` is missing, and written back from it. */
-    dayBasis: z.enum(DAY_BASES).optional(),
-    dayCount: z.enum(DAY_COUNTS).optional(),
+    dayCount: z.enum(DAY_COUNTS).default("365"),
     periodAnchor: z.enum(PERIOD_ANCHORS).default("calendar"),
     /** Days after the settlement date the bank's payment is looked for; `null`: the default window. */
     paymentWindowDays: z.int().min(0).max(MAX_PAYMENT_WINDOW_DAYS).nullable().default(null),
@@ -89,11 +85,7 @@ export const ruleInputSchema = z
     payeeMatch: optionalText(MAX_MATCH),
     tiers: z.array(z.object({ upToCents: z.bigint().positive().nullable(), annualRate: fraction })).min(1),
   })
-  .refine((rule) => rule.validTo === null || rule.validTo >= rule.validFrom, "Ends before it starts")
-  .transform(({ dayBasis, dayCount, ...rule }) => {
-    const count = dayCount ?? dayBasis ?? "365";
-    return { ...rule, dayCount: count, dayBasis: count === "360" ? ("360" as const) : ("365" as const) };
-  });
+  .refine((rule) => rule.validTo === null || rule.validTo >= rule.validFrom, "Ends before it starts");
 
 export type RuleInput = z.input<typeof ruleInputSchema>;
 
@@ -108,8 +100,6 @@ export interface PlainRule {
   runHour: number | null;
   tiers: readonly { upTo: string | null; rate: string }[];
   tax: string;
-  /** Deprecated (R5g): `dayCount` wins when both are given. */
-  dayBasis?: (typeof DAY_BASES)[number];
   dayCount?: DayCount;
   periodAnchor?: (typeof PERIOD_ANCHORS)[number];
   paymentWindowDays?: number | null;
@@ -132,7 +122,6 @@ export function ruleInputOf(plain: PlainRule): RuleInput {
       annualRate: percentToFraction(tier.rate),
     })),
     taxRate: percentToFraction(plain.tax),
-    dayBasis: plain.dayBasis,
     dayCount: plain.dayCount,
     periodAnchor: plain.periodAnchor,
     paymentWindowDays: plain.paymentWindowDays,

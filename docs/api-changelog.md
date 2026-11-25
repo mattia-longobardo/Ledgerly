@@ -1,7 +1,36 @@
 # API changelog
 
-Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
-written before it keeps working.
+Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive, a client
+written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
+deprecated (`apiLevel` and `minClientLevel` 2).
+
+## Unreleased · R5f.2 · The clean-up: the deprecated keys are removed (not additive)
+
+`GET /meta` answers `apiLevel` 2 and `minClientLevel` 2. Removed:
+
+- Payroll: `type` of the rows of `GET /payroll/payslips` and of `get_payroll`; `type` of the payslip of
+  `GET /payroll/payslips/{id}` and of `get_payslip`; `type` of a manual payslip
+  (`/payroll/manual-payslips`). Read `kind` and `extraNumber`. An employer may now have up to 12 extra
+  payments (`extraMonths`, `extraNumber` 1-12).
+- Funds: `payslipType` of the rows of `payslips` of `GET /funds/{id}/contributions`. Read `kind` and
+  `extraNumber`.
+- Time off, `GET /timeoff/{year}` and `get_time_off`: `allowance`, `vacation`, `rol`, `residualInputs`,
+  `forecastInputs`, `accrual`, `totalAllowanceMinutes`, `allowanceMismatch`, `unrecorded`, `overdrawn`,
+  `totals.byKind`, `months[].payroll`, `months[].recorded`, and `kind` of the rows and of the days of
+  `balances[].residualInput`/`forecastInput`. Read `types`, `allowances`, `balances`, `unrecordedByType`,
+  `overdrawnByType`, `totals.byType`, `months[].payrollByType`/`recordedByType` and `typeId`.
+- Time off, the routes `GET /timeoff/allowances` and `PUT /timeoff/allowances/{year}` and the MCP tools
+  `list_time_off_allowances` and `save_time_off_allowance`. Use `PUT /timeoff/types/{id}/allowances/{year}`.
+- Time off, `POST /timeoff/leave` and `POST /timeoff/leave/undo`: `kind`, `editedKind`, `otherKind` and
+  `rows[].kind`. `typeId` is required (`rows[].typeId` too).
+- Interests: `dayBasis` of `GET /interests`, `GET /interests/{id}`, `list_interest_rules` and of the
+  bodies of `POST /interests` and `PUT /interests/{id}`. Read and send `dayCount`.
+- Preferences: `patronSaint` of `GET`/`PATCH /preferences`. The days off of the year are
+  `GET /timeoff/rest-days`.
+- Investments: `funds` of `GET /investments/home` (the pension funds are in `groups`); the value
+  `planned` of `providers[].status` of `GET /investments/catalog`.
+- Imports: the kinds `cometa_operations` and `cometa_position` of `POST /imports` (`400` `invalid` now,
+  `415` before).
 
 ## Unreleased · R5f.1 · Before the clean-up of the schema
 

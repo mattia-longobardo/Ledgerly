@@ -4,9 +4,7 @@ import { checkIn, createdAtColumn, idColumn, moment, updatedAtColumn } from "../
 
 /** A job's result, restricted to JSON-safe values: a `bigint` would fail jsonb serialization and
  * turn a successful job into a recorded failure. */
-// `quarter` is the tier `integrations-sync` ran in before the minute tick: kept for the rows it
-// wrote, never asked for again.
-const RUN_TIERS = ["minute", "hourly", "daily", "monthly", "manual", "quarter"] as const;
+const RUN_TIERS = ["minute", "hourly", "daily", "monthly", "manual"] as const;
 const RUN_STATUSES = ["running", "success", "failed", "skipped"] as const;
 const QUEUE_STATUSES = ["queued", "running"] as const;
 

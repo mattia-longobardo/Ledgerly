@@ -157,7 +157,6 @@ export async function seedReferenceUser(ctx: Ctx, setClock: (instant: Date) => v
   await createRule(ctx, {
     accountId: savings.id,
     taxRate: "0.26",
-    dayBasis: "365",
     settlement: "monthly",
     validFrom: "2031-01-01",
     validTo: null,

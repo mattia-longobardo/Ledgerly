@@ -11,7 +11,6 @@ import {
   PAYROLL_ERRORS,
   PAYSLIP_ID,
   PAYSLIP_KINDS,
-  PAYSLIP_TYPES,
   payslipFieldValues,
 } from "./shared";
 
@@ -44,8 +43,6 @@ const manualPayslip = z.object({
   period: monthStart().nullable(),
   kind: z.enum(PAYSLIP_KINDS),
   extraNumber: z.number().int().nullable(),
-  /** Deprecated (R5g): the old type, written beside the kind. */
-  type: z.enum(PAYSLIP_TYPES),
   paidOn: civilDate().nullable(),
   gross: money().nullable(),
   taxes: money().nullable(),
@@ -75,7 +72,6 @@ const MANUAL_EXAMPLE = {
   period: "2026-03-01",
   kind: "ordinary",
   extraNumber: null,
-  type: "ordinary",
   paidOn: "2026-03-27",
   gross: "3000.00",
   taxes: "600.00",

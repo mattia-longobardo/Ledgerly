@@ -118,8 +118,6 @@ export const fundContributions = z.object({
       documentId: id().nullable(),
       /** The month of a monthly payslip; null for a thirteenth or another extra payslip. */
       month: civilDate().nullable(),
-      /** Deprecated (R5g), removed in R5f: read `kind` and `extraNumber`. */
-      payslipType: z.string(),
       kind: z.enum(PAYSLIP_KINDS),
       /** The employer's extra payment it is (1 is a 13th), for `extra` only. */
       extraNumber: z.number().int().min(1).nullable(),

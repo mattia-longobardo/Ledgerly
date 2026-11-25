@@ -47,7 +47,7 @@ export async function oldLeaveTypes(ctx: Pick<Ctx, "userId">): Promise<OldTypes>
     .values(userScoped(ctx).stamp({ workDays: [1, 2, 3, 4, 5] }))
     .onConflictDoNothing();
   const existing = await getDb()
-    .select({ id: leaveTypes.id, legacyKind: leaveTypes.legacyKind })
+    .select({ id: leaveTypes.id, name: leaveTypes.name })
     .from(leaveTypes)
     .where(eq(leaveTypes.userId, ctx.userId));
   if (existing.length === 0) {
@@ -63,12 +63,18 @@ export async function oldLeaveTypes(ctx: Pick<Ctx, "userId">): Promise<OldTypes>
             toCalendar: type.calendar,
             balanceKey: type.balance ? type.word : null,
             calendarKind: type.held ? type.word : null,
-            legacyKind: type.word,
             position,
           }),
         ),
       );
     return oldLeaveTypes(ctx);
   }
-  return Object.fromEntries(existing.map((one) => [one.legacyKind, one.id])) as OldTypes;
+  return Object.fromEntries(
+    existing.map((one) => [OLD_TYPES.find((type) => type.name === one.name)?.word, one.id]),
+  ) as OldTypes;
+}
+
+/** The old word of a row's type, as the tests name it. */
+export function wordOf(types: OldTypes, typeId: string): string | null {
+  return Object.entries(types).find(([, id]) => id === typeId)?.[0] ?? null;
 }

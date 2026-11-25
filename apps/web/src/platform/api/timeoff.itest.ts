@@ -59,11 +59,11 @@ const SAT = "2026-12-19";
 const leave = (overrides: Record<string, unknown> = {}) => ({
   from: MON,
   to: TUE,
-  kind: "vacation",
+  typeId: types.vacation,
   fraction: 1,
   note: null,
-  editedKind: null,
-  otherKind: null,
+  editedTypeId: null,
+  otherTypeId: null,
   ...overrides,
 });
 
@@ -91,22 +91,6 @@ afterAll(async () => {
 });
 
 describe("the routes of time off", () => {
-  it("state an allowance and answer it in days, and list it", async () => {
-    const saved = await send(alice, "PUT", "/timeoff/allowances/2026", {
-      vacationDays: 22,
-      rolDays: 4.5,
-      totalDays: null,
-      note: "contract",
-    });
-    expect(saved).toEqual({
-      status: 200,
-      body: { year: 2026, vacationDays: 22, rolDays: 4.5, totalDays: null, note: "contract" },
-    });
-    expect((await send(alice, "GET", "/timeoff/allowances")).body).toEqual({ allowances: [saved.body] });
-    expect((await send(bob, "GET", "/timeoff/allowances")).body).toEqual({ allowances: [] });
-    expect((await send(alice, "PUT", "/timeoff/allowances/2026", { vacationDays: -1 })).status).toBe(400);
-  });
-
   it("book, remove and undo through the routes, with the answer «Undo» sends back", async () => {
     const booked = await send(alice, "POST", "/timeoff/leave", leave());
     expect(booked).toEqual({
@@ -115,7 +99,7 @@ describe("the routes of time off", () => {
     });
     const year = (await send(alice, "GET", "/timeoff/2026")).body;
     const day = year.rows.find((row: { on: string }) => row.on === MON);
-    expect(day).toMatchObject({ source: "day", kind: "vacation", origin: "manual", sync: "upsert" });
+    expect(day).toMatchObject({ source: "day", typeId: types.vacation, origin: "manual", sync: "upsert" });
 
     const byId = await send(alice, "DELETE", `/timeoff/leave/${day.id}`);
     expect(byId.body).toMatchObject({ removed: 1, pending: 0 });
@@ -150,7 +134,7 @@ describe("the routes of time off", () => {
   });
 
   it("raise LeaveChanged for a day the external calendar has to hear about, as the action does", async () => {
-    await send(alice, "POST", "/timeoff/leave", leave({ kind: "other" }));
+    await send(alice, "POST", "/timeoff/leave", leave({ typeId: types.other }));
     expect(requestPass).not.toHaveBeenCalled();
     await send(alice, "POST", "/timeoff/leave", leave({ from: FRI, to: FRI }));
     expect(requestPass).toHaveBeenCalledWith({ userId: alice.userId });
@@ -191,18 +175,17 @@ describe("the external calendar's figures on GET /timeoff/{year}", () => {
 
 describe("parity of time off: page = route = MCP tool, preview = answer after the save", () => {
   it("answers the tool and the route with the page's numbers", async () => {
-    await send(alice, "PUT", "/timeoff/allowances/2026", {
-      vacationDays: 20,
-      rolDays: 4,
-      totalDays: 24,
-      note: null,
+    await send(alice, "PUT", `/timeoff/types/${types.vacation}/allowances/2026`, {
+      days: 20,
+      carriedDays: null,
     });
+    await send(alice, "PUT", `/timeoff/types/${types.rol}/allowances/2026`, { days: 4, carriedDays: null });
     await send(alice, "POST", "/timeoff/leave", leave());
     const route = (await send(alice, "GET", "/timeoff/2026")).body;
     const tool = reads.find((one) => one.name === "get_time_off")!;
     expect(await tool.run(alice, { year: "2026" })).toEqual(route);
 
-    // R5g: the page's figures are by type; the route keeps them beside its deprecated fields.
+    // The page's figures are by type, and so are the route's.
     const page = await timeoff.timeOffView(alice, 2026);
     type Balance = { typeId: string; residual: unknown; accrual: unknown };
     const ofBalances = (list: Balance[]) =>
@@ -221,12 +204,11 @@ describe("parity of time off: page = route = MCP tool, preview = answer after th
   });
 
   it("previews in the panel what the route answers once the range is saved", async () => {
-    await send(alice, "PUT", "/timeoff/allowances/2026", {
-      vacationDays: 20,
-      rolDays: 4,
-      totalDays: null,
-      note: null,
+    await send(alice, "PUT", `/timeoff/types/${types.vacation}/allowances/2026`, {
+      days: 20,
+      carriedDays: null,
     });
+    await send(alice, "PUT", `/timeoff/types/${types.rol}/allowances/2026`, { days: 4, carriedDays: null });
     await send(alice, "POST", "/timeoff/leave", leave({ from: FRI, to: FRI }));
     const before = (await send(alice, "GET", "/timeoff/2026")).body;
 
@@ -239,7 +221,12 @@ describe("parity of time off: page = route = MCP tool, preview = answer after th
       otherTypeId: null,
       editedTypeId: null,
     };
-    type Balance = { typeId: string; residualInput: { days: unknown[] }; forecastInput: unknown };
+    type Balance = {
+      typeId: string;
+      residual: { remainingMinutes: number | null };
+      residualInput: { days: unknown[] };
+      forecastInput: unknown;
+    };
     const vacationOf = (year: { balances: Balance[] }) =>
       year.balances.find((one) => one.typeId === types.vacation) as Balance;
     const booked = vacationOf(before).residualInput.days as {
@@ -266,7 +253,7 @@ describe("parity of time off: page = route = MCP tool, preview = answer after th
     await send(alice, "POST", "/timeoff/leave", leave());
     const after = (await send(alice, "GET", "/timeoff/2026")).body;
     const balance = preview.balances.find((one) => one.typeId === types.vacation);
-    expect(balance?.afterMinutes).toBe(after.vacation.residual.remainingMinutes);
+    expect(balance?.afterMinutes).toBe(vacationOf(after).residual.remainingMinutes);
     const saved = vacationOf(after).residualInput.days as { on: string; typeId: string; fraction: number }[];
     expect(forecast?.afterMinutes).toBe(
       client.forecastChange(forecastOf(after), range, after.window, { before: saved, after: saved })

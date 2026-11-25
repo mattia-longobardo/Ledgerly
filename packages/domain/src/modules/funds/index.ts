@@ -48,7 +48,6 @@ export {
   movementCandidates,
   proposeDebitMatch,
   recordValuation,
-  releaseFormerAccountReferences,
   removeFee,
   removeSource,
   requireFund,

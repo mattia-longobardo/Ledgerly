@@ -4,4 +4,4 @@ export { FIELDS, FIELD_GROUPS, FIELD_NAMES, effectiveValue, isDerived } from "./
 export type { FieldGroup, FieldName } from "./fields";
 export type { RegisterRow, YearSummary } from "./queries";
 export { CODE_ROLES, SUMMED_FIELDS } from "./rules";
-export type { PayslipType, SummedField } from "./rules";
+export type { SummedField } from "./rules";

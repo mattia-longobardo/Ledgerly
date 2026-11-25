@@ -78,7 +78,6 @@ async function everythingOn(account: string) {
   await createRule(ctx, {
     accountId: account,
     taxRate: "0",
-    dayBasis: "365",
     settlement: "monthly",
     validFrom: "2026-01-01",
     validTo: null,

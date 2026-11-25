@@ -1,18 +1,16 @@
 // Time off (rewrite plan R2, 05-refactor.md §5.5 «timeoff»; audit TOF-4, TOF-5, TOF-7): the year of
-// the Time off page as `get_time_off` shows it too, the allowances of Time off › Settings and the
-// writes of the leave panel. A write answers what «Undo» sends back; the pass of the external
+// the Time off page as `get_time_off` shows it too and the writes of the leave panel (the allowances
+// are the types', `types.ts`). A write answers what «Undo» sends back; the pass of the external
 // calendar starts from the event `LeaveChanged`, the same for an action and a route.
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { civilDate, id } from "../primitives";
 import {
-  allowance,
   byDate,
   byDay,
   byYear,
   DAY_FRACTIONS,
   DAY_ID,
-  LEAVE_KINDS,
   leaveUndo,
   MAX_NOTE,
   TIMEOFF_ERRORS,
@@ -27,8 +25,8 @@ export const getTimeOff = defineRoute({
   scope: "read",
   capability: "timeoff",
   summary:
-    "One year of time off: the residual of vacation and ROL with the formula that gave it, the year's " +
-    "totals by month and kind, the days and the payslips' months, the forecasts and the warnings.",
+    "One year of time off: the residual of each type with an allowance and the formula that gave it, " +
+    "the year's totals by month and type, the days and the payslips' months, the forecasts and the warnings.",
   actions: [],
   params: byYear,
   response: timeOffYear,
@@ -36,8 +34,8 @@ export const getTimeOff = defineRoute({
   mcp: {
     title: "Time off",
     description:
-      "One year of leave: what is left of vacation and ROL (and whether the payslip or the allowance " +
-      "says so), days taken and planned by month and kind, the forecast at year end, overdrawn kinds " +
+      "One year of leave: what is left of each type with an allowance (and whether the payslip or the " +
+      "allowance says so), days taken and planned by month and type, the forecast at year end, overdrawn types " +
       "and months a payslip counted more leave than recorded. Lengths in minutes; minutesPerDay is a day.",
     arguments: {
       year: z
@@ -48,47 +46,6 @@ export const getTimeOff = defineRoute({
     pathArguments: { year: "year" },
   },
   example: { params: { year: "2026" }, response: TIMEOFF_YEAR_EXAMPLE },
-});
-
-export const listTimeOffAllowances = defineRoute({
-  id: "list_time_off_allowances",
-  method: "GET",
-  path: "/timeoff/allowances",
-  scope: "read",
-  capability: "timeoff",
-  summary: "The allowance stated for each year, newest first.",
-  actions: [],
-  response: z.object({ allowances: z.array(allowance) }),
-  errors: [],
-  example: { response: { allowances: [TIMEOFF_YEAR_EXAMPLE.allowance] } },
-});
-
-const days = () => z.number().min(0).max(400).nullable();
-
-export const saveTimeOffAllowance = defineRoute({
-  id: "save_time_off_allowance",
-  method: "PUT",
-  path: "/timeoff/allowances/{year}",
-  scope: "write",
-  capability: "timeoff",
-  summary: "States the allowance of a year, in days; null for a part nobody states.",
-  actions: [],
-  params: byYear,
-  body: z
-    .object({
-      vacationDays: days(),
-      rolDays: days(),
-      totalDays: days(),
-      note: z.string().max(MAX_NOTE).nullable(),
-    })
-    .strict(),
-  response: allowance,
-  errors: ["invalid"],
-  example: {
-    params: { year: "2026" },
-    body: { vacationDays: 22, rolDays: 4, totalDays: 26, note: null },
-    response: TIMEOFF_YEAR_EXAMPLE.allowance,
-  },
 });
 
 const undoAnswer = z.object({
@@ -116,25 +73,15 @@ export const saveLeave = defineRoute({
     .object({
       from: civilDate(),
       to: civilDate(),
-      /** Deprecated (R5g): the type by its old kind, for a client that sends no `typeId`. */
-      kind: z.enum(LEAVE_KINDS).optional(),
-      typeId: id().optional(),
+      typeId: id(),
       fraction: z.union(DAY_FRACTIONS.map((one) => z.literal(one))),
       /** For a type counted in hours: the length of every day, in minutes (R5g). */
       minutes: z.number().int().min(1).max(1440).nullish(),
       note: z.string().max(MAX_NOTE).nullable(),
-      /** Deprecated (R5g): read `editedTypeId`. */
-      editedKind: z.enum(LEAVE_KINDS).nullish(),
       editedTypeId: id().nullish(),
-      /** Deprecated (R5g): read `otherTypeId`. */
-      otherKind: z.enum(LEAVE_KINDS).nullish(),
       otherTypeId: id().nullish(),
     })
-    .strict()
-    .refine((body) => body.kind !== undefined || body.typeId !== undefined, {
-      path: ["typeId"],
-      message: "a range names its type",
-    }),
+    .strict(),
   response: undoAnswer,
   errors: TIMEOFF_ERRORS,
   example: {

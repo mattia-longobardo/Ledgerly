@@ -21,7 +21,7 @@ import {
   type PayslipIdentity,
   type PayslipProfile,
   profileOfVersion,
-  type TfrSource,
+  BASE_FIELDS,
 } from "../rules";
 import { payrollRawLines, payslips } from "../schema";
 import { PayrollError, codeMapOf, ofKind, type Payslip, type RawLineRow } from "./codes";
@@ -270,13 +270,12 @@ export async function recompute(
     employeeKey: identity.employeeKey,
     year: identity.year,
     period: identity.period,
-    type: identity.type,
     ...kindOfType(identity.type),
     printedOn: state.values.printedOn && isCivilDate(state.values.printedOn) ? state.values.printedOn : null,
     checks: assembled.checks,
     warnings,
-    tfrSource: (assembled.values.tfrSource ?? null) as TfrSource | null,
-    ...amounts,
+    // The base fields on the row; every field of the country is a pair.
+    ...Object.fromEntries(BASE_FIELDS.map(({ key }) => [key, amounts[key] ?? null])),
   };
   const [payslip] = current
     ? await tx

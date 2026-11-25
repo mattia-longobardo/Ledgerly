@@ -47,7 +47,6 @@ async function aRule(accountId: string): Promise<string> {
   const rule = await createRule(ctx, {
     accountId,
     taxRate: "0",
-    dayBasis: "365",
     settlement: "monthly",
     validFrom: addDays(yesterday, -1),
     tiers: [{ upToCents: null, annualRate: "0.0365" }],

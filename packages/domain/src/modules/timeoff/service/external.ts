@@ -5,7 +5,6 @@ import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { calendarWordOf } from "../rules";
 import { leaveDays } from "../schema";
-import { legacyKind, legacyObservedKind } from "../schema/legacy";
 import { listLeaveTypes } from "./types";
 
 type LeaveWindow = { from: CivilDate; to: CivilDate };
@@ -117,15 +116,9 @@ export async function yearsWithPending(ctx: Pick<Ctx, "userId">): Promise<number
   return [...new Set(rows.map((row) => Number(row.on.slice(0, 4))))].sort((a, b) => a - b);
 }
 
-/**
- * The pair the calendar was observed holding: the `external_*` columns every read uses since R5g,
- * and the old ones, still written for the image before it (R5f drops them) when they take the word.
- */
+/** The pair the calendar was observed holding. */
 function observedPair(fraction: string | null, kind: string) {
-  const old = legacyObservedKind(kind);
   return {
-    observedFraction: old === null ? null : fraction,
-    observedKind: old,
     externalFraction: fraction,
     externalKind: kind,
     externalState: "synced" as const,
@@ -207,7 +200,6 @@ export async function recordFromCalendar(
       userScoped(ctx).stamp({
         on: day.on,
         typeId: type.id,
-        kind: legacyKind(type.legacyKind),
         fraction,
         origin: "external" as const,
         pending: "none" as const,

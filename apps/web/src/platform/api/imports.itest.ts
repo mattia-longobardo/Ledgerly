@@ -167,11 +167,8 @@ describe("POST /imports and the upload of the Payroll screen", () => {
         { name: "note.txt", error: "unsupported_format" },
       ],
     });
-    // A fund's kind is refused before its size, and nothing is queued.
-    expect(await upload(alice, tooLarge(), "cometa_position")).toEqual({
-      status: 415,
-      body: { error: "unsupported_format" },
-    });
+    // A kind the contract does not have is refused before its size, and nothing is queued.
+    expect((await upload(alice, tooLarge(), "cometa_position")).status).toBe(400);
     expect(await queued()).toEqual([]);
     // No file, or more than 24, refuses the whole upload of the screen.
     expect(await byAction(alice)).toEqual({ ok: false, error: "empty" });

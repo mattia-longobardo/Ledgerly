@@ -15,9 +15,8 @@ export const PAYSLIP_SOURCES = ["read", "manual"] as const;
 export const PAY_FREQUENCIES = ["monthly", "semimonthly", "biweekly", "weekly"] as const;
 export type PayFrequency = (typeof PAY_FREQUENCIES)[number];
 
-// shortcut: the old `payslips.type` names three extra payments only, and it stays written until
-// R5f; lift the cap when R5f drops the old type.
-export const MAX_EXTRA_PAYMENTS = 3;
+/** The most extra payments an employer has: one a month (R5f lifted the cap of the old type). */
+export const MAX_EXTRA_PAYMENTS = 12;
 
 /** An employer's configuration: how often it pays, and the month of each extra payment (1st, 2nd…). */
 export interface Employer {

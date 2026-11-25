@@ -268,7 +268,6 @@ describe("interest on the backing account (spec §7.4)", () => {
     await createRule(ctx, {
       accountId: saving,
       taxRate: "0",
-      dayBasis: "365",
       settlement: "monthly",
       validFrom: addDays(todayOn, -365),
       tiers: [{ upToCents: null, annualRate: "0.0365" }],

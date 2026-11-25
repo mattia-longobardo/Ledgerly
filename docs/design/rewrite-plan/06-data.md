@@ -121,6 +121,24 @@ nulle riempito dal vecchio `type`. Da qui il codice non legge più `payslips.typ
 (gli importi del fondo e del registro vengono da `payslip_fields`) né `interest_rules.day_basis`. Le colonne
 vecchie restano scritte fino a R5f.2. Rollback: solo le immagini `pre-r5f-1`.
 
+Migrazione di R5f nel repo, secondo passo (R5f.2): `0077_r5f_cleanup`. Contrazione, in una transazione.
+Prima un controllo dei conteggi: si ferma se una tabella ha più righe di quelle contate in produzione il
+25/11/2026 (il deploy controlla prima i conteggi esatti). Poi i dati: `DELETE` delle 44 righe `quarter` di
+`job_runs` (4 = A), `funds` tolto da `user_preferences.modules`, `kind` delle competenze ancora nullo dal
+vecchio `payslip_type`. Poi le rimozioni: tabelle `fund_deposits`, `fund_deposit_rules`, `fund_fee_tariffs`,
+`pension_rules` (intera, 5 = A), `timeoff_allowances`; colonne di `funds` (`type`, `isin`, `debit_account_id`,
+`debit_day`, `ter`, `monthly_cents`, `deposit_fee_cents`, `receives_payroll`), `document_id` di
+`fund_operations` e `position_snapshots`, `pension_competences.payslip_type`, `payslips.type` e le 35
+colonne fiscali con `tfr_source`, `interest_rules.day_basis`, `user_preferences.patron_month/day`,
+`leave_days.kind`, `trek_fraction`, `trek_kind`, `leave_types.legacy_kind`, l'indice
+`payslips_active_key_uq` e i check vecchi. Check nuovi: `payslips.kind`, `pension_competences.kind` e
+`leave_days.type_id` `NOT NULL`; fino a 12 mensilità extra; `documents.kind` solo `payslip`; tier dei job
+senza `quarter`; movimenti dei pocket salvati solo `accrual` e `deposit`; origine dei giorni `manual` o
+`external`. Non compatibile con l'immagine precedente: deploy e ritorno indietro in
+[`r5f-rollback.md`](r5f-rollback.md). Fuori da R5f (3 = A): `default_range`, gruppi di conti,
+`account_connections`, `sync_jobs.next_run_at` e il kind `documents`, `investment_superseded_entries`, i
+check dei vocabolari aperti e `subscriptions_currency_ck`.
+
 ## 6.2 Regola di compatibilità
 
 ```mermaid

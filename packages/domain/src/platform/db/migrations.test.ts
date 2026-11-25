@@ -23,6 +23,34 @@ const ALLOWED: Record<string, readonly string[]> = {
   "0052_connection_status_cleanup.sql": [
     'ALTER TABLE "integration_connections" DROP CONSTRAINT "integration_connections_user_provider_uq"',
   ],
+  // R5f.2, the clean-up (06-data.md §6.1; the proposal approved by Mattia, 2 = A, 3 = A, 4 = A, 5 = A):
+  // what N6, R5a, R5b, R5c and R5g made useless and R5f.1 stopped reading, with the checks of it.
+  "0077_r5f_cleanup.sql": [
+    'DELETE FROM "job_runs" WHERE "tier" = \'quarter\'',
+    'DROP TABLE "fund_deposit_rules"',
+    'DROP TABLE "fund_deposits"',
+    'DROP TABLE "fund_fee_tariffs"',
+    'DROP TABLE "pension_rules"',
+    'DROP TABLE "timeoff_allowances"',
+    'ALTER TABLE "funds" DROP',
+    'ALTER TABLE "fund_operations" DROP CONSTRAINT "fund_operations_document_id_documents_id_fk"',
+    'ALTER TABLE "fund_operations" DROP COLUMN "document_id"',
+    'ALTER TABLE "position_snapshots" DROP CONSTRAINT "position_snapshots_document_id_documents_id_fk"',
+    'ALTER TABLE "position_snapshots" DROP COLUMN "document_id"',
+    'ALTER TABLE "pension_competences" DROP COLUMN "payslip_type"',
+    'ALTER TABLE "pension_competences" ALTER COLUMN "kind" SET NOT NULL',
+    'ALTER TABLE "payslips" DROP',
+    'ALTER TABLE "payslips" ALTER COLUMN "kind" SET NOT NULL',
+    'ALTER TABLE "interest_rules" DROP',
+    'ALTER TABLE "user_preferences" DROP CONSTRAINT "user_preferences_patron',
+    'ALTER TABLE "user_preferences" DROP COLUMN "patron_',
+    'ALTER TABLE "leave_days" DROP CONSTRAINT "leave_days_user_on_kind_uq"',
+    'ALTER TABLE "leave_days" DROP CONSTRAINT "leave_days_kind_ck"',
+    'ALTER TABLE "leave_days" DROP CONSTRAINT "leave_days_trek_kind_ck"',
+    'ALTER TABLE "leave_days" DROP COLUMN',
+    'ALTER TABLE "leave_days" ALTER COLUMN "type_id" SET NOT NULL',
+    'ALTER TABLE "leave_types" DROP COLUMN "legacy_kind"',
+  ],
 };
 
 const migrations = readdirSync(FOLDER)

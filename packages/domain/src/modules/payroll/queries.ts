@@ -19,6 +19,7 @@ import {
   averageNet,
   averageTaxRate,
   BASE_FIELDS,
+  type BaseField,
   groupByYear,
   isOrdinary,
   meanCents,
@@ -86,16 +87,17 @@ interface RegisterView {
 }
 
 const BASE_KEYS: ReadonlySet<string> = new Set(BASE_FIELDS.map((field) => field.key));
+const isBase = (field: string): field is BaseField => BASE_KEYS.has(field);
 
 /**
  * A column of the register for one payslip: a base field from its row, a field of the country from
- * its pair only — the old fixed columns are no longer read (R5f.1; every row has its pairs).
+ * its pair (R5f dropped the fixed columns).
  */
 export function registerAmount(
-  row: { payslip: Record<SummedField, Cents | null>; fields: Readonly<Record<string, Cents>> },
+  row: { payslip: Record<BaseField, Cents | null>; fields: Readonly<Record<string, Cents>> },
   field: SummedField,
 ): Cents | null {
-  return BASE_KEYS.has(field) ? row.payslip[field] : (row.fields[field] ?? null);
+  return isBase(field) ? row.payslip[field] : (row.fields[field] ?? null);
 }
 
 function sumOf(rows: readonly RegisterRow[], field: SummedField): Cents | null {

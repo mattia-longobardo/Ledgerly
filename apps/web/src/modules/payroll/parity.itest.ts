@@ -17,7 +17,6 @@ import {
   type FieldGroup,
   type FieldName,
   isDerived,
-  type PayslipType,
   type RegisterRow,
   SUMMED_FIELDS,
   type SummedField,
@@ -182,15 +181,14 @@ const old = (() => {
   }
   const hours = (value: string | null | undefined, format: Format) =>
     value === null || value === undefined ? NULL_DISPLAY : `${formatAmountInput(parseCents(value), format.numberFormat)} h`;
-  function rowCells({ payslip, document: read, leaveLeft, openWarnings }: RegisterRow, format: Format) {
+  function rowCells({ payslip, fields, document: read, leaveLeft, openWarnings }: RegisterRow, format: Format) {
     // Every payslip of this test is read from a document.
     const document = read!;
     const values = {} as Record<SummedField, Cents | null>;
-    for (const field of SUMMED_FIELDS) values[field] = payslip[field];
+    for (const field of SUMMED_FIELDS) values[field] = payroll.registerAmount({ payslip, fields }, field);
     const state: DocumentState = document.state;
-    // R5g: the badge is the kind and the number of an extra payment; the old type stays written beside it.
-    const type: PayslipType = payslip.type;
-    const kind = payroll.kindOf({ ...payslip, type });
+    // R5g: the badge is the kind and the number of an extra payment.
+    const kind = payroll.kindOf(payslip);
     const badge = kind.kind === "ordinary" ? null : kind;
     return {
       id: document.id,

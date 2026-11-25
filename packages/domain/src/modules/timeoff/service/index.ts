@@ -21,16 +21,12 @@ export {
   yearsOf,
 } from "./types";
 export {
-  type Allowance,
   type LeaveDay,
   MAX_RANGE_DAYS,
   TimeOffError,
-  allowanceOf,
   deleteLeaveDay,
-  listAllowances,
   listLeaveDays,
   saveLeaveDay,
-  saveYearNote,
   yearWindow,
 } from "./records";
 export {

@@ -7,7 +7,6 @@ import type { Hono } from "hono";
 import type { z } from "zod";
 import { INVESTMENTS, INVESTMENTS_ROUTES, type RouteContract } from "@ledgerly/api-contract";
 import { accountsView } from "@ledgerly/domain/accounts";
-import { fundValues } from "@ledgerly/domain/funds";
 import {
   catalogView,
   checkSyncNow,
@@ -139,13 +138,12 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, investments.getInvestmentsHome, async ({ ctx, query }) => {
     const period = periodOf(ctx, query);
     const snapshot = await investmentsSnapshot(ctx);
-    const [home, pnl, funds, { rows }] = await Promise.all([
+    const [home, pnl, { rows }] = await Promise.all([
       investmentsHome(ctx, snapshot),
       investmentsPnlView(ctx, period, snapshot),
-      fundValues(ctx),
       accountsView(ctx, { months: 1 }),
     ]);
-    return homeOut(home, pnl, funds, await portfolioOut(ctx, { rows, portfolio: home, pnl }));
+    return homeOut(home, pnl, await portfolioOut(ctx, { rows, portfolio: home, pnl }));
   });
   serve(app, guard, investments.getInvestmentsCatalog, async ({ ctx }) => catalogOut(await catalogView(ctx)));
   serve(app, guard, investments.getInvestmentHoldings, async ({ ctx, params }) =>

@@ -8,6 +8,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { Ctx } from "@domain/platform/context";
 import type { PlainRule } from "@ledgerly/domain/interests";
+import { DAY_COUNTS } from "@ledgerly/api-contract/interests";
 import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
@@ -79,7 +80,7 @@ interface Form {
   runHour: string;
   tiers: { upTo: string; rate: string }[];
   tax: string;
-  dayBasis: string;
+  dayCount: string;
   settlement: string;
   payeeMatch: string;
   publish: boolean;
@@ -98,7 +99,7 @@ const typed = (accountId: string, overrides: Partial<Form> = {}): Form => ({
     { upTo: "", rate: "1,5" },
   ],
   tax: "26",
-  dayBasis: "365",
+  dayCount: "365",
   settlement: "quarterly",
   payeeMatch: " INTEREST ",
   publish: false,
@@ -121,7 +122,7 @@ function wire(input: Form) {
       rate: rate(tier.rate),
     })),
     tax: rate(input.tax === "" ? "0" : input.tax),
-    dayBasis: input.dayBasis,
+    dayCount: input.dayCount,
     settlement: input.settlement,
     payeeMatch: input.payeeMatch,
     mode: input.publish ? "post_to_provider" : "analyze_only",
@@ -144,7 +145,7 @@ const actions = (() => {
         rate: readRate(tier.rate, ctx.numberFormat),
       })),
       tax: readRate(input.tax === "" ? "0" : input.tax, ctx.numberFormat),
-      dayBasis: z.enum(interests.DAY_BASES).parse(input.dayBasis),
+      dayCount: z.enum(DAY_COUNTS).parse(input.dayCount),
       settlement: z.enum(interests.SETTLEMENTS).parse(input.settlement),
       payeeMatch: input.payeeMatch,
       mode: input.publish ? "post_to_provider" : "analyze_only",
@@ -204,7 +205,7 @@ describe("interests, old Server Action = new call", () => {
       tax: "",
       runHour: "7",
       validTo: "2027-06-30",
-      dayBasis: "360",
+      dayCount: "360",
       settlement: "annual",
       payeeMatch: "",
       active: false,

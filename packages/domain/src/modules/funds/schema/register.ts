@@ -16,7 +16,6 @@ import { users } from "../../../platform/auth/schema";
 import { inList } from "../../../platform/db/checks";
 import { idColumn, moment } from "../../../platform/db/columns";
 import { balanceEntries } from "../../accounts/schema";
-import { documents } from "../../imports/schema";
 import { transactions } from "../../transactions/schema";
 import { COMPONENTS, DECISIONS, OPERATION_CLASSES, OPERATION_SOURCES } from "../pension/rules";
 import { funds } from "./funds";
@@ -33,7 +32,6 @@ export const fundOperations = pgTable(
     fundId: uuid("fund_id")
       .notNull()
       .references(() => funds.id, { onDelete: "cascade" }),
-    documentId: uuid("document_id").references(() => documents.id, { onDelete: "set null" }),
     originKey: text("origin_key").notNull(),
     originalType: text("original_type").notNull(),
     classification: text("classification", { enum: OPERATION_CLASSES }).notNull(),
@@ -72,7 +70,6 @@ export const fundOperations = pgTable(
     unique("fund_operations_origin_uq").on(table.fundId, table.originKey),
     unique("fund_operations_transaction_uq").on(table.transactionId),
     index("fund_operations_fund_idx").on(table.fundId, table.operationDate),
-    index("fund_operations_document_idx").on(table.documentId),
     index("fund_operations_source_idx").on(table.sourceId),
     check(
       "fund_operations_class_ck",
@@ -131,7 +128,6 @@ export const positionSnapshots = pgTable(
     fundId: uuid("fund_id")
       .notNull()
       .references(() => funds.id, { onDelete: "cascade" }),
-    documentId: uuid("document_id").references(() => documents.id, { onDelete: "set null" }),
     balanceEntryId: uuid("balance_entry_id")
       .notNull()
       .references(() => balanceEntries.id, { onDelete: "cascade" }),
@@ -197,27 +193,5 @@ export const reconciliationLinks = pgTable(
     check("reconciliation_links_component_ck", sql`${table.component} in (${sql.raw(inList(COMPONENTS))})`),
     check("reconciliation_links_decision_ck", sql`${table.decision} in (${sql.raw(inList(DECISIONS))})`),
     check("reconciliation_links_note_ck", sql`length(btrim(${table.note})) between 1 and 500`),
-  ],
-);
-
-/** Before N6: the published tariff of a provider. Now rows of `fund_fees`. Not read; removed in R5f. */
-export const fundFeeTariffs = pgTable(
-  "fund_fee_tariffs",
-  {
-    id: idColumn(),
-    provider: text("provider").notNull(),
-    validFrom: date("valid_from").notNull(),
-    validTo: date("valid_to"),
-    item: text("item").notNull(),
-    amountCents: money("amount_cents"),
-    rate: numeric("rate", { precision: 8, scale: 6 }),
-    unit: text("unit").notNull(),
-    note: text("note"),
-    sourceUrl: text("source_url").notNull(),
-    ...timestamps,
-  },
-  (table) => [
-    unique("fund_fee_tariffs_item_uq").on(table.provider, table.item, table.validFrom),
-    check("fund_fee_tariffs_value_ck", sql`(${table.amountCents} is null) <> (${table.rate} is null)`),
   ],
 );

@@ -13,8 +13,6 @@ export interface AppliedPayslip {
   payslipId: string;
   year: number;
   period: string | null;
-  /** Deprecated (R5f.1): the old type, still stored beside the kind until R5f. */
-  type: string;
   kind: string;
   extraNumber: number | null;
   printedOn: string | null;
@@ -69,7 +67,6 @@ export function competenceOf(payslip: AppliedPayslip): CompetenceInput | null {
   return {
     payslipId: payslip.payslipId,
     payrollPeriod: payslip.period,
-    payslipType: payslip.type,
     kind: payslip.kind,
     extraNumber: payslip.extraNumber,
     year: payslip.year,

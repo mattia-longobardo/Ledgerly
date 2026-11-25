@@ -315,7 +315,7 @@ describe("POST /imports", () => {
     Release N6 (decisions H19, ST-26): a fund reads no document. The two kinds stay in the contract
     so that a caller gets a declared refusal, and nothing of the file is kept.
   */
-  it("refuses a fund's document with 415 and keeps nothing of it, while a payslip still uploads", async () => {
+  it("refuses a fund's document as a kind it does not have and keeps nothing of it, while a payslip still uploads", async () => {
     const { documents } = await import("@domain/modules/imports/schema");
     const stored = async () => [
       ...(await listFolder(`payslips/${alice.userId}/`)),
@@ -326,8 +326,8 @@ describe("POST /imports", () => {
       form.set("kind", kind);
       form.set("file", aPdf(`a-fund-document-${kind}`));
       const response = await call("/imports", aliceToken, { method: "POST", body: form });
-      expect(response.status, kind).toBe(415);
-      expect(await response.json(), kind).toEqual({ error: "unsupported_format" });
+      expect(response.status, kind).toBe(400);
+      expect(await response.json(), kind).toMatchObject({ error: "invalid" });
     }
     expect(await getDb().select().from(documents)).toEqual([]);
     expect(await stored()).toEqual([]);

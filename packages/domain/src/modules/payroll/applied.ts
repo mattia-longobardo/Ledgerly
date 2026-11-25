@@ -25,7 +25,6 @@ function eventOf(
     payslipId: payslip.id,
     year: payslip.year,
     period: payslip.period,
-    type: payslip.type,
     ...kindOf(payslip),
     printedOn: payslip.printedOn,
     workerCents: pair("employeeFundEffective"),

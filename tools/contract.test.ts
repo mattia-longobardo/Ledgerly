@@ -43,7 +43,6 @@ import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
 import * as timeoffDomain from "@domain/modules/timeoff/rules";
 import { leaveDays } from "@domain/modules/timeoff/schema";
-import { LEGACY_KINDS } from "@domain/modules/timeoff/schema/legacy";
 import { HOLIDAY_SOURCES } from "@domain/platform/holidays/rules";
 import * as fundsWire from "../packages/api-contract/src/funds/shared";
 import * as fundsSources from "@domain/modules/funds/sources";
@@ -370,7 +369,6 @@ describe("the Server Actions of interests", () => {
   });
 
   it("speak the vocabularies of the domain", () => {
-    expect(interestsWire.DAY_BASES).toEqual(interestsDomain.DAY_BASES);
     expect(interestsWire.DAY_COUNTS).toEqual(interestsDomain.DAY_COUNTS);
     expect(interestsWire.PERIOD_ANCHORS).toEqual(interestsDomain.PERIOD_ANCHORS);
     expect(interestsWire.MAX_PAYMENT_WINDOW_DAYS).toBe(interestsDomain.MAX_PAYMENT_WINDOW_DAYS);
@@ -409,13 +407,9 @@ describe("the Server Actions of time off", () => {
   });
 
   it("speak the vocabularies of the domain", () => {
-    // The deprecated `kind` of the wire (R5g) is the old column's vocabulary.
-    expect(timeoffWire.LEAVE_KINDS).toEqual(LEGACY_KINDS);
     expect(timeoffWire.RESIDUAL_BASES).toEqual(timeoffDomain.RESIDUAL_BASES);
     expect(timeoffWire.SYNC_STATES).toEqual(timeoffDomain.PENDING_STATES);
-    // The wire says `external` for every origin that is not `manual` (the old one until R5c P3).
-    const wireOrigin = (origin: string) => (origin === "manual" ? "manual" : "external");
-    expect([...new Set(leaveDays.origin.enumValues.map(wireOrigin))]).toEqual(timeoffWire.LEAVE_ORIGINS);
+    expect(leaveDays.origin.enumValues).toEqual(timeoffWire.LEAVE_ORIGINS);
     expect(timeoffWire.MAX_RANGE_DAYS).toBe(timeoffDomain.MAX_RANGE_DAYS);
     expect(timeoffWire.HOLIDAY_SOURCES).toEqual(HOLIDAY_SOURCES);
   });
@@ -440,7 +434,6 @@ describe("the Server Actions of payroll", () => {
   });
 
   it("speak the vocabularies of the domain", () => {
-    expect(payrollWire.PAYSLIP_TYPES).toEqual(payrollRules.PAYSLIP_TYPES);
     expect(payrollWire.PAYSLIP_KINDS).toEqual(payrollRules.PAYSLIP_KINDS);
     expect(payrollWire.PAYSLIP_SOURCES).toEqual(payrollRules.PAYSLIP_SOURCES);
     expect(payrollWire.PAY_FREQUENCIES).toEqual(payrollRules.PAY_FREQUENCIES);

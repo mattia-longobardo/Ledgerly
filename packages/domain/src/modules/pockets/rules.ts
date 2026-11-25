@@ -5,6 +5,8 @@ import { civilDate } from "../../shared/inputs";
 
 export const POCKET_STATES = ["active", "paused", "archived"] as const;
 export const MOVEMENT_KINDS = ["accrual", "deposit", "withdrawal", "adjustment"] as const;
+/** The kinds a row of `pocket_movements` holds: a spend is worked out, never stored (R5f, POC-4). */
+export const STORED_MOVEMENT_KINDS = ["accrual", "deposit"] as const;
 type MovementKind = (typeof MOVEMENT_KINDS)[number];
 /**
  * Why a pocket's share of the backing account's interest is what it is (spec §7.4): an estimate

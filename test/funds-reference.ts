@@ -72,7 +72,7 @@ export async function seedFundsReference(ctx: Ctx): Promise<{ debitId: string; p
           // A stable id per month, so the file does not depend on the run.
           payslipId: `00000000-0000-7000-8000-0000000000${String(index + 10)}`,
           payrollPeriod,
-          payslipType: "ordinary",
+          kind: "ordinary",
           year,
           quarter,
           workerCents: 8_000n,

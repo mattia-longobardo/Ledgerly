@@ -79,7 +79,7 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | the writes of subscriptions: create, change, state, delete ([changelog](api-changelog.md)) | `write` |
 | `GET /interests`, `/interests/{id}` | `read` |
 | the writes of interests: create, change, state, post and mark a settlement ([changelog](api-changelog.md)) | `write` |
-| `GET /timeoff/{year}`, `/timeoff/allowances`, `/timeoff/holidays/*` | `read` |
+| `GET /timeoff/{year}`, `/timeoff/types`, `/timeoff/holidays/*` | `read` |
 | the writes of time off: allowance, leave, undo, holiday calendars ([changelog](api-changelog.md)) | `write` |
 | `GET /payroll/payslips`, `/payroll/payslips/{id}`, `/payroll/codes` | `read` |
 | the writes of payroll: a value, verify, apply, reopen, reject, retry, rename, delete, the code map ([changelog](api-changelog.md)) | `write` |

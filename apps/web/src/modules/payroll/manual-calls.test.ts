@@ -93,12 +93,15 @@ describe("the calls of a payslip typed by hand", () => {
 });
 
 describe("the employer", () => {
-  it("saves the frequency and the months, and refuses a fourth extra payment without a call", async () => {
+  it("saves the frequency and the months, and refuses a thirteenth extra payment without a call", async () => {
     call.mockResolvedValue({ payFrequency: "monthly", extraMonths: [12, 6], configured: true });
     expect(await saveEmployerAction("monthly", [12, 6])).toEqual({ ok: true });
     expect(call).toHaveBeenCalledWith(employer.setPayrollEmployer, { body: { payFrequency: "monthly", extraMonths: [12, 6] } });
     call.mockReset();
-    expect(await saveEmployerAction("monthly", [12, 6, 7, 8])).toEqual({ ok: false, error: "invalid_value" });
+    expect(await saveEmployerAction("monthly", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12])).toEqual({
+      ok: false,
+      error: "invalid_value",
+    });
     expect(call).not.toHaveBeenCalled();
   });
 });

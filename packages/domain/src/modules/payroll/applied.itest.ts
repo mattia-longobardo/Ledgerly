@@ -53,14 +53,10 @@ async function applied(twin: TwinPayslip): Promise<string> {
 /** What the fund holds, without the ids of the run. */
 async function fundRows(fundId: string) {
   const rows = (await competencesOf(ctx, [fundId])).get(fundId) ?? [];
-  // R5f.1: the competence stores the kind beside the old type it replaces (here a month or a 13th).
-  for (const row of rows) {
-    expect([row.kind, row.extraNumber]).toEqual(row.payslipType === "thirteenth" ? ["extra", 1] : [row.payslipType, null]);
-  }
   return rows
     .map((row) => ({
       period: row.payrollPeriod,
-      type: row.payslipType,
+      type: row.kind === "extra" ? `extra-${row.extraNumber}` : row.kind,
       year: row.year,
       quarter: row.quarter,
       worker: row.workerCents,
@@ -137,7 +133,7 @@ describe("an applied payslip gives the fund and Time off the same numbers as bef
             "period": null,
             "quarter": 4,
             "tfr": null,
-            "type": "thirteenth",
+            "type": "extra-1",
             "worker": 500n,
             "workerAdjustment": -2000n,
             "workerEnrollment": null,
@@ -225,7 +221,7 @@ describe("an applied payslip gives the fund and Time off the same numbers as bef
             "period": null,
             "quarter": 4,
             "tfr": null,
-            "type": "thirteenth",
+            "type": "extra-1",
             "worker": 500n,
             "workerAdjustment": -2000n,
             "workerEnrollment": null,

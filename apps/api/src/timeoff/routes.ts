@@ -1,6 +1,5 @@
 // Time off (rewrite plan R2, 05-refactor.md §5.5): every route of the module and of its holiday
-// calendars, all of them the domain's use cases, the ones the Server Actions call. Hono tries the
-// routes in order: `/timeoff/allowances` is served before `/timeoff/{year}`, which would shadow it.
+// calendars, all of them the domain's use cases, the ones the Server Actions call.
 import type { Hono } from "hono";
 import { z } from "zod";
 import { TIMEOFF, TIMEOFF_ROUTES, type RouteContract } from "@ledgerly/api-contract";
@@ -19,27 +18,23 @@ import { today } from "@ledgerly/domain/shared/dates";
 import {
   TimeOffError,
   addRestDay,
-  allowanceOf,
   bookLeave,
   calendarSync,
   deleteLeaveType,
   deleteRestDay,
   leaveSettingsOf,
-  listAllowances,
   listLeaveTypes,
   listRestDays,
-  listTypeAllowances,
   saveLeaveSettings,
   saveLeaveType,
   saveTypeAllowance,
-  saveYearNote,
   timeOffView,
   unbookLeave,
   unbookLeaveRange,
   undoLeave,
 } from "@ledgerly/domain/timeoff";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
-import { allowanceOut, oldAllowanceParts, timeOffYear, typeOfOldKind } from "./dto";
+import { timeOffYear } from "./dto";
 
 const { timeoff, holidays, types: leaveTypes } = TIMEOFF;
 
@@ -66,19 +61,6 @@ async function refusing<T>(work: () => Promise<T>): Promise<T> {
       throw new ApiRefusal("invalid", "invalid_input");
     throw error;
   }
-}
-
-/** The type a request means: its id, or the first type of the old kind a client still sends. */
-async function typeMeant(
-  ctx: Parameters<typeof listLeaveTypes>[0],
-  typeId: string | null | undefined,
-  kind: string | null | undefined,
-): Promise<string | null> {
-  if (typeId) return typeId;
-  if (!kind) return null;
-  const found = typeOfOldKind(await listLeaveTypes(ctx), kind);
-  if (found === null) throw new ApiRefusal("invalid", "invalid_input");
-  return found;
 }
 
 function serveTypes(app: Hono<ApiEnv>, guard: Guard): void {
@@ -129,28 +111,6 @@ function serveTypes(app: Hono<ApiEnv>, guard: Guard): void {
 }
 
 function serveYear(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, timeoff.listTimeOffAllowances, async ({ ctx }) => ({
-    allowances: (await listAllowances(ctx)).map(allowanceOut),
-  }));
-  // Deprecated (R5g): the two old parts of a year go to the types of the two old kinds.
-  serve(app, guard, timeoff.saveTimeOffAllowance, async ({ ctx, params, body }) => {
-    const year = Number(params.year);
-    const stated = await listTypeAllowances(ctx);
-    for (const [kind, days] of oldAllowanceParts(body)) {
-      const typeId = await typeMeant(ctx, null, kind).catch(() => null);
-      if (typeId === null) {
-        if (days !== null) throw new ApiRefusal("invalid", "invalid_input");
-        continue;
-      }
-      const carriedDays =
-        stated.find((one) => one.typeId === typeId && one.year === year)?.carriedDays ?? null;
-      await refusing(() => saveTypeAllowance(ctx, typeId, year, { days, carriedDays }));
-    }
-    await refusing(() => saveYearNote(ctx, year, { totalDays: body.totalDays, note: body.note }));
-    const saved = await allowanceOf(ctx, year);
-    if (saved === null) throw new Error("timeoff: the allowance just saved is not there");
-    return allowanceOut(saved);
-  });
   serve(app, guard, timeoff.getTimeOff, async ({ ctx, params }) => {
     const year = Number(params.year);
     const [view, external] = await Promise.all([
@@ -163,27 +123,16 @@ function serveYear(app: Hono<ApiEnv>, guard: Guard): void {
 
 function serveLeave(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, timeoff.saveLeave, async ({ ctx, body }) => {
-    const { kind, editedKind, otherKind, ...rest } = body;
-    const typeId = (await typeMeant(ctx, body.typeId, kind)) as string;
-    const editedTypeId = await typeMeant(ctx, body.editedTypeId, editedKind);
-    const otherTypeId = await typeMeant(ctx, body.otherTypeId, otherKind);
-    return refusing(() => bookLeave(ctx, { ...rest, typeId, editedTypeId, otherTypeId }));
+    return refusing(() =>
+      bookLeave(ctx, {
+        ...body,
+        editedTypeId: body.editedTypeId ?? null,
+        otherTypeId: body.otherTypeId ?? null,
+      }),
+    );
   });
   serve(app, guard, timeoff.undoLeave, async ({ ctx, body }) => {
-    const rows: {
-      on: string;
-      typeId: string;
-      fraction: number;
-      minutes: number | null;
-      note: string | null;
-    }[] = [];
-    for (const { kind, ...row } of body.rows) {
-      rows.push({
-        ...row,
-        minutes: row.minutes ?? null,
-        typeId: (await typeMeant(ctx, row.typeId, kind)) as string,
-      });
-    }
+    const rows = body.rows.map((row) => ({ ...row, minutes: row.minutes ?? null }));
     await refusing(() => undoLeave(ctx, { dates: body.dates, rows }));
   });
   serve(app, guard, timeoff.removeLeaveRange, async ({ ctx, query }) =>

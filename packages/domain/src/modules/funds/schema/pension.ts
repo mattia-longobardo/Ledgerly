@@ -1,91 +1,15 @@
 // Funds · the tables of the payslip side: the pension rules and the competences.
 import { sql } from "drizzle-orm";
-import {
-  bigint,
-  check,
-  date,
-  index,
-  jsonb,
-  numeric,
-  pgTable,
-  smallint,
-  text,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { bigint, check, date, index, pgTable, smallint, text, unique, uuid } from "drizzle-orm/pg-core";
 import { users } from "../../../platform/auth/schema";
-import { inList } from "../../../platform/db/checks";
 import { createdAtColumn, idColumn, updatedAtColumn } from "../../../platform/db/columns";
-import { LEGACY_RULE_KINDS, funds } from "./funds";
+import { funds } from "./funds";
 
 export const money = (name: string) => bigint(name, { mode: "bigint" });
 export const timestamps = {
   createdAt: createdAtColumn(),
   updatedAt: updatedAtColumn(),
 };
-
-/**
- * Before N6: the contribution percentages of a contract and the schedule of the transfers with its
- * fees. Now the note, the due dates and the tolerance of a `payroll` source, and rows of `fund_fees`.
- * Not read; removed in R5f.
- */
-export const pensionRules = pgTable(
-  "pension_rules",
-  {
-    id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    fundId: uuid("fund_id")
-      .notNull()
-      .references(() => funds.id, { onDelete: "cascade" }),
-    kind: text("kind", { enum: LEGACY_RULE_KINDS }).notNull(),
-    validFrom: date("valid_from").notNull(),
-    validTo: date("valid_to"),
-    ccnl: text("ccnl"),
-    base: text("base"),
-    workerPct: numeric("worker_pct", { precision: 7, scale: 4 }),
-    employerPct: numeric("employer_pct", { precision: 7, scale: 4 }),
-    tfrPct: numeric("tfr_pct", { precision: 7, scale: 4 }),
-    schedule: jsonb("schedule").$type<unknown[]>(),
-    toleranceDays: smallint("tolerance_days").notNull().default(15),
-    /** The fees Settings records beside the schedule (GC §6.1), for a fund with no export. */
-    enrollmentFeeCents: money("enrollment_fee_cents")
-      .notNull()
-      .default(sql`0`),
-    quarterFeeCents: money("quarter_fee_cents")
-      .notNull()
-      .default(sql`0`),
-    source: text("source"),
-    verifiedOn: date("verified_on"),
-    ...timestamps,
-  },
-  (table) => [
-    index("pension_rules_fund_idx").on(table.fundId, table.kind, table.validFrom),
-    check("pension_rules_kind_ck", sql`${table.kind} in (${sql.raw(inList(LEGACY_RULE_KINDS))})`),
-    check(
-      "pension_rules_validity_ck",
-      sql`${table.validTo} is null or ${table.validTo} >= ${table.validFrom}`,
-    ),
-    check("pension_rules_tolerance_ck", sql`${table.toleranceDays} between 0 and 120`),
-    check(
-      "pension_rules_fees_ck",
-      sql`${table.enrollmentFeeCents} between 0 and 100000 and ${table.quarterFeeCents} between 0 and 100000`,
-    ),
-    check(
-      "pension_rules_pct_ck",
-      sql`coalesce(${table.workerPct}, 0) between 0 and 100 and coalesce(${table.employerPct}, 0) between 0 and 100 and coalesce(${table.tfrPct}, 0) between 0 and 100`,
-    ),
-    check(
-      "pension_rules_schedule_ck",
-      sql`(${table.kind} = 'payment_schedule') = (${table.schedule} is not null)`,
-    ),
-    check(
-      "pension_rules_text_ck",
-      sql`coalesce(length(${table.ccnl}), 0) <= 120 and coalesce(length(${table.base}), 0) <= 200 and coalesce(length(${table.source}), 0) <= 300`,
-    ),
-  ],
-);
 
 /**
  * What one applied payslip accrued for the pension fund (spec §6, §7.7; GC §8.2–8.3): worker,
@@ -105,10 +29,8 @@ export const pensionCompetences = pgTable(
       .references(() => funds.id, { onDelete: "cascade" }),
     payslipId: uuid("payslip_id").notNull(),
     payrollPeriod: date("payroll_period"),
-    /** Deprecated (R5f.1): read `kind` and `extra_number`; R5f drops it. */
-    payslipType: text("payslip_type").notNull(),
-    /** Payroll's kind of the payslip; null only on a row before R5f.1, which its migration fills. */
-    kind: text("kind"),
+    /** Payroll's kind of the payslip, as its event names it. */
+    kind: text("kind").notNull(),
     extraNumber: smallint("extra_number"),
     year: smallint("year").notNull(),
     quarter: smallint("quarter").notNull(),

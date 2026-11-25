@@ -1,12 +1,7 @@
 import { addDays, type CivilDate } from "../../shared/dates";
 
-/**
- * The kinds a document row can have. The two after `payslip` are of documents a fund read before
- * release N6: nothing reads or stores one any more (decision H19), the rows already stored keep
- * their kind, and the API still names the two values so that a caller gets a declared refusal
- * (decision ST-26). The values leave with release R5f.
- */
-export const DOCUMENT_KINDS = ["payslip", "cometa_operations", "cometa_position"] as const;
+/** The kinds a document row can have (R5f removed the two of a fund's documents of before N6). */
+export const DOCUMENT_KINDS = ["payslip"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 /** The document states of spec §7.8, one list for every kind of document (§9.3). */

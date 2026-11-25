@@ -16,7 +16,7 @@ import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@dom
 import { expenseLinkCandidates } from "@domain/modules/pockets/queries";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "@domain/modules/pockets/service";
 import { createSubscription } from "@domain/modules/subscriptions/service";
-import { saveLeaveDay, saveTypeAllowance, saveYearNote } from "@domain/modules/timeoff/service";
+import { saveLeaveDay, saveTypeAllowance } from "@domain/modules/timeoff/service";
 import { oldLeaveTypes } from "../../test/leave-types";
 import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
@@ -227,7 +227,6 @@ export async function seedLayout(email: string = USERS.layout.email): Promise<vo
   await createRule(ctx, {
     accountId: savings.id,
     taxRate: "0.26",
-    dayBasis: "365",
     settlement: "monthly",
     validFrom: addDays(addMonths(monthKey(on), -1), -1),
     mode: "analyze_only",
@@ -416,7 +415,6 @@ export async function seedLayout(email: string = USERS.layout.email): Promise<vo
   const types = await oldLeaveTypes(ctx);
   await saveTypeAllowance(ctx, types.vacation, year, { days: 26 });
   await saveTypeAllowance(ctx, types.rol, year, { days: 4 });
-  await saveYearNote(ctx, year, { totalDays: null, note: "CCNL Metalmeccanici" });
   await saveLeaveDay(ctx, { from: workingDay(on, -14), typeId: types.vacation, fraction: 1 });
   await saveLeaveDay(ctx, { from: workingDay(on, -7), typeId: types.rol, fraction: 0.5 });
   await saveLeaveDay(ctx, { from: workingDay(on, 21), typeId: types.vacation, fraction: 1 });

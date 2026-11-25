@@ -12,7 +12,6 @@ const KINDS: Record<string, { kind: string; extraNumber: number | null }> = {
 const row = (type: string, printedOn: string | null): AppliedPayslip => ({
   payslipId: "p",
   period: null,
-  type,
   ...KINDS[type],
   year: 2026,
   printedOn,
