@@ -16546,6 +16546,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "time_known": {
+          "name": "time_known",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "amount_cents": {
           "name": "amount_cents",
           "type": "bigint",
