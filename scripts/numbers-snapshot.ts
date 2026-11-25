@@ -40,6 +40,9 @@ import { registerView } from "@domain/modules/payroll/queries";
 import { pocketsView } from "@domain/modules/pockets/queries";
 import { subscriptionsView } from "@domain/modules/subscriptions/queries";
 import { timeOffView } from "@domain/modules/timeoff/queries";
+import { leaveSettings } from "@domain/modules/timeoff/schema";
+import { getDb } from "@domain/platform/db/client";
+import { eq } from "drizzle-orm";
 import { timeOffYear } from "../apps/api/src/timeoff/dto";
 import { expensesView } from "@domain/modules/transactions/queries";
 import type { Ctx } from "@domain/platform/context";
@@ -152,10 +155,17 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
       lastValuation: row.lastValuation,
     }));
 
-  const timeOffNow = await timeOffView(ctx, thisYear);
+  // A person who never reached time off has no figures to compare, and reading them would start it:
+  // a write, which the read-only transaction refuses (since R5g the first read creates the types).
+  const reached = await getDb()
+    .select({ userId: leaveSettings.userId })
+    .from(leaveSettings)
+    .where(eq(leaveSettings.userId, ctx.userId))
+    .limit(1);
+  const timeOffNow = reached.length === 0 ? null : await timeOffView(ctx, thisYear);
   const timeOff: Record<string, unknown> = {};
-  for (const year of timeOffNow.years) {
-    const view = year === thisYear ? timeOffNow : await timeOffView(ctx, year);
+  for (const year of timeOffNow?.years ?? []) {
+    const view = year === thisYear && timeOffNow ? timeOffNow : await timeOffView(ctx, year);
     // The two old kinds as the API still answers them (R5g): the same figures as before the types,
     // without the ids of the types, which differ from one database to the other.
     const wire = timeOffYear(view, null);
