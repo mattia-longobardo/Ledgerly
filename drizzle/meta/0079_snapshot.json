@@ -1,6 +1,6 @@
 {
   "id": "70d2222a-497c-43eb-a702-a28811786780",
-  "prevId": "8fccb710-eb22-4d26-b80e-271d5532dee7",
+  "prevId": "a65e5c73-09bc-4aa7-832e-8a497ed1d886",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -16545,6 +16545,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
+        },
+        "time_known": {
+          "name": "time_known",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "amount_cents": {
           "name": "amount_cents",
