@@ -10,7 +10,8 @@ import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions/client";
 import { editInSource, setLabels, setNote } from "./commands";
-import type { LabelOption, RowView } from "./view";
+import { useTransferRoute } from "./transfer-cell";
+import { dateTimeOf, type LabelOption, type RowView } from "./view";
 
 const FORM_ID = "transaction-details";
 
@@ -120,16 +121,18 @@ export function TransactionDetails({
     });
   }
 
+  const routeOf = useTransferRoute();
   const context: { term: string; value: string }[] = atSource
     ? [
-        { term: t("columns.date"), value: row.date },
+        { term: t("columns.date"), value: dateTimeOf(row) },
         { term: t("columns.account"), value: row.account },
       ]
     : [
         { term: t("columns.payee"), value: row.payee ?? t("row.noPayee") },
-        { term: t("columns.date"), value: row.date },
+        { term: t("columns.date"), value: dateTimeOf(row) },
         { term: t("columns.account"), value: row.account },
         { term: t("columns.amount"), value: row.amount },
+        ...(row.transfer ? [{ term: t("transfer.title"), value: routeOf(row) }] : []),
       ];
 
   return (

@@ -5,6 +5,7 @@
  * DOM tests replace, which keeps them away from the network entirely.
  */
 
+import { TRANSACTIONS } from "@ledgerly/api-contract";
 import { movements, review, spending } from "@ledgerly/api-contract/transactions";
 import { categories as categoryRoutes, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call, type RouteInput } from "@ledgerly/api-client";
@@ -163,4 +164,36 @@ export async function editInSource(id: string, input: SourceEditInput): Promise<
   } catch (error) {
     return sourceRefusal(error);
   }
+}
+
+/**
+ * The giroconti's calls. shortcut: read from the contract's root, because its `transactions` entry
+ * does not export `giroconti` yet; import them from there once it does.
+ */
+export const { giroconti } = TRANSACTIONS;
+
+/** The other side of a giroconto: one of the person's accounts, an account outside, or none (an income or a spending again). */
+export type TransferSide = RouteInput<typeof giroconti.setTransferSide>["body"];
+
+export function setTransferSide(id: string, side: TransferSide): Promise<FieldResult> {
+  return writing(async () => {
+    await call(giroconti.setTransferSide, { params: { id }, body: side });
+    invalidate(giroconti.listTransferProposals);
+  });
+}
+
+/** Two movements of two of the person's accounts, money out and money in, paired by hand. */
+export function pairTransfer(ids: readonly [string, string]): Promise<FieldResult> {
+  return writing(async () => {
+    await call(giroconti.pairTransfer, { body: { ids: [...ids] } });
+    invalidate(giroconti.listTransferProposals);
+  });
+}
+
+/** The person's answer to a giroconto found by amount and day. */
+export function answerTransferProposal(id: string, accept: boolean): Promise<FieldResult> {
+  return writing(async () => {
+    await call(giroconti.answerTransferProposal, { params: { id }, body: { accept } });
+    invalidate(giroconti.listTransferProposals);
+  });
 }

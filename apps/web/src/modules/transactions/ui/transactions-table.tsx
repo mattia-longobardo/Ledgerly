@@ -12,16 +12,17 @@ import { type Params, withParams } from "@ledgerly/ui/url";
 import { useSelection } from "@ledgerly/ui/use-selection";
 import { useCategoryActions } from "./category-actions";
 import { CategoryCell } from "./category-cell";
-import { changeVisibility, type CommandResult, setCategory } from "./commands";
+import { changeVisibility, type CommandResult, pairTransfer, setCategory } from "./commands";
 import { TransactionDetails } from "./details-modal";
 import { DEFAULT_DIRECTION, type SortDirection, type SortKey } from "./filters";
 import { useManualMovement } from "./manual-movement";
 import { PayeeCell, RowCard } from "./row-parts";
 import { SelectionBar } from "./selection-bar";
+import { TransferCell, TransferDialog } from "./transfer-cell";
 import { DeleteHiddenModal, TransactionRowMenu } from "./transaction-row-menu";
 import { nextDirection, SortHeading } from "./sort-heading";
 import { useRowKeyboard } from "./use-row-keyboard";
-import type { CategoryOption, GroupView, LabelOption, RowView } from "./view";
+import { type CategoryOption, dateTimeOf, type GroupView, type LabelOption, type RowView } from "./view";
 
 /** The sortable columns of the design, left to right, with the width of each `<col>`. */
 const COLUMNS: readonly {
@@ -67,6 +68,7 @@ export function TransactionsTable({
   path = "/expenses",
   sortable = true,
   visibility = changeVisibility,
+  accounts = [],
 }: {
   groups: readonly GroupView[];
   categories: readonly CategoryOption[];
@@ -80,12 +82,16 @@ export function TransactionsTable({
   sortable?: boolean;
   /** Hide, restore and delete for good; the route rebuilds a manual movement's balance (PERS-473). */
   visibility?: (ids: string[], change: "hide" | "restore" | "delete") => Promise<CommandResult>;
+  /** The person's accounts: the other side a giroconto can be given. */
+  accounts?: readonly { id: string; name: string }[];
 }) {
   const t = useTranslations("expenses");
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
   const [detailsFor, setDetailsFor] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  /** The row whose giroconto's other account is being chosen. */
+  const [transferFor, setTransferFor] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   /** The manual movement's dialogs, where the page set them up. */
   const manual = useManualMovement();
@@ -98,7 +104,14 @@ export function TransactionsTable({
   const selection = useSelection(ids);
   const chosen = rows.filter((row) => selection.has(row.id));
 
-  const editOnKey = useCallback((id: string) => setEditing(`table:${id}`), []);
+  // A giroconto has no category: `E` opens the choice of its other account instead.
+  const editOnKey = useCallback(
+    (id: string) => {
+      if (rows.find((row) => row.id === id)?.transfer) setTransferFor(id);
+      else setEditing(`table:${id}`);
+    },
+    [rows],
+  );
   useRowKeyboard(ids, domId, { toggle: selection.toggle, edit: editOnKey });
 
   /**
@@ -165,6 +178,17 @@ export function TransactionsTable({
     );
   }
 
+  /** Two selected movements paired by hand as one giroconto. */
+  function onPair(ids: readonly [string, string]) {
+    run(
+      async () => {
+        const result = await pairTransfer(ids);
+        return result.ok ? { ok: true, count: 2 } : result;
+      },
+      () => t("transfer.toasts.paired"),
+    );
+  }
+
   /** "Confirm" on one row or on the selection: only the automatic and the suggested ones change. */
   function onConfirm(ids: readonly string[]): Promise<boolean> {
     if (!automatic) return Promise.resolve(false);
@@ -202,12 +226,15 @@ export function TransactionsTable({
 
   /** The row whose details panel is open, if it is still in the list after a revalidation. */
   const opened = rows.find((row) => row.id === detailsFor);
+  const transferring = rows.find((row) => row.id === transferFor);
 
   /**
    * The two layouts draw the same row, so each keeps its own editor key: one open editor must not
    * open a second popup behind the layout the viewport is not showing.
    */
   function categoryTrigger(row: RowView, variant: "table" | "list") {
+    if (row.transfer)
+      return <TransferCell row={row} onOpen={() => setTransferFor(row.id)} disabled={pending} />;
     const key = `${variant}:${row.id}`;
     return (
       <CategoryCell
@@ -229,6 +256,7 @@ export function TransactionsTable({
         row={row}
         onEditCategory={() => setEditing(`${variant}:${row.id}`)}
         onOpenDetails={() => setDetailsFor(row.id)}
+        onTransfer={() => setTransferFor(row.id)}
         onVisibility={() => onVisibility([row.id], row.hidden)}
         onDeleteHidden={() => setDeleting(row.id)}
       />
@@ -248,7 +276,15 @@ export function TransactionsTable({
   );
 
   const cellOf: Record<SortKey, (row: RowView) => ReactNode> = {
-    date: (row) => row.date,
+    date: (row) =>
+      !row.time ? (
+        row.date
+      ) : (
+        <span title={dateTimeOf(row)}>
+          <span className="block">{row.date}</span>
+          <span className="block">{row.time}</span>
+        </span>
+      ),
     payee: (row) => <PayeeCell row={row} />,
     account: (row) => (
       <span className="block truncate" title={row.account}>
@@ -285,6 +321,7 @@ export function TransactionsTable({
           onSetCategory={onSetCategory}
           onConfirm={automatic ? (ids) => void onConfirm(ids) : undefined}
           onVisibility={onVisibility}
+          onPair={onPair}
           onClear={selection.clear}
         />
       )}
@@ -373,6 +410,15 @@ export function TransactionsTable({
           />
         )}
       />
+
+      {transferring !== undefined && (
+        <TransferDialog
+          key={transferring.id}
+          row={transferring}
+          accounts={accounts}
+          onClose={() => setTransferFor(null)}
+        />
+      )}
 
       {/* One panel for the whole table, keyed by its row so it opens with that row's own values. */}
       {opened !== undefined && (

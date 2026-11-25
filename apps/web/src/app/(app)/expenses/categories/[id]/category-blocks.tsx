@@ -228,6 +228,7 @@ export function Movements({ view, page }: { view: ApiState<View>; page: Category
                     rows: data.rows.map((line) =>
                       lineViewOf(line, {
                         locale: page.prefs.locale,
+                        timeZone: page.prefs.timeZone,
                         numberFormat: page.numberFormat,
                         colorOf: page.colorOf,
                         categories: page.options,

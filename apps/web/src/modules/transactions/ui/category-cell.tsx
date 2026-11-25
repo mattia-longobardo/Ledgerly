@@ -37,7 +37,6 @@ type CellRow = Pick<
   | "categoryReason"
   | "suggestion"
   | "macros"
-  | "paired"
 >;
 
 /**
@@ -186,7 +185,6 @@ export function CategoryCell({
         (option) =>
           option.type === undefined || row.macros === undefined || row.macros.some((m) => m === option.type),
       )}
-      note={row.paired === true ? t("row.paired") : undefined}
       currentId={row.categoryId}
       open={open}
       onOpenChange={onOpenChange}

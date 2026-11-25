@@ -54,6 +54,7 @@ export interface ReviewData {
   query: ReviewQuery;
   todayOn: CivilDate;
   locale: UiLocale;
+  timeZone: string;
   numberFormat: NumberFormat;
   labels: readonly { id: string; name: string; color: string | null }[];
   options: readonly CategoryOption[];

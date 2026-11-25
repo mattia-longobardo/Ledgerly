@@ -434,8 +434,7 @@
       "noGroup": "No group",
       "types": {
         "income": "Income",
-        "expense": "Expense",
-        "transfer": "Transfer"
+        "expense": "Expense"
       },
       "usage": "{count, plural, =0 {unused} one {# transaction} other {# transactions}}",
       "rename": "Rename",
@@ -1828,7 +1827,6 @@
       "noPayee": "No payee",
       "save": "Save",
       "cancel": "Cancel",
-      "paired": "It is a transfer between your accounts.",
       "createRule": "Create a rule…"
     },
     "badges": {
@@ -1838,7 +1836,7 @@
       "edited": "Edited here",
       "transfer": "Transfer",
       "pending": "Pending",
-      "unpaired": "Unpaired transfer"
+      "unpaired": "Choose the account"
     },
     "breakdown": {
       "title": "By category",
@@ -1885,7 +1883,7 @@
       "expenses": "Spending",
       "net": "Net",
       "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of income and spending, counted in the net",
-      "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}",
+      "unpaired": "{count, plural, one {# waits for you to choose the account} other {# wait for you to choose the account}}",
       "partial": "Partial total: {count, plural, one {# foreign-currency transaction without an exchange rate left out} other {# foreign-currency transactions without an exchange rate left out}}"
     },
     "spending": {
@@ -2131,13 +2129,9 @@
       "macroLabel": "Section",
       "macro": {
         "income": "Income",
-        "expense": "Expenses",
-        "transfer": "Transfers"
+        "expense": "Expenses"
       },
       "count": "{count, plural, one {# transaction} other {# transactions}}",
-      "transferSplit": "In {in} · Out {out}",
-      "in": "In",
-      "out": "Out",
       "shareOf": "Share of {name}",
       "budget": "Budget {limit}",
       "budgetStatus": {
@@ -2155,7 +2149,6 @@
       "open": "Open",
       "newGroup": "New group",
       "addCategory": "Add a category",
-      "addTransferCategory": "Add a transfer category",
       "addIn": "In {macro} › {group}",
       "actions": "Actions for {name}",
       "rename": "Rename",
@@ -2201,12 +2194,6 @@
           "inRange": "received in the range",
           "empty": "Nothing received in this range.",
           "summary": "Received over the range, {total} in all."
-        },
-        "transfer": {
-          "title": "Moved over time",
-          "inRange": "moved out in the range",
-          "empty": "Nothing moved in this range.",
-          "summary": "Moved out over the range, {total} in all."
         }
       },
       "detail": {
@@ -2253,8 +2240,7 @@
       },
       "fromWord": {
         "income": "income",
-        "expense": "expenses",
-        "transfer": "transfers"
+        "expense": "expenses"
       }
     },
     "tabs": {
@@ -2262,6 +2248,38 @@
       "movements": "Transactions",
       "categories": "Categories",
       "review": "To review"
+    },
+    "transfer": {
+      "title": "Other account",
+      "make": "Make it a transfer",
+      "description": "Where the money of “{account}” goes or comes from. A transfer has no category and stays out of income, spending and budgets.",
+      "other": "Other account",
+      "choose": "Choose the account",
+      "outside": "Outside account",
+      "none": "Not a transfer",
+      "noAccount": "—",
+      "route": "From {from} → to {to}",
+      "change": "{route}: change the other account",
+      "waiting": "Waiting for the other side",
+      "save": "Save",
+      "cancel": "Cancel",
+      "failed": "The transfer could not be saved.",
+      "pair": "Pair as a transfer",
+      "toasts": {
+        "saved": "Transfer saved",
+        "none": "It is not a transfer any more",
+        "paired": "Transfer paired",
+        "rejected": "Proposal rejected"
+      },
+      "proposals": {
+        "title": "{count, plural, one {# transfer to confirm} other {# transfers to confirm}}",
+        "description": "Same amount, close days, more than one possible pair: confirm the right one.",
+        "days": "Out on {out}, in on {in}",
+        "accept": "Confirm",
+        "reject": "Reject",
+        "acceptLabel": "Confirm: {route}",
+        "rejectLabel": "Reject: {route}"
+      }
     }
   },
   "overview": {

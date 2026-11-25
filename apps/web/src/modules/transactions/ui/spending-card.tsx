@@ -52,8 +52,8 @@ export function SpendingCard({
   /** Everything the page carries, for the grain links. */
   params: Params;
   numberFormat: NumberFormat;
-  /** The macro drawn: the page of one category of Income or Transfers says what came in or moved. */
-  kind?: "income" | "expense" | "transfer";
+  /** The macro drawn: the page of one category of Income says what came in. */
+  kind?: "income" | "expense";
 }) {
   const spending = useTranslations("expenses.spending");
   const words = useTranslations("expenses.categories.chart");

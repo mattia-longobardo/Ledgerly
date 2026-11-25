@@ -127,14 +127,14 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
     // the month's cash flow as Wallet shows it, counts it with Netflix.
     const transfer = page.getByRole("row").filter({ hasText: "Revolut" });
     await expect(transfer).toHaveCount(1);
-    await expect(transfer).toContainText("Unpaired transfer");
+    await expect(transfer).toContainText("Choose the account");
     // Grey, not red: it left the account but was not spent.
     await expect(transfer.getByText("−500,00 €")).toHaveClass(/text-muted/);
     await expect(summary(page)).toHaveText("2 transactions");
     await expect(net(page)).toHaveText("−512,99 €");
     await expect(
       page.getByText(
-        "1 transfer left out of income and spending, counted in the net · 1 has no other leg here",
+        "1 transfer left out of income and spending, counted in the net · 1 waits for you to choose the account",
       ),
     ).toBeVisible();
 

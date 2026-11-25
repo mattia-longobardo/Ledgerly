@@ -91,6 +91,7 @@ function Expenses({
     query,
     filters,
     locale: prefs.locale,
+    timeZone: prefs.timeZone,
     numberFormat: numberStyle(prefs),
     colorOf,
     categories,

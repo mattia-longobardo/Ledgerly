@@ -6,7 +6,8 @@ import { setSourceCategory } from "../../apps/web/src/app/(app)/settings/finance
 import { accounts } from "@domain/modules/accounts/schema";
 import { applyProviderAccounts, createAccount, saveProviderBalance } from "@domain/modules/accounts/service";
 import { markNotSent } from "@domain/modules/transactions/sending";
-import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { listTransactions } from "@domain/modules/transactions/queries";
+import { chooseTransferSide, upsertFromProvider } from "@domain/modules/transactions/service";
 import { keepSourceCategory, listSourceCategories } from "@domain/modules/transactions/source-categories";
 import { createCategory, listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, today } from "@domain/shared/dates";
@@ -43,6 +44,58 @@ export async function seedExpenses(): Promise<void> {
     ],
     { provider: WALLET_PROVIDER },
   );
+}
+
+/**
+ * The giroconti of decisions 6A–10A (2026-11-25), all last month on three Wallet accounts: one pair,
+ * one leg outside, one waiting for its account, three that wait for the person to choose, two money out
+ * each with two equal money in (four proposals), an expense and an income for a pair by hand, and two
+ * expenses with and without a time of day. Synthetic names and amounts, each amount its own, so the
+ * automatic pairing finds only what it is meant to.
+ */
+export async function seedGiroconti(): Promise<void> {
+  const ctx = await contextOf(USERS.giroconti.email);
+  const [one, two, three] = [
+    await syncedAccount(ctx, "e2e-g-1", "Conto Uno"),
+    await syncedAccount(ctx, "e2e-g-2", "Conto Due"),
+    await syncedAccount(ctx, "e2e-g-3", "Conto Tre"),
+  ];
+  const day = (dd: string) => `${lastMonthOf(ctx)}-${dd}`;
+  const read = (accountId: string, movements: ReturnType<typeof walletMovement>[]) =>
+    upsertFromProvider(ctx, accountId, movements, { provider: WALLET_PROVIDER });
+  const timed = walletMovement("g-time", day("12"), -1234n, "Morning bakery", null);
+  const oneRows = [
+    walletMovement("g-pair-out", day("03"), -10000n, "Pair out", null, "g-pair-in"),
+    walletMovement("g-outside", day("04"), -2000n, "Gift out", null, "g-none-1"),
+    walletMovement("g-waiting", day("06"), -3000n, "Wait out", null, "g-none-2"),
+    walletMovement("g-second-in-a", day("15"), 6000n, "Second in A", null),
+    walletMovement("g-hand-out", day("05"), -7700n, "Hand out", null),
+    { ...timed, occurredAt: new Date(`${day("12")}T12:32:00Z`), timeKnown: true },
+    walletMovement("g-no-time", day("13"), -1500n, "Corner kiosk", null),
+  ];
+  // The pairing runs after every reading: a money out read before both its equal money in would be
+  // paired with the only one there. Each money out comes after its two candidates.
+  await read(one, oneRows);
+  await read(three, [
+    walletMovement("g-in-b", day("10"), 5000n, "Proposal in B", null),
+    walletMovement("g-second-in-b", day("15"), 6000n, "Second in B", null),
+    walletMovement("g-hand-in", day("20"), 7700n, "Hand in", null),
+  ]);
+  await read(two, [
+    walletMovement("g-pair-in", day("03"), 10000n, "Pair in", null, "g-pair-out"),
+    walletMovement("g-choose", day("07"), -4000n, "Choose out", null, "g-none-4"),
+    walletMovement("g-pick", day("08"), -4500n, "Pick out", null, "g-none-5"),
+    walletMovement("g-leave", day("09"), -4600n, "Leave out", null, "g-none-6"),
+    walletMovement("g-in-a", day("10"), 5000n, "Proposal in A", null),
+    walletMovement("g-second", day("15"), -6000n, "Second out", null, "g-none-7"),
+  ]);
+  await read(one, [
+    ...oneRows,
+    walletMovement("g-proposal", day("10"), -5000n, "Proposal out", null, "g-none-3"),
+  ]);
+  const ids = new Map((await listTransactions(ctx, { limit: 100 })).map((row) => [row.payee ?? "", row.id]));
+  await chooseTransferSide(ctx, ids.get("Gift out") ?? "", { kind: "outside" });
+  await chooseTransferSide(ctx, ids.get("Wait out") ?? "", { kind: "account", accountId: three });
 }
 
 /**

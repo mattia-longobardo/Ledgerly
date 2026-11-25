@@ -37,6 +37,8 @@ export const USERS = {
   // currency switched in Settings. Its own user, so no other journey sees its totals change.
   currency: { email: "currency@example.test", name: "Currency" },
   expenses: { email: "expenses@example.test", name: "Expenses" },
+  // Giroconti in each of their states, and movements with and without a time of day.
+  giroconti: { email: "giroconti@example.test", name: "Giroconti" },
   budgets: { email: "budgets@example.test", name: "Budgets" },
   pockets: { email: "pockets@example.test", name: "Pockets" },
   subscriptions: {
@@ -284,6 +286,7 @@ export const SESSIONS = {
   accounts: { user: "accounts", file: "accounts-session.json" },
   currency: { user: "currency", file: "currency-session.json" },
   expenses: { user: "expenses", file: "expenses-session.json" },
+  giroconti: { user: "giroconti", file: "giroconti-session.json" },
   budgets: { user: "budgets", file: "budgets-session.json" },
   pockets: { user: "pockets", file: "pockets-session.json" },
   subscriptions: { user: "subscriptions", file: "subscriptions-session.json" },

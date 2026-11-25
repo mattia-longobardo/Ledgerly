@@ -18,6 +18,10 @@ const PAGES: Screen[] = [
     session: "sources",
     open: go("/expenses?preset=last3Months"),
   },
+
+  // Decisions 6A–12A of 2026-11-25: giroconti in each state, the proposals to confirm, and
+  // movements with and without a time of day, last month.
+  { name: "/expenses (giroconti and times)", session: "giroconti", open: go("/expenses?off=1") },
 ];
 
 const OVERLAYS: Screen[] = [
@@ -76,6 +80,18 @@ const OVERLAYS: Screen[] = [
         .first()
         .click();
       await page.getByRole("menuitem", { name: /^(Delete|Elimina)$/ }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // The choice of a giroconto's other account, with «Outside account» among the accounts.
+    name: "the transfer's account dialog",
+    session: "giroconti",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?off=1");
+      await settled(page);
+      await page.getByTestId("transfer-choose").locator("visible=true").first().click();
       await settledDialog(page);
     },
   },
