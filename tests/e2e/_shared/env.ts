@@ -225,6 +225,48 @@ export const USERS = {
     password: "disposable-password-123",
     name: "Disposable",
   },
+  // H56 (PERS-619): one user per column of the matrix of the plugins' states (scripts/seed-e2e/plugins.ts).
+  pluginsOff: {
+    email: "plugins-off@example.test",
+    password: "plugins-off-password-123",
+    name: "Plugins Off",
+  },
+  pluginsOn: { email: "plugins-on@example.test", password: "plugins-on-password-123", name: "Plugins On" },
+  pluginsLive: {
+    email: "plugins-live@example.test",
+    password: "plugins-live-password-123",
+    name: "Plugins Live",
+  },
+  pluginsErrors: {
+    email: "plugins-errors@example.test",
+    password: "plugins-errors-password-123",
+    name: "Plugins Errors",
+  },
+  pluginsMixed: {
+    email: "plugins-mixed@example.test",
+    password: "plugins-mixed-password-123",
+    name: "Plugins Mixed",
+  },
+  pluginsDisconnected: {
+    email: "plugins-disconnected@example.test",
+    password: "plugins-disconnected-password-123",
+    name: "Plugins Disconnected",
+  },
+  pluginsCleanup: {
+    email: "plugins-cleanup@example.test",
+    password: "plugins-cleanup-password-123",
+    name: "Plugins Cleanup",
+  },
+  pluginsGone: {
+    email: "plugins-gone@example.test",
+    password: "plugins-gone-password-123",
+    name: "Plugins Gone",
+  },
+  pluginsJourney: {
+    email: "plugins-journey@example.test",
+    password: "plugins-journey-password-123",
+    name: "Plugins Journey",
+  },
   // TOTP (docs/auth-design.md D2). The seed turns TOTP on for every user above, as the site's
   // TWO_FACTOR_POLICY=required would make them; these two are left without it on purpose:
   // `enroll` walks through the forced setup, `pending` keeps the setup page open for the a11y check.
@@ -311,6 +353,16 @@ export const SESSIONS = {
   // Release N3.4: Settings › Rules (tests/e2e/categories/rules.spec.ts).
   rules: { user: "rules", file: "rules-session.json" },
   rulesJourney: { user: "rulesJourney", file: "rules-journey-session.json" },
+  // H56 (PERS-619): the plugins' states (tests/e2e/connections/plugin-states.spec.ts).
+  pluginsOff: { user: "pluginsOff", file: "plugins-off-session.json" },
+  pluginsOn: { user: "pluginsOn", file: "plugins-on-session.json" },
+  pluginsLive: { user: "pluginsLive", file: "plugins-live-session.json" },
+  pluginsErrors: { user: "pluginsErrors", file: "plugins-errors-session.json" },
+  pluginsMixed: { user: "pluginsMixed", file: "plugins-mixed-session.json" },
+  pluginsDisconnected: { user: "pluginsDisconnected", file: "plugins-disconnected-session.json" },
+  pluginsCleanup: { user: "pluginsCleanup", file: "plugins-cleanup-session.json" },
+  pluginsGone: { user: "pluginsGone", file: "plugins-gone-session.json" },
+  pluginsJourney: { user: "pluginsJourney", file: "plugins-journey-session.json" },
   // TOTP: sessions of users who still have to set it up, so they land on the setup page.
   enroll: { user: "enroll", file: "enroll-session.json" },
   pending: { user: "pending", file: "pending-session.json" },

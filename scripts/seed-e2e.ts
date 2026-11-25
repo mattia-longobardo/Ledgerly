@@ -45,6 +45,17 @@ import { seedInterests } from "./seed-e2e/interests";
 import { seedInvestments, seedPlans, seedPortfolio } from "./seed-e2e/investments";
 import { seedLayout } from "./seed-e2e/layout";
 import { seedPayrollHand } from "./seed-e2e/payroll";
+import {
+  seedPluginsCleanup,
+  seedPluginsDisconnected,
+  seedPluginsErrors,
+  seedPluginsGone,
+  seedPluginsJourney,
+  seedPluginsLive,
+  seedPluginsMixed,
+  seedPluginsOff,
+  seedPluginsOn,
+} from "./seed-e2e/plugins";
 import { seedPockets } from "./seed-e2e/pockets";
 import { seedSubscriptions } from "./seed-e2e/subscriptions";
 import { seedTimeOff } from "./seed-e2e/timeoff";
@@ -292,6 +303,16 @@ await seedSwitching(USERS.switchJourney.email);
 await seedConnections(USERS.connectionsJourney.email);
 
 await seedSchedule();
+// H56: the plugins' states, one user per column of the matrix (tests/e2e/connections/plugin-states.spec.ts).
+await seedPluginsOff();
+await seedPluginsOn();
+await seedPluginsLive();
+await seedPluginsErrors();
+await seedPluginsMixed();
+await seedPluginsDisconnected();
+await seedPluginsCleanup();
+await seedPluginsGone();
+await seedPluginsJourney();
 
 await seedCurrency();
 
