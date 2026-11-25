@@ -48,12 +48,12 @@ function toIncoming(movement: ReadingMovement, timeZone: string): IncomingTransa
   const credit = movement.direction === "credit";
   // The day of the operation when the bank gives one (a card payment is booked days later).
   const day = movement.operationDay ?? movement.day;
-  const at = timeOn(day, movement.instant, timeZone);
+  const timed = timeOn(day, movement.instant, timeZone);
   return {
     externalId: movement.externalId,
     counterpartExternalId: null,
-    occurredAt: at ?? wallClockIn(day, NOON_MINUTES, timeZone),
-    timeKnown: at !== null,
+    occurredAt: timed ?? wallClockIn(day, NOON_MINUTES, timeZone),
+    timeKnown: timed !== null,
     amountCents: credit ? cents : -cents,
     currency: movement.currency,
     type: credit ? "income" : "expense",

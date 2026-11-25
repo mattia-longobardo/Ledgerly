@@ -12,7 +12,7 @@ import { categoryLabels, categoryModels } from "../schema";
 import { setCategory, upsertFromProvider } from "../service";
 import { listCategories } from "../taxonomy";
 import { createDefaultGroups } from "./review";
-import { importCategoryLabels } from "./labels";
+import { importCategoryLabels } from "../service/category-labels";
 import { categorise, suggestionsFor, suggestionsForMovement } from "./service";
 import { DEFAULT_GROUPS } from "./tables";
 

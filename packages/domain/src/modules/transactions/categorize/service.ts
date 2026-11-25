@@ -27,8 +27,8 @@ import { type Confirmation, strictMemory } from "./memory";
 import { applyRulesToNew } from "./user-rules-service";
 import { memoryKey, merchantKey } from "./text";
 import { groupThresholdFor, type Thresholds, thresholdsFor } from "./thresholds";
-import { importedLabels } from "./labels";
-import { categoriesOf } from "./own-categories";
+import { importedLabels } from "../service/category-labels";
+import { categoriesOf } from "../service/own-categories";
 
 type Who = Pick<Ctx, "userId">;
 

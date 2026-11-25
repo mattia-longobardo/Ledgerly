@@ -8,8 +8,8 @@ import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { categories, categoryGroupMarks } from "../schema";
-import { groupCategories, type Knowledge } from "./cascade";
-import { DEFAULT_CATEGORIES } from "./tables";
+import { groupCategories, type Knowledge } from "../categorize/cascade";
+import { DEFAULT_CATEGORIES } from "../categorize/tables";
 
 /** The person's categories a movement may be given, and their category for each default group. */
 export async function categoriesOf(ctx: Pick<Ctx, "userId">): Promise<
