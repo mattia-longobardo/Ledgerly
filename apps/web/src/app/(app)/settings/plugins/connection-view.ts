@@ -150,7 +150,23 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
     if (status.text === "pending") return { text: t("text.pending"), at: null };
     if (status.text === "pausedSchedule") return { text: t("text.pausedSchedule"), at: null };
     if (status.text === "pausedProvider") return { text: t("text.pausedProvider", names), at: null };
+    if (status.text === "failed") return failed(facts);
     return { text: t("text.lateNever", { next: attempt }), at: null };
+  }
+
+  /**
+   * A reading that failed with no schedule to try again (H56, PERS-615 §5): its cause and its day,
+   * from the last reading that failed, and that Ledgerly does not try again by itself.
+   */
+  function failed(facts: RowFacts): { text: string; at: Date | null } {
+    const names = { name: facts.connection.name, provider: facts.connection.providerName };
+    const last = facts.connection.runs.find((run) => run.state === "failed");
+    const code = last?.errorCode ?? facts.connection.errorCode;
+    // The sentence of a code ends with its own full stop: here it sits inside a sentence.
+    const cause = (code === null ? t("codes.failed") : t(`codes.${codeKey(code)}`, names)).replace(/\.$/, "");
+    if (last === undefined) return { text: t("text.failedBare", { cause }), at: null };
+    const started = new Date(last.startedAt);
+    return { text: t("text.failed", { cause, when: past(started) }), at: started };
   }
 
   function historyItems(facts: RowFacts): HistoryItem[] {

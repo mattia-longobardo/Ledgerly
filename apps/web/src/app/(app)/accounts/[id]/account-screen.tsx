@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 // `accountRoutes`: `accounts` is also the name of the table, which the gate of M5 counts.
 import { accounts as accountRoutes, views } from "@ledgerly/api-contract/accounts";
 import { profile } from "@ledgerly/api-contract/settings";
@@ -15,6 +16,7 @@ import { Badge } from "@ledgerly/ui/badge";
 import { useApi } from "@ledgerly/ui/data";
 import { DetailHeader } from "@ledgerly/ui/detail-header";
 import { Loaded } from "@ledgerly/ui/loaded";
+import { StateWord } from "@ledgerly/ui/plugin-row";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { SyncStatus } from "@ledgerly/ui/sync-status";
@@ -25,6 +27,7 @@ import { AccountConnection } from "./connection-status";
 import { EntriesTab } from "./entries-tab";
 import { OverviewTab } from "./overview-tab";
 import { SettingsTab } from "./settings-tab";
+import { StoppedBanner } from "./source-state";
 
 const TABS = ["overview", "transactions", "entries", "settings"] as const;
 
@@ -103,7 +106,10 @@ function AccountView({
   // Still tied to its source, with no connection to it: the source was disconnected, and a new
   // connection to it ties the account again (ux n1 §5.4).
   const disconnected =
-    row.service === null && account.origin === "synced" && read.context.connectionId === null;
+    row.service === null &&
+    account.origin === "synced" &&
+    read.context.connectionId === null &&
+    account.sourceState !== "stopped";
   const source = sourceOf(text, { ...read, row }, disconnected);
   const page: AccountPage = { ...read, row, index, source, color: colorFor(account, index) };
   const requested = search.get("tab");
@@ -145,6 +151,21 @@ function sourceOf(
   });
 }
 
+/** How fresh the balance is: «Stopped» for an account whose plugin is off, else its last reading. */
+function syncMeta(page: AccountPage, stopped: string): ReactNode {
+  const { account, row } = page;
+  if (account.sourceState === "stopped") return <StateWord word={stopped} tone="warn" />;
+  if (account.origin !== "synced" && row.service === null) return null;
+  return (
+    <span>
+      <SyncStatus
+        lastSyncedAt={row.service?.lastSyncedAt ?? row.lastSyncedAt}
+        now={new Date().toISOString()}
+      />
+    </span>
+  );
+}
+
 function Header({ page, view, disconnected }: { page: AccountPage; view: NetWorth; disconnected: boolean }) {
   const text = useTranslations("accounts");
   const detailText = useTranslations("accounts.detail");
@@ -157,14 +178,7 @@ function Header({ page, view, disconnected }: { page: AccountPage; view: NetWort
           <span>{text(`types.${account.type}`)}</span>
         </>,
         disconnected ? <Badge tone="warn">{page.source}</Badge> : <span>{page.source}</span>,
-        (account.origin === "synced" || row.service !== null) && (
-          <span>
-            <SyncStatus
-              lastSyncedAt={row.service?.lastSyncedAt ?? row.lastSyncedAt}
-              now={new Date().toISOString()}
-            />
-          </span>
-        ),
+        syncMeta(page, text("origins.stopped")),
       ]}
       tags={
         <>
@@ -181,13 +195,17 @@ function Header({ page, view, disconnected }: { page: AccountPage; view: NetWort
         </>
       }
       above={
-        page.context.connectionId !== null && (
-          <AccountConnection
-            connectionId={page.context.connectionId}
-            // A service of Investments fed by a provider has its key replaced on its own page.
-            keyHref={row.service !== null ? `/investments/${account.id}/connection` : null}
-            format={page.format}
-          />
+        account.sourceState === "stopped" ? (
+          <StoppedBanner page={page} />
+        ) : (
+          page.context.connectionId !== null && (
+            <AccountConnection
+              connectionId={page.context.connectionId}
+              // A service of Investments fed by a provider has its key replaced on its own page.
+              keyHref={row.service !== null ? `/investments/${account.id}/connection` : null}
+              format={page.format}
+            />
+          )
         )
       }
       title={account.name}

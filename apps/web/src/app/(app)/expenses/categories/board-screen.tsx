@@ -19,7 +19,12 @@ import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { categoryColor } from "@/modules/transactions";
-import { AccountsMenu, type ExpensesQuery, parseExpensesQuery } from "@/modules/transactions/client";
+import {
+  AccountsMenu,
+  type ExpensesQuery,
+  parseExpensesQuery,
+  useSourcesOff,
+} from "@/modules/transactions/client";
 import { DefaultGroupsButton } from "../../settings/finance/default-groups";
 import { ExpensesTabs } from "../tabs";
 import { CategoriesBoard } from "./board";
@@ -108,6 +113,7 @@ function Board({ page, prefs }: { page: ReturnType<typeof usePageQuery>; prefs: 
   const { query, carry, macro } = page;
   const scope = scopeOf(query);
   const read = useLatest(useApi(categoryBoard.getCategoriesBoard, { query: scope }));
+  const sourcesOff = useSourcesOff().providers;
   return (
     <Loaded state={read}>
       {(board) => {
@@ -116,6 +122,7 @@ function Board({ page, prefs }: { page: ReturnType<typeof usePageQuery>; prefs: 
           carry,
           range: query.range,
           accounts: query.accountSelection,
+          sourcesOff,
           sourceText: (source) =>
             text("categories.source", { provider: source.name, names: source.names.join(", ") }),
         });

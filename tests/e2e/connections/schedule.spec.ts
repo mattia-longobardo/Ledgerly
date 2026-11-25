@@ -60,7 +60,7 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
 
   await test.step("back to manual only", async () => {
     await trek.getByRole("button", { name: "Change the sync schedule" }).click();
-    await dialog.getByRole("radio", { name: /Manual only/ }).check();
+    await dialog.getByRole("radio", { name: /On demand only/ }).check();
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(dialog).toBeHidden();
     await expect(trek.getByText("No automatic sync")).toBeVisible();
@@ -72,13 +72,13 @@ test("a service's Connection tab shows its real schedule, with the same control"
   await page.goto("/settings/finance");
   const row = page.getByTestId("investment-connection").filter({ hasText: "eToro" });
   // Seeded on manual only: the row says the automatic update is off, and the tab used to say
-  // 07:30 and 22:30 whatever the schedule was. «Manual only», not «Paused» (UX review, point 2).
-  await expect(row.getByText("Manual only")).toBeVisible();
+  // 07:30 and 22:30 whatever the schedule was. «On demand only», not «Paused» (PERS-615 §6).
+  await expect(row.getByText("On demand only")).toBeVisible();
   await expect(row.getByText("Automatic update is off.")).toBeVisible();
   await row.getByRole("button", { name: "eToro" }).click();
   await page.getByRole("menuitem", { name: "Connection settings" }).click();
   const card = page.getByTestId("service-connection");
-  await expect(card.getByText("Manual only")).toBeVisible();
+  await expect(card.getByText("On demand only")).toBeVisible();
   await expect(card.getByText("07:30")).toHaveCount(0);
   await card.getByRole("button", { name: "Change the sync schedule" }).click();
   await expect(page.getByRole("dialog", { name: "Sync schedule · eToro" })).toBeVisible();

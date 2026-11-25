@@ -10,5 +10,6 @@ export { LeaveTable } from "./ui/leave-table";
 export type { Say, View } from "./ui/words";
 export { type Filter, filterOf } from "./ui/year";
 export { YearAlerts } from "./ui/year-alerts";
+export { CalendarOffBanner } from "./ui/calendar-off";
 export { YearCards } from "./ui/year-cards";
 export { YearActions, YearHeader } from "./ui/year-header";

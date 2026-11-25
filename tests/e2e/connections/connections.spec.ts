@@ -61,21 +61,25 @@ test.describe("the rows of the connections", () => {
       await page.setViewportSize({ width, height });
       await page.goto(INTEGRATIONS);
 
-      await test.step("the list: one row per source, each a link to its page with its state", async () => {
-        const sources = page.getByTestId("source-row");
-        // Read only by hand: «Manual only», not «Paused» (UX review, point 2).
-        await expect(sources.filter({ hasText: "Trek" })).toHaveAttribute("data-status", "manual");
-        await expect(sources.filter({ hasText: "Wallet" })).toHaveAttribute("data-status", "manual");
-        // What each source reads, from `kinds` of `GET /plugins` (point 6).
-        await expect(sources.filter({ hasText: "Trek" }).getByTestId("source-reads")).toHaveText(
-          "Leave days",
-        );
+      await test.step("the list: one row per plugin, its state in a word, its name a link (PERS-615 §3)", async () => {
+        const plugins = page.getByTestId("plugin-row");
+        // Read only by hand: «On demand only», not «Paused» nor «Manual only» (PERS-615 §6).
+        await expect(plugins.filter({ hasText: "Trek" })).toHaveAttribute("data-status", "on_demand");
+        await expect(plugins.filter({ hasText: "Wallet" })).toHaveAttribute("data-status", "on_demand");
+        // What each plugin reads and writes, from `capabilities` of `GET /plugins`.
         await expect(
-          sources.filter({ hasText: "Enable Banking" }).getByTestId("source-reads").locator("span"),
-        ).toHaveText(["Accounts and balances", "Transactions"]);
+          plugins.filter({ hasText: "Trek" }).getByTestId("plugin-chips").locator("span"),
+        ).toHaveText(["Reads days off", "Writes days off"]);
+        await expect(
+          plugins.filter({ hasText: "Enable Banking" }).getByTestId("plugin-chips").locator("span"),
+        ).toHaveText(["Reads accounts and balances", "Reads transactions"]);
         // The worst of the banks: one needs an action.
-        await expect(sources.filter({ hasText: "Enable Banking" })).toHaveAttribute("data-status", "action");
-        await expect(sources.filter({ hasText: "Enable Banking" })).toHaveAttribute("href", BANKS);
+        const banks = plugins.filter({ hasText: "Enable Banking" });
+        await expect(banks).toHaveAttribute("data-status", "action_needed");
+        await expect(banks.getByRole("link", { name: "Enable Banking", exact: true })).toHaveAttribute(
+          "href",
+          BANKS,
+        );
         await expect(page.getByTestId("bank-row")).toHaveCount(0);
       });
 
@@ -83,13 +87,13 @@ test.describe("the rows of the connections", () => {
       await test.step("the source's page has the row of its connection", async () => {
         const one = row(page, "Trek");
         await expect(one).toHaveAttribute("data-status", "manual");
-        await expect(one.getByText("Manual only", { exact: true }).first()).toBeVisible();
+        await expect(one.getByText("On demand only", { exact: true }).first()).toBeVisible();
         await expect(one.getByText(/^Automatic update is off\.$/).first()).toBeVisible();
         await expect(one.getByRole("button", { name: "Turn on automatic update" })).toBeVisible();
         // The state beside the page's title too (point 10).
-        await expect(page.getByTestId("source-title")).toHaveAttribute("data-status", "manual");
+        await expect(page.getByTestId("source-heading")).toHaveAttribute("data-status", "on_demand");
         await expect(
-          page.getByTestId("source-heading").getByText("Manual only", { exact: true }),
+          page.getByTestId("source-heading").getByText("On demand only", { exact: true }),
         ).toBeVisible();
       });
 
@@ -187,7 +191,10 @@ test.describe("the rows of the connections", () => {
 
   test("the list leads to a source's page and back with the keyboard", async ({ page }) => {
     await page.goto(INTEGRATIONS);
-    const trek = page.getByTestId("source-row").filter({ hasText: "Trek" });
+    const trek = page
+      .getByTestId("plugin-row")
+      .filter({ hasText: "Trek" })
+      .getByRole("link", { name: "Trek", exact: true });
     await hydrated(trek);
     await trek.focus();
     await page.keyboard.press("Enter");
@@ -332,7 +339,7 @@ test.describe("the rows of the connections", () => {
   test("Advanced: the log with its filter, and the report", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto(INTEGRATIONS);
-    await page.getByRole("link", { name: /^Advanced/ }).click();
+    await page.getByRole("link", { name: /^Reading log/ }).click();
     await expect(page).toHaveURL(new RegExp(`${ADVANCED}$`));
 
     const log = page.getByRole("region", { name: "Log" });
@@ -401,23 +408,22 @@ test.describe("the rows of the connections", () => {
     await expect(status).toContainText(new RegExp(`Updated ${(await lastReads(page))("Alfa Bank")}`));
   });
 
-  test("Turn off: the dialog says what changes, opens on Cancel, and Esc changes nothing", async ({
+  test("Deactivate: the dialog says what changes, opens on Cancel, and Esc changes nothing", async ({
     page,
   }) => {
     // plugin-settings.md §3.3, §5. Not confirmed here: the last reading would call the bank.
     await page.goto(BANKS);
-    const zone = page.getByRole("region", { name: "Turn off Enable Banking" });
-    const open = zone.getByRole("button", { name: "Turn off Enable Banking" });
+    const zone = page.getByRole("region", { name: "Deactivate Enable Banking" });
+    const open = zone.getByRole("button", { name: "Deactivate Enable Banking" });
     await hydrated(open);
     await open.focus();
     await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog", { name: "Turn off Enable Banking?" });
-    await expect(dialog).toContainText("Your numbers do not change.");
+    const dialog = page.getByRole("dialog", { name: "Deactivate Enable Banking?" });
+    await expect(dialog).toContainText("The numbers do not change.");
     const lines = dialog.getByTestId("deactivate-lines").getByRole("listitem");
-    await expect(lines.first()).toHaveText(/^\d+ accounts? becomes? “manual”, with the same balance\.$/);
-    await expect(lines.last()).toHaveText(
-      "The credentials are deleted: to turn it on again, enter them again.",
-    );
+    await expect(lines.first()).toHaveText(/^\d+ accounts? becomes? manual, with the same balance\.$/);
+    // Saved credentials: the dialog says they go (PERS-615 §5, defect 12 of PERS-614).
+    await expect(lines.last()).toHaveText("The Enable Banking credentials and settings are deleted.");
     await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
@@ -481,7 +487,7 @@ test.describe("the rows of the connections", () => {
     await expect(page.getByText('"Old savings" is archived: it comes back to the lists')).toBeVisible();
   });
 
-  test("Trek turned off: its page starts empty, with no connection and no setting", async ({ page }) => {
+  test("Trek deactivated: its page is «Not active», with the day and «Activate»", async ({ page }) => {
     // Disconnected first, so the last reading of §3.2 calls nobody.
     await page.goto(TREK);
     const trek = page.getByTestId("connection-row").first();
@@ -492,21 +498,25 @@ test.describe("the rows of the connections", () => {
     await disconnect.getByRole("button", { name: "Disconnect", exact: true }).click();
     await expect(disconnect).toBeHidden();
 
-    await page.getByRole("button", { name: "Turn off Trek" }).click();
-    const dialog = page.getByRole("dialog", { name: "Turn off Trek?" });
-    await expect(dialog.getByTestId("deactivate-lines").getByRole("listitem")).toHaveText([
-      "The credentials are deleted: to turn it on again, enter them again.",
-    ]);
-    await dialog.getByRole("button", { name: "Turn off Trek" }).click();
-    await expect(page.getByText("Trek turned off: 0 accounts are now “manual”")).toBeVisible();
+    await page.getByRole("button", { name: "Deactivate Trek" }).click();
+    const dialog = page.getByRole("dialog", { name: "Deactivate Trek?" });
+    // No credential is left after «Disconnect»: no line says one goes (defect 12 of PERS-614).
+    await expect(dialog.getByTestId("deactivate-lines")).not.toContainText("credentials");
+    await dialog.getByRole("button", { name: "Deactivate Trek" }).click();
+    await expect(page.getByText("Trek deactivated: no account to convert")).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`${INTEGRATIONS}$`));
+    // The list keeps a trace: «Not active», and the day (defect 10 of PERS-614).
+    const listed = page.getByTestId("plugin-row").filter({ hasText: "Trek" });
+    await expect(listed).toHaveAttribute("data-status", "not_active");
+    await expect(listed.getByTestId("plugin-text")).toContainText("deactivated on");
 
     await page.goto(TREK);
     for (const name of ["Schedule", "Advanced", "Writing to Trek"]) {
       await expect(page.getByRole("region", { name, exact: true })).toHaveCount(0);
     }
-    // Nothing left to turn off: no connection, no credential, the plugin off (point 8).
-    await expect(page.getByRole("region", { name: "Turn off Trek" })).toHaveCount(0);
+    // Nothing left to deactivate: the plugin is off with nothing here; «Activate» is the step.
+    await expect(page.getByRole("region", { name: "Deactivate Trek" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Activate Trek" })).toBeVisible();
   });
 });
 

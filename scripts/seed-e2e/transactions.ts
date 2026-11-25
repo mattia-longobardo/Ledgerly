@@ -89,7 +89,8 @@ export async function seedManual(email: string = USERS.manual.email): Promise<vo
   });
 }
 
-export async function seedSources(email: string = USERS.sources.email): Promise<void> {
+/** `activate`: false for a user whose Wallet is off with its data here («Needs cleanup», H56). */
+export async function seedSources(email: string = USERS.sources.email, activate = true): Promise<void> {
   const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   await createAccount(ctx, {
@@ -98,7 +99,7 @@ export async function seedSources(email: string = USERS.sources.email): Promise<
     currency: "EUR",
     openingBalance: { on: addDays(on, -5), cents: 8_000n },
   });
-  const current = await syncedAccount(ctx, "e2e-sources-1", "Conto corrente app");
+  const current = await syncedAccount(ctx, "e2e-sources-1", "Conto corrente app", "checking", activate);
   await upsertFromProvider(
     ctx,
     current,

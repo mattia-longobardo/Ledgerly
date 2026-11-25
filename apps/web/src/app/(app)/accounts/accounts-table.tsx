@@ -22,9 +22,19 @@ export interface Row extends ViewRow {
   color: string;
   counter: string | null;
   syncedAt: string | null;
+  /** The day a stopped account stopped (its plugin is off, H56), already written; null for any other. */
+  stoppedSince: string | null;
 }
 
-export function rowsOf(view: NetWorth, format: CardFormat): Row[] {
+/**
+ * The rows, with the day each stopped account stopped: `GET /accounts` says it (`sourceState`,
+ * `stoppedSince`), `GET /net-worth` does not.
+ */
+export function rowsOf(
+  view: NetWorth,
+  format: CardFormat,
+  stopped: ReadonlyMap<string, string> = new Map(),
+): Row[] {
   return view.accounts.map((row, index) => ({
     ...row,
     color: colorFor(row, index),
@@ -35,6 +45,7 @@ export function rowsOf(view: NetWorth, format: CardFormat): Row[] {
     ),
     // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
     syncedAt: row.service?.lastSyncedAt ?? row.lastSyncedAt,
+    stoppedSince: stopped.get(row.id) ?? null,
   }));
 }
 
@@ -81,6 +92,9 @@ function StateBadges({ row }: { row: Row }) {
 }
 
 function RowSync({ row }: { row: Row }) {
+  const text = useTranslations("accounts");
+  // A stopped account is not read: «Stopped since», never «Last synced» (PERS-615 §4).
+  if (row.stoppedSince !== null) return text("origins.stoppedSince", { date: row.stoppedSince });
   return (
     <SyncStatus
       manual={row.origin === "manual" && row.service === null}

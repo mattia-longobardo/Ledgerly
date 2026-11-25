@@ -9,7 +9,7 @@ import { sessionState } from "../_shared/env";
 
 const ROW = '[data-testid="plugin-row"][data-plugin="enablebanking"]';
 const RETURN_PATH = "/api/v1/plugins/enablebanking/callback";
-// The plugin's page (rewrite plan N7.2): only while it is on; otherwise its address leads to the list.
+// The plugin's page (rewrite plan N7.2): in every state, «Not active» included (H56, PERS-615 §2).
 const PAGE = "/settings/plugins/enablebanking";
 
 async function integrations(page: Page) {
@@ -30,22 +30,23 @@ test.describe("a person who is not an admin", () => {
     const row = page.locator(ROW);
     const banks = page.getByRole("region", { name: "Connection" });
 
-    await test.step("it is there, not active, and nothing else is new", async () => {
-      await expect(row).toHaveAttribute("data-state", "available");
+    await test.step("it is there, not active, with a page that says what it does", async () => {
+      await expect(row).toHaveAttribute("data-status", "not_active");
       await expect(row).toContainText("Not active");
       await expect(page.getByTestId("banks-card")).toHaveCount(0);
-      await page.goto(PAGE);
-      await expect(page).toHaveURL(/\/settings\/plugins#source-enablebanking$/);
+      await pluginPage(page);
+      await expect(page.getByTestId("plugin-about")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Activate Enable Banking" })).toBeVisible();
       expect((await page.goto("/banks/connect"))?.status()).toBe(404);
     });
 
-    await test.step("turning it on asks nothing and opens its page on its guide", async () => {
+    await test.step("«Activate» asks nothing and opens its page with «Connect» next", async () => {
       await integrations(page);
-      await row.getByRole("button", { name: "Turn on" }).click();
-      await expect(page.getByText("Enable Banking turned on")).toBeVisible();
-      await expect(page.getByTestId("source-row").filter({ hasText: "Enable Banking" })).toBeVisible();
-      await pluginPage(page);
+      await row.getByRole("button", { name: "Activate" }).click();
+      await expect(page.getByText("Enable Banking activated")).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`${PAGE}\\?step=connect$`));
       await expect(page.getByTestId("source-title")).toHaveText("Enable Banking");
+      await expect(page.getByTestId("source-heading")).toHaveAttribute("data-status", "not_connected");
       await expect(banks.getByRole("button", { name: "Enter credentials" })).toBeVisible();
       await expect(banks.getByLabel("Return address")).toHaveValue(new RegExp(`${RETURN_PATH}$`));
     });
@@ -54,7 +55,7 @@ test.describe("a person who is not an admin", () => {
       const context = await browser.newContext({ storageState: sessionState("admin") });
       const other = await context.newPage();
       await integrations(other);
-      await expect(other.locator(ROW)).toHaveAttribute("data-state", "available");
+      await expect(other.locator(ROW)).toHaveAttribute("data-status", "not_active");
       await expect(other.getByTestId("banks-card")).toHaveCount(0);
       expect((await other.goto("/banks/connect"))?.status()).toBe(404);
       await context.close();
@@ -84,16 +85,16 @@ test.describe("a person who is not an admin", () => {
       await expect(page).toHaveURL(/\/banks\/connect\?step=bank&error=session$/);
     });
 
-    await test.step("turning it off from the end of its page leads to the list, and the page goes", async () => {
+    await test.step("«Deactivate» from the end of its page leads to the list, «Not active» again", async () => {
       // plugin-settings.md §3.3. Nothing connected: no last reading, no call to a bank.
       await pluginPage(page);
-      await page.getByRole("button", { name: "Turn off Enable Banking" }).click();
-      const dialog = page.getByRole("dialog", { name: "Turn off Enable Banking?" });
-      await dialog.getByRole("button", { name: "Turn off Enable Banking" }).click();
-      await expect(page.getByText("Enable Banking turned off: 0 accounts are now “manual”")).toBeVisible();
+      await page.getByRole("button", { name: "Deactivate Enable Banking" }).click();
+      const dialog = page.getByRole("dialog", { name: "Deactivate Enable Banking?" });
+      await dialog.getByRole("button", { name: "Deactivate Enable Banking" }).click();
+      await expect(page.getByText("Enable Banking deactivated: no account to convert")).toBeVisible();
       await expect(page).toHaveURL(/\/settings\/plugins$/);
       await integrations(page);
-      await expect(row).toHaveAttribute("data-state", "available");
+      await expect(row).toHaveAttribute("data-status", "not_active");
       await expect(page.getByTestId("banks-card")).toHaveCount(0);
     });
   });

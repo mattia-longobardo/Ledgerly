@@ -87,6 +87,14 @@ describe("call", () => {
     });
   });
 
+  it("carries since when a reading runs, for the refusal of «Deactivate» (H56)", async () => {
+    answer(409, { error: "conflict", reason: "reading_in_progress", startedAt: "2026-11-25T13:02:00.000Z" });
+    await expect(call(profile.updateProfile, { body: { name: "x" } })).rejects.toMatchObject({
+      reason: "reading_in_progress",
+      startedAt: "2026-11-25T13:02:00.000Z",
+    });
+  });
+
   it("refuses an answer that is not the declared shape", async () => {
     answer(200, { name: 1 });
     await expect(call(profile.getProfile, {})).rejects.toBeInstanceOf(ApiError);

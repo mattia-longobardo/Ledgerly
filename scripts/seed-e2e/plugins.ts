@@ -16,9 +16,9 @@ import { saveConnection, savePluginConnection, saveSchedule } from "@domain/plat
 import { findInstancePlugin } from "@domain/platform/plugins/queries";
 import { BANK_SCHEDULE } from "@domain/platform/plugins/rules";
 import { pluginUserCredentials } from "@domain/platform/plugins/schema";
-import { connectionBag, setPluginActive } from "@plugin-host/service";
+import { connectionBag } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
-import { contextOf } from "./common";
+import { activatePlugin, contextOf } from "./common";
 import { seedTimeOff } from "./timeoff";
 import { seedSources } from "./transactions";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "../../test/fixtures/providers";
@@ -26,13 +26,6 @@ import { TREK_PROVIDER, WALLET_PROVIDER } from "../../test/fixtures/providers";
 type Health = Partial<typeof integrationConnections.$inferInsert>;
 
 const hoursFrom = (now: Date, count: number) => new Date(now.getTime() + count * 3_600_000);
-
-/** Turns a plugin on, when the instance has it (the bank plugin needs its container). */
-async function activate(ctx: Ctx, pluginId: string): Promise<boolean> {
-  if (!(await findInstancePlugin(pluginId))) return false;
-  await setPluginActive(ctx, { pluginId, active: true });
-  return true;
-}
 
 /** A Wallet or Trek connection with a schedule or none, and the facts of its health. */
 async function coreConnection(
@@ -133,22 +126,22 @@ export async function seedPluginsOff(): Promise<void> {
 /** On with nothing yet: «Not connected» ×3. */
 export async function seedPluginsOn(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsOn.email);
-  for (const id of ["wallet", "trek", BANK_PLUGIN]) await activate(ctx, id);
+  for (const id of ["wallet", "trek", BANK_PLUGIN]) await activatePlugin(ctx, id);
 }
 
 /** Wallet up to date, Trek late (the provider's limit), a bank reading now. */
 export async function seedPluginsLive(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsLive.email);
   const now = new Date();
-  await activate(ctx, "wallet");
+  await activatePlugin(ctx, "wallet");
   await coreConnection(ctx, WALLET_PROVIDER, { scheduled: true });
   await providerAccount(ctx, WALLET_PROVIDER, "e2e-live-wallet", "Wallet everyday");
-  await activate(ctx, "trek");
+  await activatePlugin(ctx, "trek");
   await coreConnection(ctx, TREK_PROVIDER, {
     scheduled: true,
     health: { errorCode: "rate_limited", lastOkAt: hoursFrom(now, -26) },
   });
-  if (!(await activate(ctx, BANK_PLUGIN))) return;
+  if (!(await activatePlugin(ctx, BANK_PLUGIN))) return;
   await bankCredentials(ctx);
   // Half an hour from now: still «in progress», and not an orphan, when a long run opens the page.
   await bank(ctx, "Alfa Bank", { running: hoursFrom(now, 0.5) });
@@ -158,7 +151,7 @@ export async function seedPluginsLive(): Promise<void> {
 export async function seedPluginsErrors(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsErrors.email);
   const now = new Date();
-  await activate(ctx, "wallet");
+  await activatePlugin(ctx, "wallet");
   await coreConnection(ctx, WALLET_PROVIDER, {
     scheduled: false,
     health: {
@@ -168,7 +161,7 @@ export async function seedPluginsErrors(): Promise<void> {
       lastOkAt: hoursFrom(now, -30),
     },
   });
-  await activate(ctx, "trek");
+  await activatePlugin(ctx, "trek");
   await coreConnection(ctx, TREK_PROVIDER, {
     scheduled: true,
     health: {
@@ -178,7 +171,7 @@ export async function seedPluginsErrors(): Promise<void> {
       lastOkAt: hoursFrom(now, -26),
     },
   });
-  if (!(await activate(ctx, BANK_PLUGIN))) return;
+  if (!(await activatePlugin(ctx, BANK_PLUGIN))) return;
   await bankCredentials(ctx);
   await bank(ctx, "Gamma Bank", { expiresAt: hoursFrom(now, -24) });
 }
@@ -186,24 +179,24 @@ export async function seedPluginsErrors(): Promise<void> {
 /** Wallet's key refused, Trek up to date, the bank plugin on with its credentials and no bank. */
 export async function seedPluginsMixed(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsMixed.email);
-  await activate(ctx, "wallet");
+  await activatePlugin(ctx, "wallet");
   await coreConnection(ctx, WALLET_PROVIDER, {
     scheduled: true,
     health: { state: "error", errorCode: "auth" },
   });
-  await activate(ctx, "trek");
+  await activatePlugin(ctx, "trek");
   await coreConnection(ctx, TREK_PROVIDER, { scheduled: true });
-  if (await activate(ctx, BANK_PLUGIN)) await bankCredentials(ctx);
+  if (await activatePlugin(ctx, BANK_PLUGIN)) await bankCredentials(ctx);
 }
 
 /** On, with the accounts a «Disconnect» kept: Wallet and the bank «Disconnected»; Trek on demand. */
 export async function seedPluginsDisconnected(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsDisconnected.email);
-  await activate(ctx, "wallet");
+  await activatePlugin(ctx, "wallet");
   await providerAccount(ctx, WALLET_PROVIDER, "e2e-disc-wallet", "Wallet everyday");
-  await activate(ctx, "trek");
+  await activatePlugin(ctx, "trek");
   await coreConnection(ctx, TREK_PROVIDER, { scheduled: false });
-  if (!(await activate(ctx, BANK_PLUGIN))) return;
+  if (!(await activatePlugin(ctx, BANK_PLUGIN))) return;
   await providerAccount(ctx, pluginProvider(BANK_PLUGIN), "e2e-disc-bank", "Delta Bank current account");
 }
 
@@ -213,7 +206,7 @@ export async function seedPluginsDisconnected(): Promise<void> {
  * bank's account. «Needs cleanup» ×3.
  */
 export async function seedPluginsCleanup(email: string = USERS.pluginsCleanup.email): Promise<void> {
-  await seedSources(email);
+  await seedSources(email, false);
   await seedTimeOff(email);
   const ctx = await contextOf(email);
   await coreConnection(ctx, TREK_PROVIDER, { scheduled: false });
@@ -224,11 +217,11 @@ export async function seedPluginsCleanup(email: string = USERS.pluginsCleanup.em
 /** Turned off with «Deactivate» after use: «Not active», with the day, and an account kept by hand. */
 export async function seedPluginsGone(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsGone.email);
-  await activate(ctx, "wallet");
+  await activatePlugin(ctx, "wallet");
   await coreConnection(ctx, WALLET_PROVIDER, { scheduled: false });
   await providerAccount(ctx, WALLET_PROVIDER, "e2e-gone-wallet", "Wallet everyday");
-  await activate(ctx, "trek");
-  const banks = await activate(ctx, BANK_PLUGIN);
+  await activatePlugin(ctx, "trek");
+  const banks = await activatePlugin(ctx, BANK_PLUGIN);
   const quiet = { finalRead: async () => {}, force: true };
   for (const slug of ["wallet", "trek", ...(banks ? [BANK_PLUGIN] : [])]) {
     const source = await sourceOf(ctx, slug);
@@ -244,7 +237,7 @@ export async function seedPluginsGone(): Promise<void> {
 export async function seedPluginsJourney(): Promise<void> {
   await seedPluginsCleanup(USERS.pluginsJourney.email);
   const ctx = await contextOf(USERS.pluginsJourney.email);
-  if (!(await activate(ctx, BANK_PLUGIN))) return;
+  if (!(await activatePlugin(ctx, BANK_PLUGIN))) return;
   await bankCredentials(ctx);
   await bank(ctx, "Kappa Bank", { running: hoursFrom(new Date(), -20 / 60) });
 }

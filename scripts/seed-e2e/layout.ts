@@ -29,7 +29,15 @@ import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../../test/fixtures
 import { twinPdf } from "../../test/fixtures/payroll/twin";
 import { addDeposit, debitFund, importedOperation, importedPosition, payrollFund } from "../../test/funds";
 import { USERS } from "../../tests/e2e/_shared/env";
-import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement, workingDay } from "./common";
+import {
+  activatePlugin,
+  contextOf,
+  lastMonthOf,
+  syncedAccount,
+  thisMonthOf,
+  walletMovement,
+  workingDay,
+} from "./common";
 import { seedBinance, seedEtoro } from "./investments";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "../../test/fixtures/providers";
 
@@ -43,6 +51,7 @@ export async function seedLayout(email: string = USERS.layout.email): Promise<vo
     await setPluginActive(ctx, { pluginId: BANK_PLUGIN, active: true });
   // A Trek link on manual only (docs/scheduler.md): the card and its schedule control are on screen for the
   // check, and the dispatcher never tries to reach the address, which does not exist.
+  await activatePlugin(ctx, "trek");
   const trek = await saveConnection(ctx, {
     provider: TREK_PROVIDER,
     credentials: { baseUrl: "https://trek.invalid", token: "e2e-not-a-token" },

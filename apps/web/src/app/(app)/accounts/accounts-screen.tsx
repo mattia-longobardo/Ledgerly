@@ -4,11 +4,11 @@
 // screen chooses the window and formats.
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { views } from "@ledgerly/api-contract/accounts";
+import { accounts as accountRoutes, views } from "@ledgerly/api-contract/accounts";
 import { profile } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
-import { today } from "@ledgerly/format/dates";
-import { formatPercent, numberStyle } from "@ledgerly/format/format";
+import { civilDateIn, today } from "@ledgerly/format/dates";
+import { formatDate, formatPercent, numberStyle } from "@ledgerly/format/format";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { CompositionCard } from "@ledgerly/ui/composition-card";
@@ -118,6 +118,24 @@ function NoAccounts({ archived }: { archived: number }) {
   );
 }
 
+/** The accounts whose plugin is off (H56, `sourceState: stopped`), with the day they stopped. */
+function useStopped(format: CardFormat): ReadonlyMap<string, string> {
+  // `accountRoutes`: `accounts` is also the name of the table, which the gate of M5 counts.
+  const read = useApi(accountRoutes.listAccounts, { query: { archived: "true" } });
+  return new Map(
+    (read.data?.accounts ?? []).flatMap((one) =>
+      one.sourceState === "stopped" && one.stoppedSince !== null
+        ? [
+            [
+              one.id,
+              formatDate(civilDateIn(new Date(one.stoppedSince), format.timeZone), "long", format.locale),
+            ],
+          ]
+        : [],
+    ),
+  );
+}
+
 function AccountsView({
   view,
   period,
@@ -133,7 +151,7 @@ function AccountsView({
 }) {
   const text = useTranslations("accounts");
   const page = { archived: showArchived ? "1" : undefined };
-  const rows = rowsOf(view, format);
+  const rows = rowsOf(view, format, useStopped(format));
 
   return (
     <>

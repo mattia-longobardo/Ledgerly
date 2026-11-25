@@ -11,9 +11,10 @@ import { addDays, addMonths, dayOfWeek, monthKey, today } from "@domain/shared/d
 import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import { saveRates, storedRange } from "@domain/platform/fx/service";
-import { configuredPlugins } from "@domain/platform/plugins/queries";
+import { configuredPlugins, findInstancePlugin } from "@domain/platform/plugins/queries";
 import { plugins } from "@domain/platform/plugins/schema";
 import type { PluginManifest } from "@ledgerly/plugin-contract";
+import { setPluginActive } from "@plugin-host/service";
 import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 import { italianHolidays } from "../../test/fixtures/holidays";
 
@@ -38,13 +39,28 @@ export async function contextOf(email: string): Promise<Ctx> {
   };
 }
 
-/** A Wallet account adopted the way the sync adopts one; returns its id. */
+/**
+ * Turns a plugin on, when the instance has it: a connection or an account of a plugin that is off is
+ * «Needs cleanup» (H56), which only the users of that state have. Returns whether it is on.
+ */
+export async function activatePlugin(ctx: Ctx, pluginId: string): Promise<boolean> {
+  if (!(await findInstancePlugin(pluginId))) return false;
+  await setPluginActive(ctx, { pluginId, active: true });
+  return true;
+}
+
+/**
+ * A Wallet account adopted the way the sync adopts one; returns its id. Wallet is on, as for anybody
+ * whose accounts it reads (H30), unless `activate` is false: «Needs cleanup» (H56).
+ */
 export async function syncedAccount(
   ctx: Ctx,
   providerAccountId: string,
   name: string,
   type: "checking" | "investment" = "checking",
+  activate = true,
 ): Promise<string> {
+  if (activate) await activatePlugin(ctx, "wallet");
   await applyProviderAccounts(ctx, WALLET_PROVIDER, [
     { provider: WALLET_PROVIDER, providerAccountId, name, type, currency: "EUR" },
   ]);

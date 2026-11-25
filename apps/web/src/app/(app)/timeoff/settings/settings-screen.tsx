@@ -17,6 +17,7 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { Page } from "@ledgerly/ui/shell/page";
 import { TabLinks } from "@ledgerly/ui/tab-links";
+import { ActivateButton } from "../../settings/plugins/activate-button";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { parseYearQuery } from "@ledgerly/ui/period";
 import { YearPicker } from "@ledgerly/ui/year-picker";
@@ -242,23 +243,57 @@ function AllowanceYears({ place, years }: { place: Place; years: number[] }) {
   );
 }
 
-/** The external calendar's name and the page of its connection, which only the server knows. */
+/** The external calendar: its name, its page and its state, which only the server knows (H56). */
 interface CalendarLink {
+  id: string;
   name: string;
   href: string;
+  state: "not_active" | "not_connected" | "connected" | "disconnected" | "needs_cleanup";
+  /** The word of its state, already translated. */
+  word: string;
 }
 
-/** The connection to the external calendar is on its own page (plugin-settings.md §2.2): a link here. */
+/**
+ * The external calendar (plugin-settings.md §2.2, PERS-615 §4): its state in a word and the step it
+ * needs — «Activate» when it is off, «Clean up» when it is off with days that wait for it, else the
+ * way to its page, where its connection is.
+ */
 function CalendarLinkSection({ link }: { link: CalendarLink }) {
   const settings = useTranslations("settings");
+  const provider = link.name;
+  let description = settings("plugin.movedHint", { provider });
+  let action = (
+    <ButtonLink href={link.href} size="sm">
+      {settings("plugin.settingsOf", { provider })}
+    </ButtonLink>
+  );
+  if (link.state === "not_active") {
+    description = settings("plugin.calendar.notActive", { provider });
+    action = (
+      <ActivateButton
+        pluginId={link.id}
+        provider={provider}
+        label={settings("plugins.actions.activate")}
+        variant="secondary"
+      />
+    );
+  } else if (link.state === "needs_cleanup") {
+    description = settings("plugin.calendar.needsCleanup", { provider });
+    action = (
+      <ButtonLink href={link.href} size="sm" variant="primary">
+        {settings("plugins.actions.fix")}
+      </ButtonLink>
+    );
+  }
   return (
     <SettingsSection
-      title={link.name}
-      description={settings("plugin.movedHint", { provider: link.name })}
+      title={provider}
+      description={description}
       action={
-        <ButtonLink href={link.href} size="sm">
-          {settings("plugin.settingsOf", { provider: link.name })}
-        </ButtonLink>
+        <div className="flex flex-col gap-2" data-testid="calendar-plugin" data-state={link.state}>
+          <span className="text-sm font-medium">{link.word}</span>
+          {action}
+        </div>
       }
     />
   );

@@ -19,8 +19,7 @@ import { type Tone, TONE_TEXT } from "./tone";
  * is a connection read only when the person asks (no schedule); `paused` is a plugin turned off
  * (UX review, point 2): two meanings, two words.
  */
-export type RowStatusValue =
-  "ok" | "running" | "late" | "readOnly" | "action" | "manual" | "paused" | "absent";
+export type RowStatusValue = "ok" | "running" | "late" | "error" | "action" | "manual" | "paused" | "absent";
 
 /** What a person can do with a connection: the row knows the kind, never the provider. */
 export type ActionKind =
@@ -96,8 +95,8 @@ const DOT: Record<RowStatusValue, string> = {
   ok: "bg-pos",
   running: "bg-accent",
   late: "bg-warn",
-  // Reading works; only the writes wait for a key that may write: a warning, not a fault.
-  readOnly: "bg-warn",
+  // A reading that failed: never hidden behind another state (H56, PERS-615 §5).
+  error: "bg-neg",
   action: "bg-neg",
   // Hollow: nothing is wrong, and it is not the grey of «Not connected».
   manual: "border border-faint",
@@ -109,7 +108,7 @@ const WORD_TONE: Record<RowStatusValue, Tone> = {
   ok: "pos",
   running: "accent",
   late: "warn",
-  readOnly: "warn",
+  error: "neg",
   action: "neg",
   manual: "muted",
   paused: "muted",
@@ -170,7 +169,7 @@ function useRowActions(id: string, run: RunConnectionAction, options: RowOptions
 
 type Actions = ReturnType<typeof useRowActions>;
 
-export function StatusWord({ value }: { value: RowStatusValue }) {
+function StatusWord({ value }: { value: RowStatusValue }) {
   const text = useTranslations("settings.connections");
   return (
     <span className={cn("text-sm font-medium whitespace-nowrap", TONE_TEXT[WORD_TONE[value]])}>
@@ -191,7 +190,7 @@ function StatusText({ status }: { status: ConnectionRowProps["status"] }) {
 /** A state that asks nothing of the person: its sentence is muted. */
 const quiet = (value: RowStatusValue) => value === "paused" || value === "manual";
 
-export const Dot = ({ value }: { value: RowStatusValue }) => (
+const Dot = ({ value }: { value: RowStatusValue }) => (
   <span aria-hidden className={cn("size-[7px] shrink-0 rounded-full", DOT[value])} />
 );
 
@@ -288,7 +287,7 @@ function ActionsCell({ props, actions }: { props: ConnectionRowProps; actions: A
   const primary = props.status.action;
   const prominent =
     props.status.value === "action" ||
-    props.status.value === "readOnly" ||
+    props.status.value === "error" ||
     primary?.kind === "enable" ||
     primary?.kind === "connect";
   const variant = prominent ? "primary" : "secondary";

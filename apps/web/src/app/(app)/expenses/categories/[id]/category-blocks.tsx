@@ -29,6 +29,7 @@ import {
   SpendingCard,
   TransactionsTable,
   sourcePageOf,
+  useSourcesOff,
 } from "@/modules/transactions/client";
 import { RestoreButton } from "./restore-button";
 
@@ -59,8 +60,10 @@ const linkClass = "focus-ring inline-flex min-h-6 items-center rounded-xs hover:
 export function CategoryHeading({ page, source }: { page: CategoryPage; source: Summary["source"] }) {
   const text = useTranslations("expenses");
   const { category, group, carry } = page;
+  // A plugin that is off leaves nothing to match: its line is hidden (PERS-615 §4).
+  const off = useSourcesOff().providers;
   const note =
-    source && source.names.length > 0
+    source && source.names.length > 0 && !off.has(source.provider)
       ? text("categories.source", { provider: source.name, names: source.names.join(", ") })
       : null;
   return (

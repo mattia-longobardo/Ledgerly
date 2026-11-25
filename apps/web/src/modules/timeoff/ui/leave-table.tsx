@@ -1,6 +1,7 @@
 "use client";
 
 // The table of the Time off page, month by month (N7), with the design's three filters.
+import { useCalendarOn } from "./calendar-off";
 import { Fragment } from "react";
 import { formatDate } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
@@ -171,13 +172,15 @@ function DayLine({ row, types, say }: { row: DayRow; types: View["types"]; say: 
 /** The badges a row wears: what the calendar makes of it today, and where it came from. */
 function Status({ row, say }: { row: DayRow; say: Say }) {
   const { text } = say;
+  // A calendar that is off waits for nothing: the day is a day of Ledgerly (PERS-615 §4).
+  const calendarOn = useCalendarOn();
   return (
     <>
       <Badge tone={row.status === "taken" ? "neutral" : "accent"}>
         {text(`table.statuses.${row.status}`)}
       </Badge>
       {row.origin === "external" && <Badge tone="neutral">{text("table.fromExternal")}</Badge>}
-      {row.sync !== "none" && <Badge tone="warn">{text(`table.pending.${row.sync}`)}</Badge>}
+      {calendarOn && row.sync !== "none" && <Badge tone="warn">{text(`table.pending.${row.sync}`)}</Badge>}
     </>
   );
 }

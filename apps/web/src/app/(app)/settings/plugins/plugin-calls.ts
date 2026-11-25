@@ -20,8 +20,13 @@ async function attempt(work: () => Promise<unknown>): Promise<PluginActionResult
   return { ok: true };
 }
 
-export const setPluginActive = (pluginId: string, active: boolean) =>
-  attempt(() => call(banks.setPluginActive, { params: { pluginId }, body: { active } }));
+/** «Activate»: a `404` is an instance without the plugin, said `not_available` (H56, PERS-615 §5). */
+export async function activatePlugin(pluginId: string): Promise<PluginActionResult> {
+  const result = await attempt(() =>
+    call(banks.setPluginActive, { params: { pluginId }, body: { active: true } }),
+  );
+  return !result.ok && result.error === "not_found" ? { ok: false, error: "not_available" } : result;
+}
 
 const MAX_KEY_FILE_BYTES = 16_384;
 

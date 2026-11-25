@@ -21,6 +21,8 @@ interface BoardFormat {
   range: { from: string; to: string };
   accounts: readonly string[];
   sourceText: (source: { name: string; names: string[] }) => string;
+  /** The providers of the plugins that are off: their line is hidden (PERS-615 §4). */
+  sourcesOff?: ReadonlySet<string>;
 }
 
 const HERE = "/expenses/categories";
@@ -47,7 +49,7 @@ function lineOf(line: Line, format: BoardFormat): BoardLine {
     href: withParams(`${HERE}/${line.id}`, format.carry, {}),
     budget: line.budget ? { limit: money(line.budget.limit), status: line.budget.status } : null,
     source:
-      line.source && line.source.names.length > 0
+      line.source && line.source.names.length > 0 && !format.sourcesOff?.has(line.source.provider)
         ? { text: format.sourceText(line.source), href: sourcePageOf(line.source.provider) }
         : null,
   };

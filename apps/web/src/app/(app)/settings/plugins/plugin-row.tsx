@@ -1,154 +1,121 @@
 "use client";
 
+// The row of a plugin on the web (PERS-615 §3): the row of `packages/ui` with what each of its actions
+// does — «Activate», a page, the action of the connection that needs the person most, «Deactivate…».
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { type ReactNode, useState, useTransition } from "react";
-import { Button } from "@ledgerly/ui/button";
-import { cn } from "@ledgerly/ui/cn";
-import { ActionMenu } from "@ledgerly/ui/menu";
-import { Modal } from "@ledgerly/ui/modal";
+import { useState, useTransition } from "react";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { PluginRow as Row, type PluginRowProps } from "@ledgerly/ui/plugin-row";
+import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
-import { TONE_TEXT } from "@ledgerly/ui/tone";
-import { setPluginActive } from "./plugin-calls";
+import { useActivate } from "./activate-button";
+import { useRunConnection } from "./connection-row";
+import { useDeactivate } from "./deactivate-dialogs";
 
-/**
- * What the browser is told about a plugin (ux/n1-plugin-bank.md §2.2): its name and description
- * from the manifest, in the person's language, and what it is for this person. Nothing of the
- * plugin's own state, and nothing of any other person.
- */
-interface PluginRowProps {
-  id: string;
-  name: string;
-  description: string;
-  state: "available" | "active" | "paused";
-  /** The day the person last turned it off, already formatted; only for `paused`. */
-  pausedSince: string | null;
-  /** Whether credentials are saved: turning off then asks first (§2.3). */
-  hasCredentials: boolean;
-  connections: number;
-  /** What the plugin reads, drawn under its description. */
-  reads?: ReactNode;
-}
+/** The main action, as the server decides it: a step of the plugin, a page, or a connection's action. */
+export type RowPrimary =
+  | { kind: "activate"; label: string }
+  | { kind: "link"; label: string; href: string; strong: boolean }
+  | { kind: "run"; label: string; connectionId: string; action: string; strong: boolean }
+  | null;
 
-/**
- * One plugin in "Data sources": the name, "Active" or "Not active", and the one thing the person
- * can do — turn it on, or off. Turning on asks nothing and calls nothing; turning off asks only
- * when credentials are saved.
- */
-export function PluginRow({
-  id,
-  name,
-  description,
-  state,
-  pausedSince,
-  hasCredentials,
-  connections,
-  reads = null,
-}: PluginRowProps) {
-  const t = useTranslations("settings.plugins");
-  const [confirming, setConfirming] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [pending, startTransition] = useTransition();
-  // The rows come from the page's server render until Settings › Integrations reads `/api/v1` itself.
+/** Does one action to one connection, and says a refusal in place. */
+function useRun() {
+  const text = useTranslations("settings.plugins");
   const router = useRouter();
-  const active = state === "active";
-
-  function change(next: boolean) {
+  const run = useRunConnection();
+  const [failure, setFailure] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  function start(connectionId: string, kind: string) {
+    setFailure(null);
     startTransition(async () => {
-      let ok = false;
-      try {
-        ok = (await setPluginActive(id, next)).ok;
-      } catch {
-        ok = false;
-      }
-      setFailed(!ok);
-      if (!ok) return;
-      setConfirming(false);
-      notify(next ? t("toasts.enabled", { name }) : t("toasts.disabled", { name }));
+      const result = await run(connectionId, kind).catch(() => null);
+      if (result === null) return setFailure(text("errors.failed"));
+      if (!result.ok) return setFailure(result.message);
+      if (result.toast !== null) notify(result.toast);
       router.refresh();
     });
   }
+  return { start, pending, failure };
+}
 
-  return (
-    <div className="flex flex-col" data-testid="plugin-row" data-plugin={id} data-state={state}>
-      <div className="flex flex-wrap items-start justify-between gap-x-5 gap-y-3 px-4 py-3.5">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2">
-            <span
-              aria-hidden
-              className={cn("size-[7px] shrink-0 rounded-full", active ? "bg-pos" : "bg-faint")}
-            />
-            <span className="min-w-0 font-semibold">{name}</span>
-            <span
-              className={cn("text-sm font-medium whitespace-nowrap", TONE_TEXT[active ? "pos" : "muted"])}
-            >
-              {active ? t("states.active") : t("states.inactive")}
-            </span>
-          </div>
-          <p className="mt-0.5 text-sm text-muted">{description}</p>
-          {reads}
-        </div>
-        <div className="flex items-center gap-2">
-          {active ? (
-            <ActionMenu
-              label={name}
-              items={[
-                {
-                  label: t("actions.disable"),
-                  onSelect: () => {
-                    setFailed(false);
-                    if (hasCredentials) setConfirming(true);
-                    else change(false);
-                  },
-                },
-              ]}
-            />
-          ) : (
-            <Button size="sm" variant="primary" disabled={pending} onClick={() => change(true)}>
-              {t("actions.enable")}
-            </Button>
-          )}
-        </div>
-      </div>
+const said = (failure: string | null) =>
+  failure === null ? null : (
+    <p role="alert" className="text-sm text-neg">
+      {failure}
+    </p>
+  );
 
-      {state === "paused" && pausedSince !== null && (
-        <p className="border-t border-border px-4 py-2.5 text-sm text-muted">
-          {t("detail.paused", { date: pausedSince })}
-        </p>
-      )}
-
-      {failed && !confirming && (
-        <p role="alert" className="border-t border-border px-4 py-2.5 text-sm text-neg">
-          {t("errors.failed")}
-        </p>
-      )}
-
-      <Modal
-        open={confirming}
-        onOpenChange={(open) => !open && setConfirming(false)}
-        title={t("disable.title", { name })}
-        description={t("disable.description", { name })}
-        width={420}
-        footer={
-          <>
-            <Button size="sm" onClick={() => setConfirming(false)}>
-              {t("disable.cancel")}
-            </Button>
-            <Button variant="danger" size="sm" disabled={pending} onClick={() => change(false)}>
-              {t("disable.confirm")}
-            </Button>
-          </>
-        }
+/** The main action of a plugin, on its row and in the banner of its page. */
+export function PrimaryAction({ primary, slug, name }: { primary: RowPrimary; slug: string; name: string }) {
+  const run = useRun();
+  const { activate, pending: activating, failure } = useActivate(slug, name);
+  if (primary === null) return null;
+  let button;
+  if (primary.kind === "activate") {
+    button = (
+      <Button size="sm" disabled={activating} aria-busy={activating} onClick={activate}>
+        {primary.label}
+      </Button>
+    );
+  } else if (primary.kind === "link") {
+    button = (
+      <ButtonLink href={primary.href} size="sm" variant={primary.strong ? "primary" : "secondary"}>
+        {primary.label}
+      </ButtonLink>
+    );
+  } else {
+    const { connectionId, action } = primary;
+    button = (
+      <Button
+        size="sm"
+        variant={primary.strong ? "primary" : "secondary"}
+        disabled={run.pending}
+        aria-busy={run.pending}
+        onClick={() => run.start(connectionId, action)}
       >
-        <div className="flex flex-col gap-2 text-sm">
-          {connections > 0 && <p>{t("disable.links", { count: connections })}</p>}
-          {failed && (
-            <p role="alert" className="text-neg">
-              {t("errors.failed")}
-            </p>
-          )}
-        </div>
-      </Modal>
-    </div>
+        {primary.label}
+      </Button>
+    );
+  }
+  return (
+    <span className="flex flex-col gap-1.5">
+      {button}
+      {failure}
+      {said(run.failure)}
+    </span>
+  );
+}
+
+interface Props extends Omit<PluginRowProps, "primary" | "menu" | "children"> {
+  primary: RowPrimary;
+  /** The connection «Update now» of the menu reads; null without one. */
+  update: string | null;
+  deactivable: boolean;
+}
+
+export function PluginRow({ primary, update, deactivable, ...row }: Props) {
+  const text = useTranslations("settings.plugins");
+  const actions = useTranslations("settings.connections.actions");
+  const router = useRouter();
+  const run = useRun();
+  const deactivate = useDeactivate({ slug: row.slug, provider: row.name });
+
+  const items: PluginRowProps["menu"]["items"] = [
+    { label: text("actions.open"), onSelect: () => router.push(row.href) },
+  ];
+  if (update !== null) items.push({ label: actions("update"), onSelect: () => run.start(update, "update") });
+  if (deactivable) items.push({ label: text("actions.deactivate"), onSelect: deactivate.open, danger: true });
+
+  const failures = [said(run.failure), deactivate.failure].filter((one) => one !== null);
+  return (
+    <Row
+      {...row}
+      primary={primary === null ? null : <PrimaryAction primary={primary} slug={row.slug} name={row.name} />}
+      menu={{ label: text("actions.more", { name: row.name }), items }}
+    >
+      {failures.length > 0 && <div className="border-t border-border px-4 py-2.5">{failures}</div>}
+      {deactivate.dialogs}
+    </Row>
   );
 }

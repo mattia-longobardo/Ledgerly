@@ -25,17 +25,24 @@ export class ApiError extends Error {
   readonly other: string | null;
   /** `not_bookable` of time off: the dates refused and why. */
   readonly refused: ReadonlyArray<{ on: string; reason: string }>;
+  /** `reading_in_progress` of «Deactivate» (H56): when the reading that stops it started. */
+  readonly startedAt: string | null;
 
   constructor(
     readonly status: number,
     readonly code: string,
     readonly reason: string | null,
-    extra: { other?: string | null; refused?: ReadonlyArray<{ on: string; reason: string }> } = {},
+    extra: {
+      other?: string | null;
+      refused?: ReadonlyArray<{ on: string; reason: string }>;
+      startedAt?: string | null;
+    } = {},
   ) {
     super(`${status} ${code}${reason ? ` (${reason})` : ""}`);
     this.name = "ApiError";
     this.other = extra.other ?? null;
     this.refused = extra.refused ?? [];
+    this.startedAt = extra.startedAt ?? null;
   }
 }
 
@@ -105,12 +112,14 @@ async function refusalOf(response: Response): Promise<ApiError> {
   const reason = isRecord(body) ? body.reason : undefined;
   const other = isRecord(body) ? body.other : undefined;
   const refused = isRecord(body) && Array.isArray(body.refused) ? body.refused : [];
+  const startedAt = isRecord(body) ? body.startedAt : undefined;
   return new ApiError(
     response.status,
     typeof code === "string" ? code : "server_error",
     typeof reason === "string" ? reason : null,
     {
       other: typeof other === "string" ? other : null,
+      startedAt: typeof startedAt === "string" ? startedAt : null,
       refused: refused.filter(
         (one): one is { on: string; reason: string } =>
           isRecord(one) && typeof one.on === "string" && typeof one.reason === "string",

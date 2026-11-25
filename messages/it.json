@@ -252,8 +252,6 @@
       "notifications": "Avvisi"
     },
     "integrations": {
-      "title": "Sorgenti dei dati",
-      "description": "Da dove arrivano saldi e movimenti. Le credenziali sono cifrate a riposo e non vengono più mostrate.",
       "connect": {
         "title": "Collega {provider}",
         "description": "Ledgerly salva la credenziale cifrata e non la mostra più.",
@@ -377,7 +375,7 @@
         },
         "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Aggiungi una regola o scegli un'altra modalità.",
         "summary": {
-          "manual": "Solo manuale",
+          "manual": "Solo a richiesta",
           "hourly": "Ogni ora",
           "every": "Ogni {every}",
           "window": "{from}–{until}",
@@ -400,7 +398,7 @@
           "repeat": "Ripeti",
           "times": "A orari precisi",
           "timesHint": "Qualsiasi minuto del giorno, ad esempio 06:43",
-          "manual": "Solo manuale",
+          "manual": "Solo a richiesta",
           "manualHint": "Solo “Sincronizza ora” avvia una sincronizzazione",
           "custom": "Regole personalizzate",
           "customHint": "Più regole insieme, oppure un'espressione cron"
@@ -1093,35 +1091,72 @@
       "failed": "Non è stato possibile. Riprova."
     },
     "plugins": {
-      "states": {
-        "inactive": "Non attivo",
-        "active": "Attivo"
+      "errors": {
+        "failed": "Non è stato possibile salvare. Riprova.",
+        "notAvailable": "{name} non è disponibile su questo server. Chiedi all'admin.",
+        "activate": "Non è stato possibile attivare ({code}). Non è cambiato niente. Riprova."
       },
-      "detail": {
-        "paused": "Le letture sono ferme dal {date}. Credenziali e collegamenti sono salvati."
+      "title": "Plugin",
+      "description": "Servizi esterni che portano dati in Ledgerly. Ogni plugin è solo tuo: lo attivi e lo disattivi tu.",
+      "addons": "Per spegnere una parte di Ledgerly, come Ferie o Budget, usa <link>Addons</link>.",
+      "log": "Registro delle letture",
+      "states": {
+        "not_active": "Non attivo",
+        "not_connected": "Da collegare",
+        "disconnected": "Scollegato",
+        "needs_cleanup": "Da sistemare",
+        "up_to_date": "Aggiornato",
+        "reading": "In corso",
+        "late": "In ritardo",
+        "on_demand": "Solo a richiesta",
+        "error": "Errore",
+        "action_needed": "Serve un'azione"
+      },
+      "reads": {
+        "accounts": "Legge conti e saldi",
+        "transactions": "Legge movimenti",
+        "leave": "Legge giornate di ferie",
+        "documents": "Legge documenti",
+        "holdings": "Legge posizioni e valore",
+        "flows": "Legge trade e movimenti"
+      },
+      "writes": {
+        "transactions": "Scrive movimenti",
+        "leave": "Scrive giornate di ferie"
+      },
+      "text": {
+        "deactivated": "{description} · disattivato il {date}",
+        "notConnected": "Attivo. Collega il tuo account {name} per leggere i dati.",
+        "disconnected": "{count, plural, =0 {Scollegato. Le impostazioni restano.} one {Scollegato. Il conto resta, le impostazioni restano.} other {Scollegato. I # conti restano, le impostazioni restano.}}",
+        "needsCleanup": "{name} non è attivo, ma {what} {count, plural, one {dipende} other {dipendono}} ancora da {name}.",
+        "needsCleanupAccess": "{name} non è attivo, ma un collegamento o delle credenziali sono ancora salvati.",
+        "connections": "{count, plural, one {# collegamento} other {# collegamenti}}"
+      },
+      "leftovers": {
+        "accounts": "{count, plural, one {# conto} other {# conti}}",
+        "categories": "{count, plural, one {# categoria di {name}} other {# categorie di {name}}}",
+        "pendingTx": "{count, plural, one {# movimento da inviare} other {# movimenti da inviare}}",
+        "pendingDays": "{count, plural, one {# giornata da inviare} other {# giornate da inviare}}"
       },
       "actions": {
-        "enable": "Attiva",
-        "disable": "Disattiva"
-      },
-      "disable": {
-        "title": "Disattivare {name}?",
-        "description": "Le letture di {name} si fermano e la sua sezione sparisce dalle impostazioni. Credenziali, collegamenti, conti e movimenti restano salvati. Alla riattivazione tutto riparte.",
-        "links": "{count, plural, one {Hai # collegamento attivo.} other {Hai # collegamenti attivi.}}",
-        "cancel": "Resta attivo",
-        "confirm": "Disattiva"
+        "activate": "Attiva",
+        "connect": "Collega",
+        "reconnect": "Ricollega",
+        "fix": "Sistema",
+        "open": "Apri",
+        "retry": "Riprova",
+        "deactivate": "Disattiva…",
+        "more": "Altre azioni per {name}"
       },
       "toasts": {
-        "enabled": "{name} attivato",
-        "disabled": "{name} disattivato"
-      },
-      "errors": {
-        "failed": "Non è stato possibile salvare. Riprova."
+        "enabled": "{name} attivato"
       }
     },
     "plugin": {
       "page": {
-        "back": "Plugin"
+        "back": "Plugin",
+        "deactivated": "Disattivato il {date}.",
+        "disconnected": "Scollegato. Le impostazioni restano."
       },
       "sections": {
         "connection": "Collegamento",
@@ -1167,25 +1202,82 @@
       },
       "deactivate": {
         "title": "Disattivare {provider}?",
-        "body": "{provider} smette di aggiornare Ledgerly e le sue impostazioni si cancellano. I tuoi numeri non cambiano.",
-        "what": "Cosa succede",
-        "accounts": "{count, plural, one {# conto diventa “a mano”, con lo stesso saldo.} other {# conti diventano “a mano”, con lo stesso saldo.}}",
-        "categories": "{count, plural, one {# categoria di {provider} resta come categoria di Ledgerly.} other {# categorie di {provider} restano come categorie di Ledgerly.}}",
+        "body": "Ledgerly smette di leggere da {provider}. I numeri non cambiano.",
+        "accounts": "{count, plural, one {# conto diventa a mano, con lo stesso saldo.} other {# conti diventano a mano, con lo stesso saldo.}}",
+        "categories": "{count, plural, one {# categoria di {provider} si cancella. Le categorie di Ledgerly restano.} other {# categorie di {provider} si cancellano. Le categorie di Ledgerly restano.}}",
         "rules": "{count, plural, one {# regola di interessi smette di pubblicare su {provider}.} other {# regole di interessi smettono di pubblicare su {provider}.}}",
-        "unsent": "{count, plural, one {# movimento non ancora inviato resta solo in Ledgerly.} other {# movimenti non ancora inviati restano solo in Ledgerly.}}",
-        "pendingDays": "{count, plural, one {# modifica ai giorni non arriva su {provider}.} other {# modifiche ai giorni non arrivano su {provider}.}}",
-        "credentials": "Le credenziali si cancellano: per riattivare le inserisci di nuovo.",
-        "zone": "I conti diventano «a mano», con lo stesso saldo. Le categorie, le regole e i giorni restano in Ledgerly. Le credenziali e le impostazioni di {provider} si cancellano.",
+        "unsent": "{count, plural, one {# movimento da inviare resta come movimento a mano.} other {# movimenti da inviare restano come movimenti a mano.}}",
+        "pendingDays": "{count, plural, one {# giornata da inviare resta in Ferie e non arriva a {provider}.} other {# giornate da inviare restano in Ferie e non arrivano a {provider}.}}",
+        "credentials": "Le credenziali e le impostazioni di {provider} si cancellano.",
+        "zone": "I conti diventano a mano con lo stesso saldo. Le credenziali, le scelte e le categorie di {provider} si cancellano.",
         "open": "Disattiva {provider}",
         "confirm": "Disattiva {provider}",
         "cancel": "Annulla",
         "busy": "Disattivazione in corso…",
-        "done": "{provider} disattivato: {count, plural, one {# conto ora è “a mano”} other {# conti ora sono “a mano”}}",
+        "done": "{provider} disattivato: {count, plural, =0 {nessun conto da convertire} one {# conto ora è a mano} other {# conti ora sono a mano}}",
         "failed": "Non è stato possibile disattivare. Non è cambiato niente. Riprova.",
-        "zoneCalendar": "Le giornate restano in Ledgerly. Credenziali e impostazioni di {provider} vengono cancellate."
+        "zoneCalendar": "Le giornate restano in Ledgerly. Le credenziali e le impostazioni di {provider} si cancellano.",
+        "movements": "{count, plural, one {# movimento resta, con la sua categoria di Ledgerly.} other {# movimenti restano, con la loro categoria di Ledgerly.}}",
+        "nothing": "Nessun dato da convertire: {provider} non ha ancora letto niente.",
+        "back": "Se riattivi {provider}, ogni conto torna legato senza doppioni.",
+        "zoneEmpty": "Nessun dato da convertire: {provider} non ha ancora letto niente.",
+        "choose": "Disattiva {provider}…"
       },
       "reactivate": {
         "back": "{count, plural, one {# conto torna da {provider}} other {# conti tornano da {provider}}}"
+      },
+      "banner": {
+        "error": "L'ultima lettura non è riuscita",
+        "action": "{name} ha bisogno di te"
+      },
+      "about": {
+        "title": "Cosa fa",
+        "hint": "Che cosa legge e scrive quando è attivo.",
+        "reads": "Legge",
+        "writes": "Scrive",
+        "needs": "Ti serve",
+        "where": "Dove si vede",
+        "nothing": "Niente",
+        "needsBank": "Le credenziali dell'applicazione {name} (ID e chiave privata)",
+        "whereCalendar": "Ferie",
+        "whereAccounts": "Conti e Spese",
+        "activate": "Attiva {name}",
+        "after": "Dopo l'attivazione colleghi il tuo account {name}. Fino ad allora Ledgerly non legge niente."
+      },
+      "cleanup": {
+        "title": "{name} non è attivo, ma alcuni dati dipendono ancora da {name}",
+        "body": "Questi dati non si aggiornano. Finché non scegli, restano in sola lettura dove dipendono da {name}.",
+        "access": "Un collegamento o delle credenziali di {name} sono ancora salvati.",
+        "activateTitle": "Attiva {name}",
+        "activateBody": "I dati restano legati a {name}. Dopo colleghi il tuo account: alla prima lettura i conti tornano aggiornati, senza doppioni.",
+        "activate": "Attiva {name}",
+        "deactivateTitle": "Disattiva {name}",
+        "deactivateBody": "Converte i dati senza cambiare i numeri: i conti diventano a mano con lo stesso saldo, i movimenti tengono la loro categoria, le categorie di {name} si cancellano."
+      },
+      "refusal": {
+        "title": "{provider} non si può disattivare adesso",
+        "close": "Chiudi",
+        "retry": "Riprova",
+        "reading": {
+          "title": "Una lettura è in corso",
+          "body": "È iniziata alle {time}. Non è cambiato niente.",
+          "wait": "Aspetta la fine della lettura e riprova. Se la lettura dura più di 15 minuti, qui compare «Ferma la lettura e disattiva».",
+          "stuck": "La lettura dura da più di 15 minuti: puoi fermarla e disattivare.",
+          "stop": "Ferma la lettura e disattiva"
+        },
+        "down": {
+          "title": "{provider} non risponde",
+          "body": "Ledgerly non può chiudere l'accesso su {provider}. Puoi disattivare lo stesso; l'accesso sul sito di {provider} lo revochi tu.",
+          "force": "Disattiva lo stesso"
+        },
+        "other": {
+          "title": "Non è stato possibile disattivare {provider}",
+          "body": "Non è stato possibile disattivare ({code}). Non è cambiato niente. Riprova."
+        }
+      },
+      "calendar": {
+        "notActive": "{provider} non è attivo. Attivalo per allineare le giornate di Ferie con {provider}.",
+        "needsCleanup": "{provider} non è attivo, ma alcune giornate lo aspettano ancora. Scegli se attivarlo o disattivarlo."
       }
     },
     "banks": {
@@ -1267,11 +1359,11 @@
         "ok": "Aggiornato",
         "running": "In corso",
         "late": "In ritardo",
-        "readOnly": "Solo lettura",
         "action": "Serve un'azione",
-        "manual": "Solo manuale",
-        "paused": "In pausa",
-        "absent": "Non collegato"
+        "manual": "Solo a richiesta",
+        "paused": "Non attivo",
+        "absent": "Da collegare",
+        "error": "Errore"
       },
       "text": {
         "ok": "Aggiornato {when}",
@@ -1284,8 +1376,9 @@
         "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
         "pausedSchedule": "Aggiornamento automatico spento.",
         "pausedProvider": "{provider} non è attivo.",
-        "failed": "L'ultima lettura non è riuscita. Ledgerly non riprova da solo.",
-        "readOnly": "Le giornate scritte qui non arrivano a {provider}. Serve una chiave che può scrivere."
+        "failed": "L'ultima lettura non è riuscita: {cause} ({when}). Ledgerly non riprova da solo.",
+        "readOnly": "Le giornate scritte qui non arrivano a {provider}. Serve una chiave che può scrivere.",
+        "failedBare": "L'ultima lettura non è riuscita: {cause}. Ledgerly non riprova da solo."
       },
       "when": {
         "now": "ora",
@@ -1571,12 +1664,6 @@
       "noteHint": "Scritta solo se il movimento non ha una nota."
     },
     "finance": {
-      "banks": {
-        "title": "Banche",
-        "description": "Le banche da cui Ledgerly legge saldi e movimenti. Le impostazioni di ogni banca stanno nella pagina del suo plugin.",
-        "empty": "Nessun plugin di banche è attivo.",
-        "openPlugins": "Apri Plugin"
-      },
       "investments": {
         "title": "Collegamenti di investimento",
         "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Collegamento del servizio: lì ci sono la chiave e i controlli.",
@@ -1899,7 +1986,9 @@
       "twoWayPaused": "{provider} non è aggiornato ora. Ledgerly manda questo movimento quando il collegamento riparte.",
       "badges": {
         "toSend": "Da inviare",
-        "notSent": "Non inviato a {provider}"
+        "notSent": "Non inviato a {provider}",
+        "notSentOff": "Non inviato",
+        "sourceOff": "{provider} non è attivo"
       }
     },
     "auto": {
@@ -2261,8 +2350,10 @@
     },
     "origins": {
       "manual": "Manuale",
-      "syncedWith": "Sincronizzato con {provider}",
-      "disconnectedFrom": "Scollegato da {provider}"
+      "syncedWith": "Da {provider}",
+      "disconnectedFrom": "Scollegato da {provider}",
+      "stopped": "Fermo",
+      "stoppedSince": "Fermo dal {date}"
     },
     "synced": {
       "never": "Mai",
@@ -2451,7 +2542,7 @@
       "source": {
         "title": "Origine dei dati",
         "description": "Da dove arriva il saldo e come si comporta tra una lettura e l'altra.",
-        "syncedNote": "Collegato tramite {provider}. Le credenziali stanno in Impostazioni › Plugin.",
+        "syncedNote": "Arriva da {provider}. Il collegamento è in Impostazioni › Plugin.",
         "manualNote": "Questo conto lo aggiorni tu dalla scheda Saldi.",
         "reminder": "Promemoria di aggiornamento",
         "reminders": {
@@ -2465,7 +2556,9 @@
           "hold": "Riporta l'ultimo valore",
           "interpolate": "Interpola linearmente"
         },
-        "staleAfter": "Obsoleto dopo (ore)"
+        "staleAfter": "Obsoleto dopo (ore)",
+        "stoppedNote": "Arriva da {provider}, che non è attivo: è fermo dal {date}. Si sistema in Impostazioni › Plugin.",
+        "formerNote": "Lo aggiorni tu dalla scheda Saldi. Arrivava da {provider} fino al {date}."
       },
       "reporting": {
         "title": "Conteggi",
@@ -2791,6 +2884,11 @@
         "invalid": "Controlla il file e le colonne.",
         "failed": "L'import non è riuscito. Riprova."
       }
+    },
+    "stopped": {
+      "title": "Questo conto non si aggiorna: {provider} non è attivo",
+      "body": "Saldo e movimenti sono fermi al {date}. Scegli se attivare {provider} o rendere il conto a mano.",
+      "fix": "Sistema in {provider}"
     }
   },
   "budgets": {
@@ -3436,7 +3534,8 @@
           "indeterminate": "Esito incerto: controlla Wallet",
           "none": "Non pubblicata",
           "marked": "Segnata come pubblicata"
-        }
+        },
+        "sourceOff": "{provider} non è attivo: le liquidazioni restano in Ledgerly e non si pubblicano. Si sistema in Impostazioni › Plugin."
       }
     },
     "account": {
@@ -6150,6 +6249,11 @@
       "title": "Ancora nessun tipo di assenza",
       "description": "Le assenze si segnano sotto un tuo tipo, come ferie o ROL. Aggiungine uno nelle Impostazioni.",
       "action": "Aggiungi un tipo di assenza"
+    },
+    "calendarOff": {
+      "title": "{count, plural, one {# giornata aspetta {provider}, che non è attivo} other {# giornate aspettano {provider}, che non è attivo}}",
+      "body": "Le giornate restano in Ferie. Non si inviano finché {provider} non è attivo e collegato.",
+      "fix": "Sistema in {provider}"
     }
   },
   "legal": {

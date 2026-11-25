@@ -16,6 +16,7 @@ import { AccountSettingsForm, UndoSwitch } from "@/modules/accounts/client";
 import { AccountSubscriptions } from "@/modules/subscriptions/client";
 import type { AccountPage } from "./account-screen";
 import { DeleteAccount } from "./delete-account";
+import { useSourceNote } from "./source-state";
 
 export function SettingsTab({ page }: { page: AccountPage }) {
   const input = { params: { id: page.account.id } };
@@ -41,9 +42,11 @@ export function SettingsTab({ page }: { page: AccountPage }) {
 function Settings({ page, iban, twin }: { page: AccountPage; iban: string | null; twin: string | null }) {
   const { account, context } = page;
   const providerLabel = context.providerLabel;
+  const sourceNote = useSourceNote(page);
   return (
     <AccountSettingsForm
       twin={twin}
+      sourceNote={sourceNote}
       sourceExtra={
         context.switch !== null || context.switchOffer !== "none" ? <SwitchBlock page={page} /> : null
       }

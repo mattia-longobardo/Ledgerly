@@ -6,6 +6,7 @@ import { cn } from "@ledgerly/ui/cn";
 import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { Badge, Tag } from "@ledgerly/ui/badge";
 import type { RowBadge } from "@ledgerly/domain/transactions/client";
+import { useSourcesOff } from "./sources-off";
 import type { RowView } from "./view";
 
 /** Hidden and gone-from-the-provider are facts about the data; "edited here" is one about the user. */
@@ -20,6 +21,24 @@ const BADGE_TONE: Record<RowBadge, "neutral" | "warn" | "accent"> = {
   pending: "warn",
 };
 
+/** «To send», or a grey «Not sent» while its plugin is off, or the refusal of the source. */
+function SendBadge({ send }: { send: NonNullable<RowView["send"]> }) {
+  const text = useTranslations("expenses");
+  const off = useSourcesOff().names;
+  if (send.state !== "to_send")
+    return <Badge tone="warn">{text("manual.badges.notSent", { provider: send.source })}</Badge>;
+  if (!off.has(send.source)) return <Badge tone="neutral">{text("manual.badges.toSend")}</Badge>;
+  const why = text("manual.badges.sourceOff", { provider: send.source });
+  return (
+    <span title={why} data-testid="send-off">
+      <Badge tone="neutral">
+        {text("manual.badges.notSentOff")}
+        <span className="sr-only">: {why}</span>
+      </Badge>
+    </span>
+  );
+}
+
 /** The badges of an Expenses row, in the table and on the card alike. */
 function RowBadges({ row }: { row: RowView }) {
   const text = useTranslations("expenses");
@@ -30,12 +49,7 @@ function RowBadges({ row }: { row: RowView }) {
           {text(`badges.${badge}`)}
         </Badge>
       ))}
-      {row.send &&
-        (row.send.state === "to_send" ? (
-          <Badge tone="neutral">{text("manual.badges.toSend")}</Badge>
-        ) : (
-          <Badge tone="warn">{text("manual.badges.notSent", { provider: row.send.source })}</Badge>
-        ))}
+      {row.send && <SendBadge send={row.send} />}
     </>
   );
 }

@@ -16,7 +16,7 @@ export {
   type RowAction,
   type RowStatusValue,
 } from "@ledgerly/ui/connection-row";
-export { DeactivateLink, SourceLinkRow, SourceReads } from "@ledgerly/ui/source-link-row";
+export { DeactivateLink } from "@ledgerly/ui/source-link-row";
 
 type RunResult = { ok: true; toast: string | null } | { ok: false; message: string };
 

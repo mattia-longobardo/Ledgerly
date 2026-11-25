@@ -252,8 +252,6 @@
       "notifications": "Alerts"
     },
     "integrations": {
-      "title": "Data sources",
-      "description": "Where balances and transactions come from. Credentials are encrypted at rest and never shown again.",
       "connect": {
         "title": "Connect {provider}",
         "description": "Ledgerly saves the credential encrypted and never shows it again.",
@@ -377,7 +375,7 @@
         },
         "manualHint": "No rule: only “Sync now” starts a sync. Add a rule, or choose another mode.",
         "summary": {
-          "manual": "Manual only",
+          "manual": "On demand only",
           "hourly": "Every hour",
           "every": "Every {every}",
           "window": "{from}–{until}",
@@ -400,7 +398,7 @@
           "repeat": "Repeat",
           "times": "At set times",
           "timesHint": "Any minute of the day, such as 06:43",
-          "manual": "Manual only",
+          "manual": "On demand only",
           "manualHint": "Only “Sync now” starts a sync",
           "custom": "Custom rules",
           "customHint": "Several rules together, or a cron expression"
@@ -1093,35 +1091,72 @@
       "failed": "It could not be done. Try again."
     },
     "plugins": {
-      "states": {
-        "inactive": "Not active",
-        "active": "Active"
+      "errors": {
+        "failed": "Couldn't save. Try again.",
+        "notAvailable": "{name} is not available on this server. Ask the admin.",
+        "activate": "Could not activate ({code}). Nothing changed. Try again."
       },
-      "detail": {
-        "paused": "Readings have been stopped since {date}. Credentials and connections are saved."
+      "title": "Plugins",
+      "description": "Outside services that bring data into Ledgerly. Each plugin is yours alone: you activate it and deactivate it.",
+      "addons": "To turn off a part of Ledgerly, like Time off or Budgets, use <link>Addons</link>.",
+      "log": "Reading log",
+      "states": {
+        "not_active": "Not active",
+        "not_connected": "Not connected",
+        "disconnected": "Disconnected",
+        "needs_cleanup": "Needs cleanup",
+        "up_to_date": "Up to date",
+        "reading": "Reading",
+        "late": "Late",
+        "on_demand": "On demand only",
+        "error": "Error",
+        "action_needed": "Action needed"
+      },
+      "reads": {
+        "accounts": "Reads accounts and balances",
+        "transactions": "Reads transactions",
+        "leave": "Reads days off",
+        "documents": "Reads documents",
+        "holdings": "Reads holdings and value",
+        "flows": "Reads trades and transfers"
+      },
+      "writes": {
+        "transactions": "Writes transactions",
+        "leave": "Writes days off"
+      },
+      "text": {
+        "deactivated": "{description} · deactivated on {date}",
+        "notConnected": "Active. Connect your {name} account to read the data.",
+        "disconnected": "{count, plural, =0 {Disconnected. The settings stay.} one {Disconnected. The account stays, the settings stay.} other {Disconnected. The # accounts stay, the settings stay.}}",
+        "needsCleanup": "{name} is not active, but {what} still {count, plural, one {depends} other {depend}} on {name}.",
+        "needsCleanupAccess": "{name} is not active, but a connection or credentials are still saved.",
+        "connections": "{count, plural, one {# connection} other {# connections}}"
+      },
+      "leftovers": {
+        "accounts": "{count, plural, one {# account} other {# accounts}}",
+        "categories": "{count, plural, one {# {name} category} other {# {name} categories}}",
+        "pendingTx": "{count, plural, one {# transaction to send} other {# transactions to send}}",
+        "pendingDays": "{count, plural, one {# day to send} other {# days to send}}"
       },
       "actions": {
-        "enable": "Turn on",
-        "disable": "Turn off"
-      },
-      "disable": {
-        "title": "Turn off {name}?",
-        "description": "{name} readings stop and its section disappears from the settings. Credentials, connections, accounts and transactions stay saved. Everything resumes when you turn it on again.",
-        "links": "{count, plural, one {You have # active connection.} other {You have # active connections.}}",
-        "cancel": "Keep it on",
-        "confirm": "Turn off"
+        "activate": "Activate",
+        "connect": "Connect",
+        "reconnect": "Reconnect",
+        "fix": "Clean up",
+        "open": "Open",
+        "retry": "Try again",
+        "deactivate": "Deactivate…",
+        "more": "More actions for {name}"
       },
       "toasts": {
-        "enabled": "{name} turned on",
-        "disabled": "{name} turned off"
-      },
-      "errors": {
-        "failed": "Couldn't save. Try again."
+        "enabled": "{name} activated"
       }
     },
     "plugin": {
       "page": {
-        "back": "Plugins"
+        "back": "Plugins",
+        "deactivated": "Deactivated on {date}.",
+        "disconnected": "Disconnected. The settings stay."
       },
       "sections": {
         "connection": "Connection",
@@ -1136,7 +1171,7 @@
         "historyHint": "How many months of transactions Ledgerly reads from {provider}.",
         "writes": "Writing to {provider}",
         "writesHint": "What Ledgerly writes to {provider}. Change it where it starts: in the rule, the transaction, the day.",
-        "deactivate": "Turn off {provider}",
+        "deactivate": "Deactivate {provider}",
         "deactivateHint": "Stop using {provider}."
       },
       "accounts": {
@@ -1166,26 +1201,83 @@
         "toDeactivate": "Want to stop using {provider}? Turn it off"
       },
       "deactivate": {
-        "title": "Turn off {provider}?",
-        "body": "{provider} stops updating Ledgerly and its settings are deleted. Your numbers do not change.",
-        "what": "What happens",
-        "accounts": "{count, plural, one {# account becomes “manual”, with the same balance.} other {# accounts become “manual”, with the same balance.}}",
-        "categories": "{count, plural, one {# {provider} category stays as a Ledgerly category.} other {# {provider} categories stay as Ledgerly categories.}}",
+        "title": "Deactivate {provider}?",
+        "body": "Ledgerly stops reading from {provider}. The numbers do not change.",
+        "accounts": "{count, plural, one {# account becomes manual, with the same balance.} other {# accounts become manual, with the same balance.}}",
+        "categories": "{count, plural, one {# {provider} category is deleted. The Ledgerly categories stay.} other {# {provider} categories are deleted. The Ledgerly categories stay.}}",
         "rules": "{count, plural, one {# interest rule stops posting to {provider}.} other {# interest rules stop posting to {provider}.}}",
-        "unsent": "{count, plural, one {# transaction not sent yet stays only in Ledgerly.} other {# transactions not sent yet stay only in Ledgerly.}}",
-        "pendingDays": "{count, plural, one {# change to your days does not reach {provider}.} other {# changes to your days do not reach {provider}.}}",
-        "credentials": "The credentials are deleted: to turn it on again, enter them again.",
-        "zone": "The accounts become “manual”, with the same balance. Categories, rules and days stay in Ledgerly. The {provider} credentials and settings are deleted.",
-        "open": "Turn off {provider}",
-        "confirm": "Turn off {provider}",
+        "unsent": "{count, plural, one {# transaction to send stays as a manual transaction.} other {# transactions to send stay as manual transactions.}}",
+        "pendingDays": "{count, plural, one {# day to send stays in Time off and does not reach {provider}.} other {# days to send stay in Time off and do not reach {provider}.}}",
+        "credentials": "The {provider} credentials and settings are deleted.",
+        "zone": "The accounts become manual with the same balance. The {provider} credentials, choices and categories are deleted.",
+        "open": "Deactivate {provider}",
+        "confirm": "Deactivate {provider}",
         "cancel": "Cancel",
         "busy": "Turning off…",
-        "done": "{provider} turned off: {count, plural, one {# account is now “manual”} other {# accounts are now “manual”}}",
+        "done": "{provider} deactivated: {count, plural, =0 {no account to convert} one {# account is now manual} other {# accounts are now manual}}",
         "failed": "Could not turn it off. Nothing changed. Try again.",
-        "zoneCalendar": "The days stay in Ledgerly. The {provider} credentials and settings are deleted."
+        "zoneCalendar": "The days stay in Ledgerly. The {provider} credentials and settings are deleted.",
+        "movements": "{count, plural, one {# transaction stays, with its Ledgerly category.} other {# transactions stay, with their Ledgerly category.}}",
+        "nothing": "Nothing to convert: {provider} has not read anything yet.",
+        "back": "If you activate {provider} again, every account is tied again with no duplicates.",
+        "zoneEmpty": "Nothing to convert: {provider} has not read anything yet.",
+        "choose": "Deactivate {provider}…"
       },
       "reactivate": {
         "back": "{count, plural, one {# account comes back from {provider}} other {# accounts come back from {provider}}}"
+      },
+      "banner": {
+        "error": "The last reading did not work",
+        "action": "{name} needs you"
+      },
+      "about": {
+        "title": "What it does",
+        "hint": "What it reads and writes when it is active.",
+        "reads": "Reads",
+        "writes": "Writes",
+        "needs": "You need",
+        "where": "Where it shows",
+        "nothing": "Nothing",
+        "needsBank": "The credentials of your {name} application (ID and private key)",
+        "whereCalendar": "Time off",
+        "whereAccounts": "Accounts and Expenses",
+        "activate": "Activate {name}",
+        "after": "After activating it you connect your {name} account. Until then Ledgerly reads nothing."
+      },
+      "cleanup": {
+        "title": "{name} is not active, but some data still depend on {name}",
+        "body": "These data are not updated. Until you choose, they stay read-only where they depend on {name}.",
+        "access": "A connection or credentials of {name} are still saved.",
+        "activateTitle": "Activate {name}",
+        "activateBody": "The data stay tied to {name}. Then you connect your account: at the first reading the accounts are up to date again, with no duplicates.",
+        "activate": "Activate {name}",
+        "deactivateTitle": "Deactivate {name}",
+        "deactivateBody": "Converts the data without changing the numbers: the accounts become manual with the same balance, the transactions keep their category, the {name} categories are deleted."
+      },
+      "refusal": {
+        "title": "{provider} cannot be deactivated now",
+        "close": "Close",
+        "retry": "Try again",
+        "reading": {
+          "title": "A reading is in progress",
+          "body": "It started at {time}. Nothing changed.",
+          "wait": "Wait for the reading to end and try again. If the reading takes more than 15 minutes, «Stop the reading and deactivate» shows here.",
+          "stuck": "The reading has taken more than 15 minutes: you can stop it and deactivate.",
+          "stop": "Stop the reading and deactivate"
+        },
+        "down": {
+          "title": "{provider} does not answer",
+          "body": "Ledgerly cannot close the access on {provider}. You can deactivate all the same; you revoke the access on the {provider} site yourself.",
+          "force": "Deactivate anyway"
+        },
+        "other": {
+          "title": "Could not deactivate {provider}",
+          "body": "Could not deactivate ({code}). Nothing changed. Try again."
+        }
+      },
+      "calendar": {
+        "notActive": "{provider} is not active. Activate it to keep the days of Time off in line with {provider}.",
+        "needsCleanup": "{provider} is not active, but some days still wait for it. Choose whether to activate or to deactivate it."
       }
     },
     "banks": {
@@ -1267,11 +1359,11 @@
         "ok": "Up to date",
         "running": "In progress",
         "late": "Delayed",
-        "readOnly": "Read only",
         "action": "Action needed",
-        "manual": "Manual only",
-        "paused": "Paused",
-        "absent": "Not connected"
+        "manual": "On demand only",
+        "paused": "Not active",
+        "absent": "Not connected",
+        "error": "Error"
       },
       "text": {
         "ok": "Updated {when}",
@@ -1284,8 +1376,9 @@
         "pending": "You gave access, but you have not chosen the accounts yet.",
         "pausedSchedule": "Automatic update is off.",
         "pausedProvider": "{provider} is not active.",
-        "failed": "The last reading did not work. Ledgerly does not try again by itself.",
-        "readOnly": "The days written here do not reach {provider}. It needs a key that can write."
+        "failed": "The last reading did not work: {cause} ({when}). Ledgerly does not try again by itself.",
+        "readOnly": "The days written here do not reach {provider}. It needs a key that can write.",
+        "failedBare": "The last reading did not work: {cause}. Ledgerly does not try again by itself."
       },
       "when": {
         "now": "just now",
@@ -1307,7 +1400,7 @@
         "replaceKey": "Replace key",
         "chooseAccounts": "Choose accounts",
         "resume": "Turn on again",
-        "enable": "Turn on",
+        "enable": "Activate",
         "connect": "Connect",
         "test": "Test the connection",
         "settings": "Connection settings",
@@ -1318,7 +1411,7 @@
       "toasts": {
         "started": "Update started: the data arrives in a few moments",
         "resumed": "Automatic update turned on again",
-        "enabled": "{provider} turned on",
+        "enabled": "{provider} activated",
         "tested": "{name} answered: the connection works",
         "historyRead": "History downloaded again"
       },
@@ -1571,12 +1664,6 @@
       "noteHint": "Written only when the transaction has no note."
     },
     "finance": {
-      "banks": {
-        "title": "Banks",
-        "description": "The banks Ledgerly reads balances and transactions from. The settings of each bank are on the page of its plugin.",
-        "empty": "No bank plugin is on.",
-        "openPlugins": "Open Plugins"
-      },
       "investments": {
         "title": "Investment connections",
         "description": "Same row and same schedule as the others. Configure opens the service's Connection tab: the key and its checks are there.",
@@ -1899,7 +1986,9 @@
       "twoWayPaused": "{provider} is not updated now. Ledgerly sends this transaction when the connection resumes.",
       "badges": {
         "toSend": "To send",
-        "notSent": "Not sent to {provider}"
+        "notSent": "Not sent to {provider}",
+        "notSentOff": "Not sent",
+        "sourceOff": "{provider} is not active"
       }
     },
     "auto": {
@@ -2261,8 +2350,10 @@
     },
     "origins": {
       "manual": "Manual",
-      "syncedWith": "Synced with {provider}",
-      "disconnectedFrom": "Disconnected from {provider}"
+      "syncedWith": "From {provider}",
+      "disconnectedFrom": "Disconnected from {provider}",
+      "stopped": "Stopped",
+      "stoppedSince": "Stopped since {date}"
     },
     "synced": {
       "never": "Never",
@@ -2451,7 +2542,7 @@
       "source": {
         "title": "Data source",
         "description": "Where the balance comes from and how it behaves between readings.",
-        "syncedNote": "Connected through {provider}. Credentials live in Settings › Plugins.",
+        "syncedNote": "It comes from {provider}. The connection is in Settings › Plugins.",
         "manualNote": "You keep this account up to date from the Balance entries tab.",
         "reminder": "Reminder to update",
         "reminders": {
@@ -2465,7 +2556,9 @@
           "hold": "Hold last value",
           "interpolate": "Interpolate linearly"
         },
-        "staleAfter": "Stale after (hours)"
+        "staleAfter": "Stale after (hours)",
+        "stoppedNote": "It comes from {provider}, which is not active: it stopped on {date}. You clean it up in Settings › Plugins.",
+        "formerNote": "You update it from the Balances tab. It came from {provider} until {date}."
       },
       "reporting": {
         "title": "Reporting",
@@ -2791,6 +2884,11 @@
         "invalid": "Check the file and the columns.",
         "failed": "The import did not succeed. Try again."
       }
+    },
+    "stopped": {
+      "title": "This account does not update: {provider} is not active",
+      "body": "Balance and transactions stopped on {date}. Choose whether to activate {provider} or to keep the account manual.",
+      "fix": "Clean up in {provider}"
     }
   },
   "budgets": {
@@ -3436,7 +3534,8 @@
           "indeterminate": "Unsure — check Wallet",
           "none": "Not posted",
           "marked": "Marked as posted"
-        }
+        },
+        "sourceOff": "{provider} is not active: the settlements stay in Ledgerly and are not published. You clean it up in Settings › Plugins."
       }
     },
     "account": {
@@ -6150,6 +6249,11 @@
       "title": "No types of leave yet",
       "description": "Leave is booked under a type of yours, such as vacation or ROL. Add one in Settings.",
       "action": "Add a type of leave"
+    },
+    "calendarOff": {
+      "title": "{count, plural, one {# day waits for {provider}, which is not active} other {# days wait for {provider}, which is not active}}",
+      "body": "The days stay in Time off. They are not sent until {provider} is active and connected.",
+      "fix": "Clean up in {provider}"
     }
   },
   "legal": {

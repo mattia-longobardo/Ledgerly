@@ -17,9 +17,15 @@ export function Badge({ tone, children }: { tone: keyof typeof TONE; children: R
   );
 }
 
-export function Tag({ children }: { children: ReactNode }) {
+/** A small label; `dashed` for what is written to elsewhere, beside what is read (PERS-615 §3). */
+export function Tag({ children, dashed = false }: { children: ReactNode; dashed?: boolean }) {
   return (
-    <span className="inline-flex items-center rounded-sm border border-border px-[5px] text-xs leading-4 text-muted">
+    <span
+      className={cn(
+        "inline-flex items-center rounded-sm border border-border px-[5px] text-xs leading-4 text-muted",
+        dashed && "border-dashed",
+      )}
+    >
       {children}
     </span>
   );

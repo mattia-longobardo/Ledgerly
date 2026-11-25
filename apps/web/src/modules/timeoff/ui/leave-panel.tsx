@@ -22,6 +22,7 @@ import {
   otherHalfOf,
   previewLeaveRange,
 } from "@ledgerly/domain/timeoff/client";
+import { useCalendarOn } from "./calendar-off";
 import { type LeaveTypeView, forRules, fullDate, nameOf, rangeEnds, shortDay } from "./kinds";
 
 /** A booked row as the panel and the table's buttons need it. */
@@ -110,6 +111,8 @@ export function LeavePanel({
   const t = useTranslations("timeoff");
   const locale = useLocale() as UiLocale;
   const id = useId();
+  // A calendar that is off waits for nothing: the day is a day of Ledgerly (PERS-615 §4).
+  const calendarOn = useCalendarOn();
 
   const rows = entry.mode === "edit" ? entry.rows : [];
   const [activeId, setActiveId] = useState(entry.mode === "edit" ? (entry.active ?? rows[0]?.id) : undefined);
@@ -376,10 +379,10 @@ export function LeavePanel({
         </div>
       ) : (
         <form id={`${id}-form`} onSubmit={submit} className="flex flex-col gap-4" data-testid="leave-panel">
-          {row !== undefined && (row.origin === "external" || row.pending !== "none") && (
+          {row !== undefined && (row.origin === "external" || (calendarOn && row.pending !== "none")) && (
             <div className="flex flex-wrap gap-1.5">
               {row.origin === "external" && <Badge tone="neutral">{t("table.fromExternal")}</Badge>}
-              {row.pending !== "none" && (
+              {calendarOn && row.pending !== "none" && (
                 <Badge tone="warn">{t(`table.pending.${row.pending}` as "table.pending.upsert")}</Badge>
               )}
             </div>

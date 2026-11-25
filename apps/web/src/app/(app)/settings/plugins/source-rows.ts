@@ -11,8 +11,8 @@ type Translator = Awaited<ReturnType<typeof getTranslations<"settings.connection
 /** The states from the one that needs the person most: a source's state in the list, and its rows' order. */
 const WORST: readonly RowStatusValue[] = [
   "action",
+  "error",
   "late",
-  "readOnly",
   "running",
   "paused",
   "manual",

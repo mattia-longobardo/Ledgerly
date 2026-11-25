@@ -15,7 +15,7 @@ import { BANK_SCHEDULE } from "@domain/platform/plugins/rules";
 import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
-import { contextOf } from "./common";
+import { activatePlugin, contextOf } from "./common";
 import { seedBinance, seedEtoro } from "./investments";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "../../test/fixtures/providers";
 
@@ -202,6 +202,7 @@ export async function seedConnections(email: string = USERS.connections.email): 
  */
 export async function seedSchedule(): Promise<void> {
   const ctx = await contextOf(USERS.schedule.email);
+  await activatePlugin(ctx, "trek");
   const trek = await saveConnection(ctx, {
     provider: TREK_PROVIDER,
     credentials: { baseUrl: "https://trek.invalid", token: "e2e-not-a-token" },

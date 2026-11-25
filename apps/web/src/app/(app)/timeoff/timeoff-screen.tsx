@@ -20,6 +20,7 @@ import {
   AddLeave,
   bookedOf,
   CalendarCard,
+  CalendarOffBanner,
   type Filter,
   filterOf,
   LeaveBoard,
@@ -119,6 +120,7 @@ function YearPage({ view, place, say }: { view: View; place: Place; say: Say }) 
     <Page title={text("title")} actions={<YearActions view={view} place={place} say={say} />}>
       {/* The external calendar's own figures of the year: null without one, or without its pass. */}
       <YearHeader view={view} place={place} external={view.external} say={say} />
+      <CalendarOffBanner />
       <YearAlerts view={view} say={say} />
       <YearCards view={view} year={place.year} say={say} />
       <CalendarCard view={view} year={place.year} currentYear={place.currentYear} say={say} />

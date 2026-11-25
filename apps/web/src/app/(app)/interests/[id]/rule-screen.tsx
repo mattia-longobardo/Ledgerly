@@ -5,7 +5,9 @@
 // formats it.
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { interests } from "@ledgerly/api-contract/interests";
+import { sources } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { civilDateIn } from "@ledgerly/format/dates";
 import { formatDate } from "@ledgerly/format/format";
@@ -228,12 +230,27 @@ function SettlementList({ rows, format, posting }: RowsProps) {
   );
 }
 
+/**
+ * The plugin a rule publishes to, when it is off and the account still depends on it (H56, PERS-615
+ * §4): its name, for the note; null while it is on, or for a rule that does not publish.
+ */
+function useSourceOff(rule: Props["detail"]["rule"]): string | null {
+  const publishes = rule.mode === "post_to_provider";
+  const account = useApi(accountRoutes.getAccount, { params: { id: rule.accountId } });
+  const plugins = useApi(sources.listPlugins, {});
+  const read = account.data;
+  if (!publishes || read?.sourceState !== "stopped") return null;
+  return plugins.data?.plugins.find((one) => `plugin:${one.id}` === read.provider)?.name ?? read.provider;
+}
+
 function Settlements({ detail, format }: Props) {
   const text = useTranslations("interests");
   const { rule } = detail;
   const rows = detail.settlements.slice(0, MAX_SETTLEMENTS);
+  // A plugin that is off leaves nothing to publish: the column reads, and says why.
+  const off = useSourceOff(rule);
   const posting =
-    rule.mode === "post_to_provider"
+    rule.mode === "post_to_provider" && off === null
       ? (row: Settlement) => (
           <PostingCell ruleId={rule.id} entryId={row.id} posting={row.posting} error={row.postingError} />
         )
@@ -241,6 +258,11 @@ function Settlements({ detail, format }: Props) {
   return (
     <Card padded={false}>
       <CardHeader title={text("detail.settlements.title")} />
+      {off !== null && (
+        <p role="note" className="px-4 pb-3 text-sm text-muted" data-testid="posting-off">
+          {text("detail.posting.sourceOff", { provider: off })}
+        </p>
+      )}
       {rows.length === 0 ? (
         <p className="px-4 pb-4 text-sm text-muted">{text("detail.settlements.empty")}</p>
       ) : (

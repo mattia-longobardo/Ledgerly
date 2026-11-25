@@ -21,16 +21,31 @@ export async function deactivationCountsAction(
   }
 }
 
-/** "Turn off {provider}": `accounts` is how many accounts are now kept by hand, for the toast. */
+/** Why «Deactivate» did nothing (H56, PERS-615 §5): the cause, and since when a reading runs. */
+export type DeactivateRefusal = {
+  ok: false;
+  /** `reading_in_progress`, `plugin_down`, `not_active`, or a code nobody planned for. */
+  reason: string;
+  startedAt: string | null;
+};
+
+/**
+ * «Deactivate {provider}»: `accounts` is how many accounts are now kept by hand, for the toast.
+ * `stopReading` stops a reading older than 15 minutes first; `force` turns off a plugin that does not
+ * answer (the person closes the access at the provider).
+ */
 export async function deactivateSourceAction(
   slug: string,
-): Promise<{ ok: true; accounts: number } | { ok: false }> {
+  options: { force?: boolean; stopReading?: boolean } = {},
+): Promise<{ ok: true; accounts: number } | DeactivateRefusal> {
   try {
-    const { accounts } = await call(banks.deactivateSource, { params: { slug }, body: {} });
+    const { accounts } = await call(banks.deactivateSource, { params: { slug }, body: options });
     invalidate(connections.listConnections);
     return { ok: true, accounts };
   } catch (error) {
-    return refused(error);
+    if (error instanceof ApiError && error.status < 500)
+      return { ok: false, reason: error.reason ?? error.code, startedAt: error.startedAt };
+    throw error;
   }
 }
 

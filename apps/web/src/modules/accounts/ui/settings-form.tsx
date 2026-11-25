@@ -59,6 +59,7 @@ export function AccountSettingsForm({
   index,
   today,
   sourceExtra,
+  sourceNote,
   deleteControl,
   twin = null,
 }: {
@@ -70,6 +71,8 @@ export function AccountSettingsForm({
   today: string;
   /** The block of the switch to the bank (ux/n4-account-switch.md §2.2 and §9.1), drawn by the page. */
   sourceExtra?: ReactNode;
+  /** Where the balance comes from, when the account's plugin is off or was (H56); else the usual note. */
+  sourceNote?: string;
   /** "Delete account" with its dialog, drawn by the page: it moves what rests on the account first (PERS-419). */
   deleteControl?: ReactNode;
 }) {
@@ -253,7 +256,10 @@ export function AccountSettingsForm({
       <SettingsSection title={t("source.title")} description={t("source.description")}>
         <div className={FIELD_GRID}>
           <p className="text-sm text-muted col-span-full">
-            {synced ? t("source.syncedNote", { provider: account.provider ?? "" }) : t("source.manualNote")}
+            {sourceNote ??
+              (synced
+                ? t("source.syncedNote", { provider: account.provider ?? "" })
+                : t("source.manualNote"))}
           </p>
           {sourceExtra && <div className="flex flex-col gap-2 col-span-full">{sourceExtra}</div>}
           <Field label={t("source.reminder")} htmlFor="reminder">

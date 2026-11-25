@@ -87,7 +87,7 @@ export const FLOWS: Flow[] = [
   },
   { id: "payroll", specs: ["payroll", "manual"], screens: ["a11y"] },
   { id: "timeoff", specs: ["timeoff", "holidays"], screens: CROSS_CUTTING },
-  { id: "connections", specs: ["connections", "plugins", "schedule"], screens: ["a11y"] },
+  { id: "connections", specs: ["connections", "plugins", "plugin-states", "schedule"], screens: ["a11y"] },
   { id: "auth", specs: ["auth", "two-factor", "preferences"], screens: ["a11y"] },
   { id: "admin", specs: ["admin"], screens: ["a11y"] },
   { id: "api", specs: ["security", "mcp"] },
@@ -721,6 +721,8 @@ export const MODULES: Module[] = [
     files: ["scripts/seed-e2e/transactions.ts"],
     flows: ["transactions", "categories"],
   },
+  // The users of the plugins' states (H56): one per column of the matrix of the plugins' section.
+  { id: "seed-plugins", files: ["scripts/seed-e2e/plugins.ts"], flows: ["connections"] },
   // The engines of the checks every flow has: every flow's piece of them runs.
   {
     id: "screen-checks",

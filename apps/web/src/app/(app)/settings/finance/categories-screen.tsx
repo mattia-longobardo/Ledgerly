@@ -10,6 +10,7 @@ import {
   categoryBoard,
   labels as labelRoutes,
   profile,
+  sources as sourceRoutes,
 } from "@ledgerly/api-contract/settings";
 import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions/client";
 import { useApi } from "@ledgerly/ui/data";
@@ -17,6 +18,7 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { categoryColor } from "@/modules/transactions";
 import { appRoute } from "@/platform/route";
+import { isOn } from "../plugins/plugin-model";
 import { DefaultGroupsButton } from "./default-groups";
 import { LabelsCard } from "./labels-card";
 import { MergeProposals } from "./merge-proposals";
@@ -45,6 +47,9 @@ function CategoriesSection() {
   const preferences = useApi(profile.getPreferences, {});
   const all = useApi(categoryRoutes.listCategories, { query: { archived: "true" } });
   const sources = useApi(labelRoutes.listSourceCategories, {});
+  // A plugin that is off leaves nothing to match here (PERS-615 §4): its line shows only while it is on.
+  const plugins = useApi(sourceRoutes.listPlugins, {});
+  const active = new Set((plugins.data?.plugins ?? []).filter(isOn).map((one) => one.id));
   return (
     <SettingsSection
       title={text("categories.title")}
@@ -61,7 +66,7 @@ function CategoriesSection() {
           // One line for each source with a page, in the order the sources first appear.
           const moved = new Map<string, { name: string; href: string }>();
           for (const row of sourceCategories) {
-            if (row.source !== null && !moved.has(row.provider))
+            if (row.source !== null && active.has(row.source) && !moved.has(row.provider))
               moved.set(row.provider, { name: row.sourceName, href: `/settings/plugins/${row.source}` });
           }
           return [...moved].map(([provider, source]) => (

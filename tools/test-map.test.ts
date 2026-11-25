@@ -201,7 +201,7 @@ describe("the selection", () => {
     const { before } = commands(select(["packages/domain/src/modules/timeoff/rules.ts"]));
     expect(before).toContain(
       "npx playwright test -c playwright.preview.config.ts tests/e2e/timeoff/ " +
-        "connections/connections.spec.ts connections/plugins.spec.ts connections/schedule.spec.ts",
+        "connections/connections.spec.ts connections/plugins.spec.ts connections/plugin-states.spec.ts connections/schedule.spec.ts",
     );
   });
 
