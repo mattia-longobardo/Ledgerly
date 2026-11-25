@@ -2,7 +2,7 @@
 // 6A–10A of 2026-11-25): the automatic pairing after every write that can make one, and what the
 // person decides by hand — the other account, an account outside, "not a giroconto", a pair, an
 // answer to a proposal. The rules are `rules/giroconti.ts`; this file reads and writes.
-import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -92,18 +92,35 @@ function proposalRows(ctx: Who) {
 
 type PairingRow = Awaited<ReturnType<typeof pairingRows>>[number];
 
-/** Writes what the rules decided, inside the caller's transaction. */
+/** A row changed between the read and the write of a run: the run plans again. */
+class StalePlan extends Error {}
+
+/** The row is still as the run read it: nobody paired it, retyped it, filed it or hid it since. */
+const unchanged = (row: PairingRow) =>
+  and(
+    eq(transactions.type, row.type),
+    eq(transactions.transferOutside, row.transferOutside),
+    sql`${transactions.transferGroupId} is not distinct from ${row.transferGroupId}`,
+    sql`${transactions.transferAccountId} is not distinct from ${row.transferAccountId}`,
+    sql`${transactions.categoryOrigin} is not distinct from ${row.categoryOrigin}`,
+    isNull(transactions.hiddenAt),
+  );
+
+/** Writes what the rules decided, inside the caller's transaction, on rows nobody changed since. */
 async function writePlan(
   trx: Tx,
   ctx: Who,
   plan: OwnTransferPlan,
   byId: ReadonlyMap<string, PairingRow>,
 ): Promise<void> {
-  const write = (id: string, values: Partial<typeof transactions.$inferInsert>) =>
-    trx
+  const write = async (id: string, values: Partial<typeof transactions.$inferInsert>) => {
+    const written = await trx
       .update(transactions)
       .set(values)
-      .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
+      .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions), unchanged(byId.get(id)!)))
+      .returning({ id: transactions.id });
+    if (written.length === 0) throw new StalePlan();
+  };
   for (const one of plan.transfers) {
     await write(one.id, {
       ...NO_CATEGORY,
@@ -127,9 +144,20 @@ async function writePlan(
  * makes a giroconto of a movement that names another account's IBAN, and keeps the proposals in
  * line: a new tie is proposed, a proposal whose legs are no longer free goes. Reads first, then one
  * short transaction. Run after every write that can make a giroconto: a reading, a choice of the
- * person, a saved IBAN. Returns how many rows changed.
+ * person, a saved IBAN. Returns how many rows changed. A choice of the person or a category that
+ * lands between the read and the write wins: the run reads and plans again (3 times at most).
  */
 export async function linkOwnTransfers(ctx: Who): Promise<number> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await linkOnce(ctx);
+    } catch (error) {
+      if (!(error instanceof StalePlan) || attempt === 3) throw error;
+    }
+  }
+}
+
+async function linkOnce(ctx: Who): Promise<number> {
   const [own, rows, proposals] = await Promise.all([ownIbans(ctx), pairingRows(ctx), proposalRows(ctx)]);
   const keyOf = (one: { outId: string; inId: string }) => proposalKey(one.outId, one.inId);
   const rejected = new Set(proposals.filter((one) => one.state === "rejected").map(keyOf));

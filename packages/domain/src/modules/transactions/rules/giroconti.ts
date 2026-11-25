@@ -191,6 +191,17 @@ function pairByIban(work: Work, own: readonly OwnIban[]): void {
 
 type Proposals = Map<string, { outId: string; inId: string }>;
 
+/** The rows of each amount, in order: only the same amount pairs, so a leg looks only there. */
+function byAmount(rows: readonly OwnTransferRow[]): (amount: Cents) => readonly OwnTransferRow[] {
+  const index = new Map<Cents, OwnTransferRow[]>();
+  for (const row of rows) {
+    const same = index.get(row.amountCents);
+    if (same) same.push(row);
+    else index.set(row.amountCents, [row]);
+  }
+  return (amount) => index.get(amount) ?? [];
+}
+
 /** 3 · Amount and day (rule 3), until a pass pairs nothing more: see {@link planOwnTransfers}. */
 function pairByAmount(work: Work, rejected: ReadonlySet<string>): Proposals {
   const proposals: Proposals = new Map();
@@ -206,17 +217,18 @@ function pairByAmount(work: Work, rejected: ReadonlySet<string>): Proposals {
     distance(out, into) <= MATCH_DAYS * DAY_MS &&
     (signal(out) || signal(into)) &&
     !rejected.has(proposalKey(out.id, into.id));
+  const ofAmount = byAmount(work.ordered);
   for (let paired = true; paired;) {
     paired = false;
     for (const out of work.ordered) {
       if (out.amountCents >= 0n || !work.free(out)) continue;
-      const candidates = work.ordered.filter((into) => matches(out, into));
+      const candidates = ofAmount(-out.amountCents).filter((into) => matches(out, into));
       if (candidates.length === 0) continue;
       const nearest = Math.min(...candidates.map((into) => distance(out, into)));
       const best = candidates.filter((into) => distance(out, into) === nearest);
       const rivals =
         best.length === 1
-          ? work.ordered.filter(
+          ? ofAmount(out.amountCents).filter(
               (other) =>
                 other.id !== out.id && matches(other, best[0]) && distance(other, best[0]) <= nearest,
             )

@@ -4,6 +4,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
+import { getPool } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
@@ -267,3 +268,51 @@ describe("what the person decides", () => {
     expect((await transactionsSummary(ctx)).expenseCents).toBe(-50_000n);
   });
 });
+
+describe("a run of the rules never undoes what the person did meanwhile", () => {
+  it("leaves a category filed between the run's read and its write, and plans again", async () => {
+    const groceries = await createCategory(ctx, {
+      name: "Spesa",
+      type: "expense",
+      parentId: null,
+      color: null,
+    });
+    await read(ctx, ing, [movement({ externalId: "o", payee: "Bonifico" })]);
+    const id = (await rows(ctx)).get("Bonifico")!.id;
+    // The IBAN of the other account lands in its text with no run: the next run makes it a giroconto.
+    const pool = getPool();
+    await pool.query("UPDATE transactions SET note = $1 WHERE id = $2", [`A ${IBAN_REV}`, id]);
+    // The person files it, in a transaction that holds the row while the run reads and plans.
+    const person = await pool.connect();
+    try {
+      await person.query("BEGIN");
+      await person.query("UPDATE transactions SET category_id = $1, category_origin = 'user' WHERE id = $2", [
+        groceries.id,
+        id,
+      ]);
+      const run = linkOwnTransfers(ctx);
+      await waitForALockWait();
+      await person.query("COMMIT");
+      expect(await run).toBe(0);
+    } finally {
+      person.release();
+    }
+    expect((await rows(ctx)).get("Bonifico")).toMatchObject({
+      type: "expense",
+      categoryId: groceries.id,
+      transferAccountId: null,
+    });
+  });
+});
+
+/** Until a statement of the database waits for a row lock: the run has read, planned and tries to write. */
+async function waitForALockWait(): Promise<void> {
+  for (let tries = 0; tries < 100; tries++) {
+    const { rows: waiting } = await getPool().query(
+      "SELECT 1 FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
+    );
+    if (waiting.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("the run never waited for the row");
+}
