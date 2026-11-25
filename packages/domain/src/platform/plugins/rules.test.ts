@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PluginAccount, SyncResponse } from "@plugin-contract/calls";
 import {
+  accountSource,
   bankAccountNames,
   bankAccountType,
   hashState,
@@ -14,6 +15,8 @@ import {
   normalizePrivateKey,
   pickBalance,
   pluginKinds,
+  pluginLifecycle,
+  pluginWrites,
   providerAccountIdOf,
   userPluginState,
 } from "./rules";
@@ -309,5 +312,79 @@ describe("what a plugin reads", () => {
     expect(pluginKinds("calendar")).toEqual(["leave"]);
     expect(pluginKinds("bank")).toEqual(["accounts", "transactions"]);
     expect(pluginKinds("source")).toEqual(["accounts", "transactions"]);
+  });
+});
+
+describe("the five states of a plugin for one person (H56)", () => {
+  const NONE = { accounts: 0, categories: 0, pendingTx: 0, pendingDays: 0 };
+  const state = (facts: Partial<Parameters<typeof pluginLifecycle>[0]>) =>
+    pluginLifecycle({ active: false, connections: 0, hasCredentials: false, leftovers: NONE, ...facts });
+
+  it("is not active when off with nothing left", () => {
+    expect(state({})).toBe("not_active");
+  });
+
+  it("is not connected when on with nothing yet", () => {
+    expect(state({ active: true })).toBe("not_connected");
+    expect(state({ active: true, hasCredentials: true, leftovers: { ...NONE, categories: 2 } })).toBe(
+      "not_connected",
+    );
+  });
+
+  it("is connected when on with a connection", () => {
+    expect(state({ active: true, connections: 2, leftovers: { ...NONE, accounts: 3 } })).toBe("connected");
+  });
+
+  it("is disconnected when on with the accounts its «Disconnect» kept", () => {
+    expect(state({ active: true, leftovers: { ...NONE, accounts: 1 } })).toBe("disconnected");
+  });
+
+  it.each<[string, Partial<Parameters<typeof pluginLifecycle>[0]>]>([
+    ["accounts", { leftovers: { ...NONE, accounts: 3 } }],
+    ["categories", { leftovers: { ...NONE, categories: 9 } }],
+    ["movements to send", { leftovers: { ...NONE, pendingTx: 1 } }],
+    ["days to send", { leftovers: { ...NONE, pendingDays: 17 } }],
+    ["a connection kept from before H55", { connections: 1 }],
+    ["a credential kept from before H55", { hasCredentials: true }],
+  ])("needs cleanup when off with %s", (_name, facts) => {
+    expect(state(facts)).toBe("needs_cleanup");
+  });
+
+  it("says what a plugin writes from its capabilities", () => {
+    expect(pluginWrites(["source.read", "createRecord", "editRecord"])).toEqual(["transactions"]);
+    expect(pluginWrites(["leaveCalendar", "provider.write"])).toEqual(["leave"]);
+    expect(pluginWrites(["leaveCalendar"])).toEqual([]);
+    expect(pluginWrites([])).toEqual([]);
+  });
+});
+
+describe("where an account stands with its source (H56)", () => {
+  const OFF = new Date("2026-11-20T10:00:00Z");
+  const READ = new Date("2026-11-19T07:00:00Z");
+
+  it("is live while its source is on, or a provider of the core", () => {
+    const synced = { provider: "plugin:wallet", lastSyncedAt: READ };
+    expect(accountSource(synced, { plugin: { active: true, deactivatedAt: OFF } }).sourceState).toBe("live");
+    expect(accountSource({ provider: "binance", lastSyncedAt: READ }, {}).sourceState).toBe("live");
+  });
+
+  it("is stopped while its plugin is off: since it was turned off, else since its last reading", () => {
+    const synced = { provider: "plugin:wallet", lastSyncedAt: READ };
+    expect(accountSource(synced, { plugin: { active: false, deactivatedAt: OFF } })).toEqual({
+      sourceState: "stopped",
+      formerSource: null,
+      stoppedSince: OFF,
+    });
+    expect(accountSource(synced, { plugin: { active: false, deactivatedAt: null } }).stoppedSince).toBe(READ);
+  });
+
+  it("is former for an account kept by hand that came from a source, and none for any other", () => {
+    const manual = { provider: null, lastSyncedAt: READ };
+    expect(accountSource(manual, { former: { provider: "plugin:wallet", until: OFF } })).toEqual({
+      sourceState: "former",
+      formerSource: "plugin:wallet",
+      stoppedSince: OFF,
+    });
+    expect(accountSource(manual, {})).toEqual({ sourceState: null, formerSource: null, stoppedSince: null });
   });
 });

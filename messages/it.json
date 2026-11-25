@@ -1284,6 +1284,7 @@
         "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
         "pausedSchedule": "Aggiornamento automatico spento.",
         "pausedProvider": "{provider} non è attivo.",
+        "failed": "L'ultima lettura non è riuscita. Ledgerly non riprova da solo.",
         "readOnly": "Le giornate scritte qui non arrivano a {provider}. Serve una chiave che può scrivere."
       },
       "when": {

@@ -93,9 +93,12 @@ di Ledgerly (specifica parallela) sono del core: Ledgerly non importa le regole 
 | Da N7.2 a R5a | Settings › Integrations, sezione «Sorgenti dei dati»: una riga per sorgente | `/settings/integrations/[source]` (`wallet`, `trek`, `enablebanking`) |
 | Da R5a | Settings › Plugin (D3, H27) | `/settings/plugins/[id]`; il vecchio URL fa redirect |
 
-- La riga dell'elenco ha: nome, stato (pallino e parola di N1 §2.2), riepilogo in una riga, freccia. Tutta la riga è un
-  link alla pagina. Il pulsante «Attiva» resta sulla riga di un plugin non attivo.
-- Una sorgente non attiva non ha pagina: l'URL diretto porta all'elenco, con la riga in evidenza.
+- La riga dell'elenco ha: nome (link alla pagina), stato (pallino e parola), una riga con il fatto principale, chip
+  «Legge …» e «Scrive …», azione principale e menu ⋯. La riga intera non è più un link (H56).
+- **Da H56 (25/11/2026)** ogni plugin ha la sua pagina, in ogni stato: «Non attivo» mostra che cosa fa e «Attiva {X}»;
+  «Da sistemare» mostra i dati rimasti, con «Attiva» e «Disattiva». Sostituisce la regola di prima: «una sorgente non
+  attiva non ha pagina, l'URL diretto porta all'elenco». Gli stati e i dati vengono da `GET /plugins` (`pluginState`,
+  `health`, `leftovers`, `capabilities`).
 - `Page` con `parent` = Integrazioni (poi Plugin). Titolo = nome della sorgente dal manifest.
 - Ingressi in più: dettaglio del conto («Impostazioni di {provider}» accanto al badge dell'origine); riga del
   collegamento di N2 (voce di menu «Impostazioni»); avviso «Nuove categorie» in Expenses.

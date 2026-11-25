@@ -154,7 +154,10 @@ export type StatusText =
   | "keyInvalid"
   | "pending"
   | "pausedSchedule"
+  /** A connection of a plugin turned off: its plugin is `needs_cleanup` in `GET /plugins` (H56). */
   | "pausedProvider"
+  /** A reading failed and no schedule tries again (H56: the error comes before «no schedule»). */
+  | "failed"
   | "readOnly";
 
 /** The one thing a person can do about a state. */
@@ -194,9 +197,10 @@ const OVERDUE_GRACE_MINUTES = 15;
 /**
  * The state of one connection: the first rule that holds, in the order of ux §2.2.
  *
- * 1. a plugin the person turned off; 2. a reading in progress; 3. something only the person can
- * repair (an access that ended, a key the provider refuses, accounts not chosen yet); 4. no
- * schedule; 5. a failure or a reading that did not come; 6. up to date.
+ * 1. a plugin the person turned off (its plugin «needs cleanup», H56); 2. a reading in progress;
+ * 3. something only the person can repair (an access that ended, a key the provider refuses,
+ * accounts not chosen yet); 4. a failure with no schedule to try again (H56: never hidden behind
+ * «no schedule»); 5. no schedule; 6. a failure or a reading that did not come; 7. up to date.
  */
 export function syncStatus(facts: StatusFacts, now: Date): SyncStatus {
   if (!facts.providerActive) return { value: "paused", text: "pausedProvider", action: "enable" };
@@ -213,7 +217,12 @@ export function syncStatus(facts: StatusFacts, now: Date): SyncStatus {
   if (facts.errorCode === "read_only") return { value: "action", text: "readOnly", action: "replaceKey" };
   if (!facts.accountsChosen) return { value: "action", text: "pending", action: "chooseAccounts" };
 
-  if (!facts.scheduled) return { value: "paused", text: "pausedSchedule", action: "resume" };
+  if (!facts.scheduled) {
+    const failing =
+      facts.errorCode !== "rate_limited" && (facts.consecutiveFailures >= 1 || facts.state === "error");
+    if (failing) return { value: "late", text: "failed", action: "update" };
+    return { value: "paused", text: "pausedSchedule", action: "resume" };
+  }
 
   if (facts.errorCode === "rate_limited") return { value: "late", text: "lateLimit", action: "update" };
   const overdue =
@@ -223,6 +232,46 @@ export function syncStatus(facts: StatusFacts, now: Date): SyncStatus {
     return { value: "late", text: "late", action: "update" };
   }
   return { value: "ok", text: "ok", action: null };
+}
+
+/* The health of a connection, as the plugins' page says it (H56) */
+
+/** From the worst to the best: a plugin's health is the worst of its connections'. */
+export const HEALTH_VALUES = [
+  "action_needed",
+  "error",
+  "late",
+  "reading",
+  "on_demand",
+  "up_to_date",
+] as const;
+export type HealthValue = (typeof HEALTH_VALUES)[number];
+
+/**
+ * The health of one connection, from its state and its facts: an error is never hidden behind
+ * «late» (H56, §5). `null` for the connection of a plugin turned off: it has no health, its plugin
+ * «needs cleanup».
+ */
+export function healthOf(
+  status: SyncStatus,
+  facts: Pick<StatusFacts, "consecutiveFailures" | "state" | "errorCode">,
+): HealthValue | null {
+  if (status.text === "pausedProvider") return null;
+  if (status.value === "action") return "action_needed";
+  if (status.text === "failed") return "error";
+  if (status.value === "running") return "reading";
+  if (status.value === "paused") return "on_demand";
+  if (status.value === "late") {
+    const failed =
+      facts.errorCode !== "rate_limited" && (facts.consecutiveFailures >= 1 || facts.state === "error");
+    return failed ? "error" : "late";
+  }
+  return "up_to_date";
+}
+
+/** The worst of some healths; `null` for none. */
+export function worstHealth(healths: readonly (HealthValue | null)[]): HealthValue | null {
+  return HEALTH_VALUES.find((one) => healths.includes(one)) ?? null;
 }
 
 /* The warnings (ux §6) */
@@ -257,7 +306,8 @@ type Warning = { kind: "failed"; todo: "renew" | "replaceKey" | null } | { kind:
 
 export function warningFor(status: SyncStatus, facts: StatusFacts, now: Date): Warning {
   // A plugin turned off, a schedule turned off, accounts not chosen: the person already knows.
-  if (status.value === "paused" || status.text === "pending") return null;
+  // A reading with no schedule that failed: the person started it, and the page says so (H56).
+  if (status.value === "paused" || status.text === "pending" || status.text === "failed") return null;
   // A calendar that may only read (D5): the connection says so, and no mail is sent.
   if (status.text === "readOnly") return null;
   if (status.value === "action") {

@@ -38,6 +38,21 @@ export const SNAPSHOT_STATES = ["success", "warning", "failed"] as const;
  * `duplicate_name`, `duplicate_connection`, `iban_exists`, `iban_archived`, `in_use`). An IBAN
  * never travels in an answer (H45): `other` is the name of the account that has it.
  */
+/**
+ * Where an account stands with its source (H56): `live` (its source is on), `stopped` (its plugin
+ * is off and the account still depends on it: «needs cleanup»), `former` (kept by hand since its
+ * source was turned off); null for an account that never had a source.
+ */
+export const sourceFields = {
+  sourceState: z.enum(["live", "stopped", "former"]).nullable(),
+  /** The source a `former` account came from (`plugin:<id>` or a provider of the core); null otherwise. */
+  formerSource: z.string().nullable(),
+  /** `stopped`: since when nothing reads it. `former`: until when it came from its source. Else null. */
+  stoppedSince: instant().nullable(),
+};
+
+export const SOURCE_FIELDS_EXAMPLE = { sourceState: null, formerSource: null, stoppedSince: null };
+
 export const ACCOUNT_ERRORS = ["invalid", "not_found", "conflict"] as const;
 
 export const ACCOUNT_ID = "1f2e3d4c-5b6a-4978-8695-a4b3c2d1e0f9";
@@ -58,6 +73,7 @@ export const accountRow = z.object({
   /** The latest reading on or before today, in the account's currency; null while it has none. */
   balance: money().nullable(),
   lastSyncedAt: instant().nullable(),
+  ...sourceFields,
 });
 
 export const ACCOUNT_ROW_EXAMPLE = {
@@ -71,6 +87,7 @@ export const ACCOUNT_ROW_EXAMPLE = {
   countsAsLiquid: true,
   balance: "11302.40",
   lastSyncedAt: null,
+  ...SOURCE_FIELDS_EXAMPLE,
 };
 
 /** One recorded balance, as `GET /accounts/{id}/balances` and `get_account_balances` give it. */

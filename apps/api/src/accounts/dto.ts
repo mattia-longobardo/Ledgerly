@@ -4,6 +4,7 @@
 import type { z } from "zod";
 import type { ACCOUNTS } from "@ledgerly/api-contract";
 import { type Account, bucketOf, type Change } from "@ledgerly/domain/accounts";
+import type { AccountSource } from "@ledgerly/domain/platform/plugins";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
 type Wire<T extends z.ZodType> = z.input<T>;
@@ -19,7 +20,10 @@ export const instant = (moment: Date | null): string | null => moment?.toISOStri
 /** A change of the domain (`changeBetween`) as the wire writes it. */
 export const delta = (change: Change) => ({ amount: money(change.cents), fraction: change.fraction });
 
-export function accountRow(account: Account, balance: Cents | null): Row {
+/** Where an account stands with its source (H56), as the wire writes it. */
+const sourceOf = (source: AccountSource) => ({ ...source, stoppedSince: instant(source.stoppedSince) });
+
+export function accountRow(account: Account, balance: Cents | null, source: AccountSource): Row {
   return {
     id: account.id,
     name: account.name,
@@ -31,11 +35,12 @@ export function accountRow(account: Account, balance: Cents | null): Row {
     countsAsLiquid: account.countsAsLiquid,
     balance: money(balance),
     lastSyncedAt: instant(account.lastSyncedAt),
+    ...sourceOf(source),
   };
 }
 
 /** One account with its settings, and the pension fund whose value it holds (null for any other). */
-export function accountDetail(account: Account, fundId: string | null): Detail {
+export function accountDetail(account: Account, fundId: string | null, source: AccountSource): Detail {
   return {
     id: account.id,
     name: account.name,
@@ -61,6 +66,7 @@ export function accountDetail(account: Account, fundId: string | null): Detail {
     lastSyncedAt: instant(account.lastSyncedAt),
     archivedAt: instant(account.archivedAt),
     fundId,
+    ...sourceOf(source),
   };
 }
 

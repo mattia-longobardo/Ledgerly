@@ -10,6 +10,7 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
   findConnection,
+  type HealthValue,
   isPluginProvider,
   isSyncErrorCode,
   listRuns,
@@ -19,8 +20,12 @@ import {
 import {
   credentialsStatus,
   isBankPluginProvider,
+  listInstancePlugins,
   listUserPlugins,
   pluginKinds,
+  type PluginLeftovers,
+  pluginLifecycle,
+  pluginWrites,
 } from "@ledgerly/domain/platform/plugins";
 import { keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
@@ -43,6 +48,11 @@ export interface SourceReads {
     options: { same: string | null },
   ): Promise<{ ok: true; answer: Answer<typeof sources.getBankOutcome> } | Refused>;
   source(ctx: Ctx, slug: string): Promise<{ ok: true; answer: Answer<typeof sources.getSource> } | Refused>;
+  /** H56: each plugin's health (the worst of its connections') and what still depends on it here. */
+  standing(
+    ctx: Ctx,
+    plugins: readonly { id: string; kind: "bank" | "source" | "calendar" }[],
+  ): Promise<Map<string, { health: HealthValue | null; leftovers: PluginLeftovers }>>;
 }
 
 /**
@@ -73,15 +83,22 @@ async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   return connection;
 }
 
-function servePlugins(app: Hono<ApiEnv>, guard: Guard): void {
+const NOTHING_LEFT: PluginLeftovers = { accounts: 0, categories: 0, pendingTx: 0, pendingDays: 0 };
+
+function servePlugins(app: Hono<ApiEnv>, guard: Guard, reads: SourceReads): void {
   serve(app, guard, sources.listPlugins, async ({ ctx }) => {
     // The manifests are read in the background, as the page did: the answer never waits for a plugin.
     keepManifestsFresh();
     const plugins = await listUserPlugins(ctx);
+    const [standing, instance] = await Promise.all([reads.standing(ctx, plugins), listInstancePlugins()]);
+    const writesOf = (id: string) =>
+      pluginWrites(instance.find((one) => one.config.id === id)?.manifest.capabilities ?? []);
     return {
       plugins: await Promise.all(
         plugins.map(async (plugin) => {
           const credentials = await credentialsStatus(ctx, plugin.id);
+          const { health, leftovers } = standing.get(plugin.id) ?? { health: null, leftovers: NOTHING_LEFT };
+          const active = plugin.state === "active";
           return {
             id: plugin.id,
             name: plugin.name,
@@ -94,6 +111,17 @@ function servePlugins(app: Hono<ApiEnv>, guard: Guard): void {
             countries: plugin.countries,
             kind: plugin.kind,
             kinds: pluginKinds(plugin.kind),
+            pluginState: pluginLifecycle({
+              active,
+              connections: plugin.connections,
+              hasCredentials: credentials.saved,
+              leftovers,
+            }),
+            // A plugin that is off has no health: its connections are «needs cleanup».
+            health: active ? health : null,
+            deactivatedAt: plugin.pausedSince?.toISOString() ?? null,
+            leftovers,
+            capabilities: { reads: pluginKinds(plugin.kind), writes: writesOf(plugin.id) },
             fields: plugin.fields,
           };
         }),
@@ -142,7 +170,7 @@ export function serveSources(app: Hono<ApiEnv>, guard: Guard, reads: SourceReads
   serve(app, guard, sources.getBankOutcome, async ({ ctx, params, query }) =>
     body(await reads.outcome(ctx, await bankOf(ctx, params.id), { same: query.same ?? null })),
   );
-  servePlugins(app, guard);
+  servePlugins(app, guard, reads);
   serve(app, guard, sources.getSource, async ({ ctx, params }) => body(await reads.source(ctx, params.slug)));
   return Object.values(sources);
 }

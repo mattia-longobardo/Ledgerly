@@ -255,6 +255,21 @@ export async function listUserPlugins(ctx: Pick<Ctx, "userId" | "locale">): Prom
   });
 }
 
+/** Every plugin this person has ever turned on or off: whether it is on, and when it was last turned off. */
+export async function pluginActivationsOf(
+  ctx: Pick<Ctx, "userId">,
+): Promise<Map<string, { active: boolean; deactivatedAt: Date | null }>> {
+  const rows = await getDb()
+    .select({
+      pluginId: pluginActivations.pluginId,
+      active: pluginActivations.active,
+      deactivatedAt: pluginActivations.deactivatedAt,
+    })
+    .from(pluginActivations)
+    .where(userScoped(ctx).owns(pluginActivations));
+  return new Map(rows.map(({ pluginId, ...row }) => [pluginId, row]));
+}
+
 /** Whether this person has the plugin on. Every action of a plugin asks this first (H25). */
 export async function isPluginActive(ctx: Pick<Ctx, "userId">, pluginId: string): Promise<boolean> {
   const [row] = await getDb()

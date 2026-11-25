@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import type { Ctx } from "../../context";
 import { getDb, type Tx } from "../../db/client";
 import { userScoped } from "../../db/scope";
@@ -232,28 +232,85 @@ export async function linksOfEntity(
     .orderBy(asc(providerLinks.provider), asc(providerLinks.externalId));
 }
 
+/** The person's runs of these connections that are running. */
+const runningRunsOf = (ctx: Pick<Ctx, "userId">, connectionIds: readonly string[]) =>
+  and(
+    userScoped(ctx).owns(syncRuns),
+    inArray(syncRuns.connectionId, [...connectionIds]),
+    eq(syncRuns.state, "running"),
+  );
+
 /**
- * How many readings of these connections are running now (a run younger than the orphan limit):
- * "Turn off" waits for none, as a reading that goes on would write the source's rows again.
+ * When the oldest reading of these connections that is running now started (a run younger than the
+ * orphan limit), or null when none runs: "Turn off" waits for none, as a reading that goes on would
+ * write the source's rows again, and the refusal says since when it waits (H56).
  */
-export async function runningReadings(
+export async function runningSince(
   ctx: Pick<Ctx, "userId">,
   connectionIds: readonly string[],
+  now: Date = new Date(),
+): Promise<Date | null> {
+  if (connectionIds.length === 0) return null;
+  const [row] = await getDb()
+    .select({ startedAt: syncRuns.startedAt })
+    .from(syncRuns)
+    .where(
+      and(
+        runningRunsOf(ctx, connectionIds),
+        gte(syncRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS)),
+      ),
+    )
+    .orderBy(asc(syncRuns.startedAt))
+    .limit(1);
+  return row?.startedAt ?? null;
+}
+
+/**
+ * Stops the readings of these connections that started before `before` and still run (H56, D3 = A):
+ * they end as failed now, so "Turn off" no longer waits for them. Returns how many stopped.
+ */
+export async function stopReadings(
+  ctx: Pick<Ctx, "userId">,
+  connectionIds: readonly string[],
+  before: Date,
   now: Date = new Date(),
 ): Promise<number> {
   if (connectionIds.length === 0) return 0;
   const rows = await getDb()
-    .select({ id: syncRuns.id })
-    .from(syncRuns)
+    .update(syncRuns)
+    .set({ state: "failed", finishedAt: now })
+    .where(and(runningRunsOf(ctx, connectionIds), lt(syncRuns.startedAt, before)))
+    .returning({ id: syncRuns.id });
+  return rows.length;
+}
+
+/**
+ * The source each of these accounts came from before it was kept by hand (H55: the conversion
+ * keeps the source's ids), with until when: the newest link of each. An account never linked is
+ * not in the map.
+ */
+export async function formerSourcesOf(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, { provider: string; until: Date }>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      entityId: providerLinks.entityId,
+      provider: providerLinks.provider,
+      at: providerLinks.lastSeenAt,
+    })
+    .from(providerLinks)
     .where(
       and(
-        userScoped(ctx).owns(syncRuns),
-        inArray(syncRuns.connectionId, [...connectionIds]),
-        eq(syncRuns.state, "running"),
-        gte(syncRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS)),
+        userScoped(ctx).owns(providerLinks),
+        eq(providerLinks.entityType, "account"),
+        inArray(providerLinks.entityId, [...accountIds]),
       ),
-    );
-  return rows.length;
+    )
+    .orderBy(asc(providerLinks.lastSeenAt), asc(providerLinks.provider));
+  // In time order: the newest link of an account is the last one written.
+  return new Map(rows.map((row) => [row.entityId, { provider: row.provider, until: row.at }]));
 }
 
 /**

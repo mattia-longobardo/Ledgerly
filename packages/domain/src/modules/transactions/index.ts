@@ -46,6 +46,7 @@ export {
   MAX_LIMIT,
   categoryMacroTotals,
   chargeCandidates,
+  countTransactions,
   expensesView,
   incomeLessExpense,
   facetCounts,

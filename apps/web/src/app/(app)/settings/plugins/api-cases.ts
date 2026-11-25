@@ -78,8 +78,8 @@ export const connectionCases: ConnectionCases = {
   readBankNow: (ctx, connectionId, headers) => retryBankReading(ctx, connectionId, presenceOf(headers)),
   cancelBank: cancelBankConnection,
   deactivation: deactivationCountsOf,
-  turnOff: (ctx, slug, headers) =>
-    turnOffSource(ctx, slug, { presence: presenceOf(headers), core: coreOf(ctx) }),
+  turnOff: (ctx, slug, headers, options) =>
+    turnOffSource(ctx, slug, { presence: presenceOf(headers), core: coreOf(ctx) }, options),
   bringBack: (ctx, slug, externalId, headers) =>
     bringBackAccount(ctx, slug, externalId, { presence: presenceOf(headers), core: coreOf(ctx) }),
   startBankAccess,

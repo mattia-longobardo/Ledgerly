@@ -111,6 +111,39 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "sourceState": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "live",
+                                  "stopped",
+                                  "former"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "formerSource": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "stoppedSince": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -123,7 +156,10 @@
                           "inNetWorth",
                           "countsAsLiquid",
                           "balance",
-                          "lastSyncedAt"
+                          "lastSyncedAt",
+                          "sourceState",
+                          "formerSource",
+                          "stoppedSince"
                         ]
                       }
                     }
@@ -482,6 +518,39 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "sourceState": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "live",
+                            "stopped",
+                            "former"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "formerSource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "stoppedSince": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -508,7 +577,10 @@
                     "betweenEntries",
                     "lastSyncedAt",
                     "archivedAt",
-                    "fundId"
+                    "fundId",
+                    "sourceState",
+                    "formerSource",
+                    "stoppedSince"
                   ]
                 }
               }
@@ -861,6 +933,39 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "sourceState": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "live",
+                            "stopped",
+                            "former"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "formerSource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "stoppedSince": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -887,7 +992,10 @@
                     "betweenEntries",
                     "lastSyncedAt",
                     "archivedAt",
-                    "fundId"
+                    "fundId",
+                    "sourceState",
+                    "formerSource",
+                    "stoppedSince"
                   ]
                 }
               }
@@ -1274,6 +1382,39 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "sourceState": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "live",
+                            "stopped",
+                            "former"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "formerSource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "stoppedSince": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -1300,7 +1441,10 @@
                     "betweenEntries",
                     "lastSyncedAt",
                     "archivedAt",
-                    "fundId"
+                    "fundId",
+                    "sourceState",
+                    "formerSource",
+                    "stoppedSince"
                   ]
                 }
               }
@@ -12215,6 +12359,7 @@
                                   "pending",
                                   "pausedSchedule",
                                   "pausedProvider",
+                                  "failed",
                                   "readOnly"
                                 ]
                               },
@@ -12382,7 +12527,7 @@
       },
       "post": {
         "operationId": "connect",
-        "summary": "Connects a provider of the core that takes credentials, or replaces them. A refusal of the credentials is `invalid` with the card's code in `reason` (`empty`, `rejected`, `provider`).",
+        "summary": "Connects a provider of the core that takes credentials, or replaces them. A refusal of the credentials is `invalid` with the card's code in `reason` (`empty`, `rejected`, `provider`). A plugin the person has not turned on is `409` `not_active`: «Connect» never turns it on (H56).",
         "tags": [
           "connections"
         ],
@@ -48589,6 +48734,110 @@
                               ]
                             }
                           },
+                          "pluginState": {
+                            "type": "string",
+                            "enum": [
+                              "not_active",
+                              "not_connected",
+                              "connected",
+                              "disconnected",
+                              "needs_cleanup"
+                            ]
+                          },
+                          "health": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "action_needed",
+                                  "error",
+                                  "late",
+                                  "reading",
+                                  "on_demand",
+                                  "up_to_date"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deactivatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "leftovers": {
+                            "type": "object",
+                            "properties": {
+                              "accounts": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "categories": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "pendingTx": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "pendingDays": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "accounts",
+                              "categories",
+                              "pendingTx",
+                              "pendingDays"
+                            ]
+                          },
+                          "capabilities": {
+                            "type": "object",
+                            "properties": {
+                              "reads": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "accounts",
+                                    "transactions",
+                                    "leave",
+                                    "documents",
+                                    "holdings",
+                                    "flows"
+                                  ]
+                                }
+                              },
+                              "writes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "transactions",
+                                    "leave"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "reads",
+                              "writes"
+                            ]
+                          },
                           "fields": {
                             "type": "array",
                             "items": {
@@ -48641,6 +48890,11 @@
                           "countries",
                           "kind",
                           "kinds",
+                          "pluginState",
+                          "health",
+                          "deactivatedAt",
+                          "leftovers",
+                          "capabilities",
                           "fields"
                         ]
                       }
@@ -48695,7 +48949,7 @@
     "/plugins/{pluginId}": {
       "patch": {
         "operationId": "set_plugin_active",
-        "summary": "Turns a plugin on or off for the person.",
+        "summary": "Turns a plugin on or off for the person. `404`: the instance has no such plugin, the refusal `not_available` of «Activate» (H56).",
         "tags": [
           "connections"
         ],
@@ -57572,7 +57826,7 @@
     "/sources/{slug}/deactivate": {
       "post": {
         "operationId": "deactivate_source",
-        "summary": "Turns a source off after a last reading: its accounts are kept by hand from now.",
+        "summary": "Turns a source off after a last reading: its accounts are kept by hand from now. A plugin that is off is turned off too while it still has data here (`needs_cleanup`, H56). `409` `reason`: `not_active` (off, nothing to convert), `reading_in_progress` (with `startedAt`; a reading older than 15 minutes stops with `stopReading`), `plugin_down` (the accesses cannot be closed at the provider: `force` turns it off all the same), `not_turned_off` (anything else: nothing changed).",
         "tags": [
           "connections"
         ],
@@ -57587,6 +57841,25 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "force": {
+                    "type": "boolean"
+                  },
+                  "stopReading": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Done",
@@ -57670,7 +57943,7 @@
     "/sources/{slug}/deactivation": {
       "get": {
         "operationId": "get_source_deactivation",
-        "summary": "What turning a source off changes, before it is turned off.",
+        "summary": "What turning a source off changes, before it is turned off: also for a plugin that is off and still has data here (`needs_cleanup` of `GET /plugins`, H56).",
         "tags": [
           "connections"
         ],
@@ -57717,6 +57990,14 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "movements": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "credentials": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -57724,7 +58005,9 @@
                     "categories",
                     "rules",
                     "unsent",
-                    "pendingDays"
+                    "pendingDays",
+                    "movements",
+                    "credentials"
                   ]
                 }
               }
@@ -69267,6 +69550,9 @@
                 "reason"
               ]
             }
+          },
+          "startedAt": {
+            "type": "string"
           }
         },
         "required": [

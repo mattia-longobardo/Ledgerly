@@ -41,6 +41,7 @@ export {
   readSyncJob,
   saveSyncJob,
   sourceSkippedIds,
+  stopReadings,
   changeSourceSkippedIds,
   skippedAccounts,
   saveSkippedAccounts,
@@ -48,8 +49,9 @@ export {
   deletedSourceAccounts,
   linksOf,
   linksOfEntity,
-  runningReadings,
+  runningSince,
   forgetSource,
+  formerSourcesOf,
   saveIbanConflicts,
   markConnection,
 } from "./sources";

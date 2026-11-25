@@ -88,7 +88,8 @@ function operation(route: RouteContract): Json {
     ...(route.body
       ? {
           requestBody: {
-            required: true,
+            // A body the route may go without (`.optional()`) is not required.
+            required: !route.body.safeParse(undefined).success,
             content: {
               [route.bodyFormat === "multipart" ? "multipart/form-data" : "application/json"]: {
                 schema: schemaOf(route.body, "input"),

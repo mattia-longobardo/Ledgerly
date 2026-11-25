@@ -51,4 +51,6 @@ export const errorBody = z.object({
   other: z.string().optional(),
   /** `not_bookable` of time off: the dates refused and why (TOF-5: the reason travels with the error). */
   refused: z.array(z.object({ on: z.string(), reason: z.enum(["weekend", "holiday"]) })).optional(),
+  /** `reading_in_progress` of «Deactivate» (H56): when the reading that stops it started. */
+  startedAt: z.string().optional(),
 });

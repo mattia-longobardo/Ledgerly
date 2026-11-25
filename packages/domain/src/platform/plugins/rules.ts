@@ -24,6 +24,84 @@ export function userPluginState(facts: {
   return facts.hasCredentials || facts.connections > 0 ? "paused" : "available";
 }
 
+/** What is still here of a plugin for one person (H56): what «Turn off» converts. */
+export interface PluginLeftovers {
+  accounts: number;
+  categories: number;
+  /** The movements waiting to be sent to the source. */
+  pendingTx: number;
+  /** The days off waiting to be sent to the calendar. */
+  pendingDays: number;
+}
+
+/** The five states of a plugin for one person (H56, D1 = A). */
+export type PluginLifecycle = "not_active" | "not_connected" | "connected" | "disconnected" | "needs_cleanup";
+
+/**
+ * The state of a plugin for one person (H56): on with a connection, on with accounts its
+ * «Disconnect» kept, on with nothing yet; off with something that still depends on it (accounts,
+ * categories, what waits to be sent, a connection or a credential kept from before H55), or off.
+ */
+export function pluginLifecycle(facts: {
+  active: boolean;
+  connections: number;
+  hasCredentials: boolean;
+  leftovers: PluginLeftovers;
+}): PluginLifecycle {
+  if (facts.active) {
+    if (facts.connections > 0) return "connected";
+    return facts.leftovers.accounts > 0 ? "disconnected" : "not_connected";
+  }
+  const left = Object.values(facts.leftovers).some((count) => count > 0);
+  return left || facts.connections > 0 || facts.hasCredentials ? "needs_cleanup" : "not_active";
+}
+
+/**
+ * What a plugin writes to its provider, from its manifest's capabilities: the movements written
+ * here (`createRecord`, `editRecord`), the days off of a calendar that may write (`provider.write`).
+ */
+export function pluginWrites(capabilities: readonly string[]): ("transactions" | "leave")[] {
+  const writes: ("transactions" | "leave")[] = [];
+  if (capabilities.includes("createRecord") || capabilities.includes("editRecord"))
+    writes.push("transactions");
+  if (capabilities.includes("leaveCalendar") && capabilities.includes("provider.write")) writes.push("leave");
+  return writes;
+}
+
+/** Where an account stands with its source (H56). */
+export interface AccountSource {
+  sourceState: "live" | "stopped" | "former" | null;
+  formerSource: string | null;
+  stoppedSince: Date | null;
+}
+
+/**
+ * Where an account stands with its source (H56): a synced account is `live`, or `stopped` while its
+ * plugin is off (since it was turned off, else since its last reading); an account kept by hand that
+ * still has a source's ids came from it (`former`, until the last time the link was written); any
+ * other has no source.
+ */
+export function accountSource(
+  account: { provider: string | null; lastSyncedAt: Date | null },
+  facts: {
+    /** The plugin of the account's provider, as the person has it; undefined for a provider of the core. */
+    plugin?: { active: boolean; deactivatedAt: Date | null };
+    former?: { provider: string; until: Date };
+  },
+): AccountSource {
+  if (account.provider !== null) {
+    if (facts.plugin && !facts.plugin.active) {
+      const since = facts.plugin.deactivatedAt ?? account.lastSyncedAt;
+      return { sourceState: "stopped", formerSource: null, stoppedSince: since };
+    }
+    return { sourceState: "live", formerSource: null, stoppedSince: null };
+  }
+  if (facts.former) {
+    return { sourceState: "former", formerSource: facts.former.provider, stoppedSince: facts.former.until };
+  }
+  return { sourceState: null, formerSource: null, stoppedSince: null };
+}
+
 /**
  * What a plugin reads, from what reads it (its manifest's capabilities): the kinds of the runs of
  * its pass, in their order. A calendar's reads the days off; a bank's or a source's the movements.

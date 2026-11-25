@@ -10,6 +10,7 @@ export {
   listInstancePlugins,
   listPluginConnections,
   listUserPlugins,
+  pluginActivationsOf,
   pluginDiagnostics,
   pluginManifest,
   pricesPlugin,
@@ -31,9 +32,19 @@ export {
   maskIdentifier,
   movementIds,
   normalizePrivateKey,
+  accountSource,
   pickBalance,
   pluginKinds,
+  pluginLifecycle,
+  pluginWrites,
   providerAccountIdOf,
 } from "./rules";
-export type { BankAccountType, ReadingError, ReturnError } from "./rules";
+export type {
+  AccountSource,
+  BankAccountType,
+  PluginLeftovers,
+  PluginLifecycle,
+  ReadingError,
+  ReturnError,
+} from "./rules";
 export { pluginActivations, pluginAuthStates, pluginUserCredentials, plugins } from "./schema";

@@ -29,13 +29,24 @@ export class ApiRefusal extends Error {
     readonly reason?: string,
     /** The name of what the refusal is about (`iban_exists`: the account with the IBAN). */
     readonly other?: string,
-    /** `not_bookable` of time off: the dates refused and why. */
-    readonly refused?: ReadonlyArray<{ on: string; reason: "weekend" | "holiday" }>,
+    /**
+     * The facts of some refusals: `not_bookable` of time off, the dates refused and why;
+     * `reading_in_progress` of «Deactivate» (H56), when the reading started.
+     */
+    details: {
+      refused?: ReadonlyArray<{ on: string; reason: "weekend" | "holiday" }>;
+      startedAt?: string;
+    } = {},
   ) {
     // An MCP tool answers the message: `module_inactive` names its addon, so the model knows why.
     super(code === "module_inactive" ? `${code}: ${reason}` : (reason ?? code));
     this.name = "ApiRefusal";
+    this.refused = details.refused;
+    this.startedAt = details.startedAt;
   }
+
+  readonly refused?: ReadonlyArray<{ on: string; reason: "weekend" | "holiday" }>;
+  readonly startedAt?: string;
 }
 
 /** The answer of a route's `otherStatus` (a file already received): the same body, another status. */
@@ -83,14 +94,15 @@ function statusOf(status: number): ContentfulStatusCode {
 function fail(
   context: Context,
   code: ApiErrorCode,
-  extra: Pick<ApiRefusal, "reason" | "other" | "refused"> = {},
+  extra: Pick<ApiRefusal, "reason" | "other" | "refused" | "startedAt"> = {},
 ): Response {
-  const { reason, other, refused } = extra;
+  const { reason, other, refused, startedAt } = extra;
   const body = {
     error: code,
     ...(reason ? { reason } : {}),
     ...(other ? { other } : {}),
     ...(refused?.length ? { refused } : {}),
+    ...(startedAt ? { startedAt } : {}),
   };
   return context.json(body, statusOf(API_ERRORS[code]));
 }

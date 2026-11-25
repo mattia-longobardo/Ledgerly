@@ -104,7 +104,12 @@ export function breakingChanges(before: Schema, next: Schema): string[] {
       }
       const body = (o: Schema) =>
         object(object(object(object(o.requestBody).content)["application/json"]).schema);
-      if (op.requestBody === undefined && nextOperation.requestBody !== undefined) {
+      // A new body the route may go without (`required: false`) asks nothing more of an old client.
+      if (
+        op.requestBody === undefined &&
+        nextOperation.requestBody !== undefined &&
+        object(nextOperation.requestBody).required !== false
+      ) {
         found.push(`${where}: a body is now required`);
       } else if (op.requestBody !== undefined) {
         found.push(...schemaBreaks(body(op), body(nextOperation), `${where} body`, "request"));
