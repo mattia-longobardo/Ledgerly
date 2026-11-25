@@ -437,6 +437,39 @@ describe("a movement", () => {
     });
     expect(toTransaction("u-1", { ...ROW, status: "RJCT" })).toBeNull();
   });
+
+  it("gives the operation's day and instant from the bank's text, which wins over transaction_date", () => {
+    const paid = toTransaction("u-1", {
+      ...ROW,
+      transaction_date: "2026-01-07",
+      remittance_information: ["PAGAMENTO CARTA del 08/01/2026 alle ore 14:32", "NEGOZIO 123"],
+    });
+    expect(paid).toMatchObject({
+      bookingDate: "2026-01-10",
+      valueDate: "2026-01-11",
+      transactionDate: "2026-01-08",
+      instant: "2026-01-08T13:32:00.000Z",
+    });
+    expect(syncResponseSchema.shape.transactions.element.safeParse(paid).success).toBe(true);
+  });
+
+  it("gives transaction_date alone when the text has no time, and nothing when there is neither", () => {
+    const dated = toTransaction("u-1", { ...ROW, transaction_date: "2026-01-08" });
+    expect(dated).toMatchObject({ transactionDate: "2026-01-08" });
+    expect(dated).not.toHaveProperty("instant");
+    const bare = toTransaction("u-1", ROW);
+    expect(bare).not.toHaveProperty("transactionDate");
+    expect(bare).not.toHaveProperty("instant");
+  });
+
+  it("ignores a time in the text on a day after the booking: it is not the operation's", () => {
+    const later = toTransaction("u-1", {
+      ...ROW,
+      remittance_information: ["RIFERIMENTO del 20/01/2026 alle ore 10:00"],
+    });
+    expect(later).not.toHaveProperty("transactionDate");
+    expect(later).not.toHaveProperty("instant");
+  });
 });
 
 describe("sync", () => {

@@ -3,26 +3,26 @@
     {
       "id": "enablebanking",
       "image": "ledgerly-plugin-enablebanking",
-      "digest": "sha256:9c3ad0f109640d4e956c28eb3ebdc55af2c462b8951759c04321aad5acac3780",
+      "digest": "sha256:0375bf4d54dc766ac11af361d91accda3a16ed6296230ca79d2ed48239c93f89",
       "egress": ["api.enablebanking.com"]
     },
     {
       "id": "prices",
       "image": "ledgerly-plugin-prices",
-      "digest": "sha256:bf34cf0b93335ca04a1d4ce00da0f96f908a1e352ba25926f58a18e4bf0a214d",
+      "digest": "sha256:4749c7d69117d660bfa80670fc59994b0fb856a991a9093beb1b486764b70d32",
       "egress": ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
     },
     {
       "id": "trek",
       "image": "ledgerly-plugin-trek",
-      "digest": "sha256:21e5ce24d901aa7e79f00d5ce331e7aacd5e75419eb84bc98c8649512d20a48f",
+      "digest": "sha256:5a86587f5de2c95a27c46dd13d614298edf53f052df60ca631849d4018b50e7b",
       "egress": [],
       "dynamicHost": { "credential": "baseUrl" }
     },
     {
       "id": "wallet",
       "image": "ledgerly-plugin-wallet",
-      "digest": "sha256:588ee817972cf11527226258ea564a4a763821efc6af34b8babd4aec8dd7d375",
+      "digest": "sha256:40cbc38ea9fedac737e71fe6bc272e6c13b90b42c3aa24cc23cd80c7bc6d89e5",
       "egress": ["rest.budgetbakers.com"]
     }
   ]

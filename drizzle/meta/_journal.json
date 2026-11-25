@@ -547,6 +547,13 @@
       "when": 1795650000000,
       "tag": "0077_r5f_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795660000000,
+      "tag": "0078_movement_time_known",
+      "breakpoints": true
     }
   ]
 }

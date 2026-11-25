@@ -18,6 +18,8 @@ export interface IncomingTransaction {
   externalId: string;
   counterpartExternalId: string | null;
   occurredAt: Date;
+  /** `occurredAt` carries the provider's time of day; absent or `false`, it stands in for a day. */
+  timeKnown?: boolean;
   amountCents: Cents;
   currency: string;
   type: TransactionType;
@@ -64,6 +66,7 @@ export interface StoredTransaction {
   id: string;
   accountId: string;
   occurredAt: Date;
+  timeKnown?: boolean;
   amountCents: Cents;
   currency: string;
   type: TransactionType;
@@ -81,6 +84,7 @@ export interface StoredTransaction {
 export interface NewTransaction {
   accountId: string;
   occurredAt: Date;
+  timeKnown?: boolean;
   amountCents: Cents;
   currency: string;
   type: TransactionType;
@@ -95,6 +99,7 @@ export interface NewTransaction {
 export interface TransactionPatch {
   accountId?: string;
   occurredAt?: Date;
+  timeKnown?: boolean;
   amountCents?: Cents;
   currency?: string;
   type?: TransactionType;

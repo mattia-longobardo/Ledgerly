@@ -89,6 +89,8 @@ export const transactionRow = z.object({
   id: id(),
   on: civilDate(),
   occurredAt: instant(),
+  /** `occurredAt` carries a real time of day. `false`: show `on` alone, never the time of `occurredAt`. */
+  timeKnown: z.boolean(),
   accountId: id(),
   accountName: z.string().nullable(),
   amount: money(),
@@ -164,6 +166,7 @@ export const TRANSACTION_ROW_EXAMPLE = {
   id: TRANSACTION_ID,
   on: "2026-10-14",
   occurredAt: "2026-10-14T08:12:00.000Z",
+  timeKnown: true,
   accountId: ACCOUNT_ID,
   accountName: "Everyday account",
   amount: "-42.80",

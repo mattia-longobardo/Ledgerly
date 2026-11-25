@@ -140,6 +140,13 @@ const transactionSchema = z.object({
   status: z.enum(["booked", "pending"]),
   bookingDate: isoDate.nullable(),
   valueDate: isoDate.nullable(),
+  /**
+   * The day of the operation (a card payment is booked days later), when the provider or the bank's
+   * text gives one. Optional: a plugin written before it stays in the contract.
+   */
+  transactionDate: isoDate.nullable().optional(),
+  /** The instant of the operation, when the bank gives a time; on `transactionDate` when both are there. */
+  instant: isoInstant.nullable().optional(),
   /** Never negative: `direction` says which way the money went. */
   amount: decimal,
   direction: z.enum(["credit", "debit"]),

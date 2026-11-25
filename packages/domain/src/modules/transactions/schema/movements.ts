@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
+  boolean,
   check,
   date,
   index,
@@ -48,6 +49,9 @@ export const transactions = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     occurredAt: moment("occurred_at").notNull(),
+    // `occurred_at` carries a real time of day. False: it stands in for a day (noon or midnight),
+    // and the interface shows the day alone.
+    timeKnown: boolean("time_known").notNull().default(false),
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull().default("EUR"),
     type: text("type", { enum: TRANSACTION_TYPES }).notNull(),

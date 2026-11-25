@@ -86,6 +86,7 @@ function row(on: CivilDate, amountCents: Cents, id = on + amountCents): Transact
     suggestedCategoryId: null,
     hidden: false,
     edited: false,
+    timeKnown: false,
   };
 }
 

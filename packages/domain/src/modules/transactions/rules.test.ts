@@ -241,6 +241,11 @@ describe("resolveType", () => {
 });
 
 describe("toNewTransaction", () => {
+  it("writes whether the time is known only when the provider says it", () => {
+    expect(toNewTransaction(incoming({ timeKnown: true }), resolution()).timeKnown).toBe(true);
+    expect(toNewTransaction(incoming(), resolution())).not.toHaveProperty("timeKnown");
+  });
+
   it("takes the amount, the date and the payee from the provider and the rest from the service", () => {
     expect(toNewTransaction(incoming({ payee: " Netflix " }), resolution())).toEqual({
       accountId: "a-1",
@@ -279,6 +284,32 @@ describe("planProviderMerge", () => {
       occurredAt: new Date("2026-03-06T10:00:00Z"),
     });
     expect(plan.changed).toBe(true);
+  });
+
+  it("follows the provider on whether the time is known, with the instant it describes", () => {
+    const at = new Date("2026-03-05T13:32:00Z");
+    expect(
+      planProviderMerge(stored(), incoming({ occurredAt: at, timeKnown: true }), resolution()).patch,
+    ).toEqual({
+      occurredAt: at,
+      timeKnown: true,
+    });
+    // The same instant, now known to be a real time: only the flag changes.
+    expect(planProviderMerge(stored(), incoming({ timeKnown: true }), resolution()).patch).toEqual({
+      timeKnown: true,
+    });
+    // A provider that does not say leaves a row without a known time as it is.
+    expect(planProviderMerge(stored({ timeKnown: false }), incoming(), resolution()).changed).toBe(false);
+  });
+
+  it("never overwrites the time of a date the user changed", () => {
+    const plan = planProviderMerge(
+      stored({ locallyEdited: ["occurredAt"] }),
+      incoming({ occurredAt: new Date("2026-03-05T13:32:00Z"), timeKnown: true }),
+      resolution(),
+    );
+    expect(plan.patch).toEqual({});
+    expect(plan.protectedFields).toEqual(["occurredAt"]);
   });
 
   it("never overwrites a category the user chose", () => {

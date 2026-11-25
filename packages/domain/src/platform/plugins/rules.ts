@@ -309,6 +309,16 @@ function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
+/** What a movement says of its operation: its day, a day before the booking (the day shown moves), its time. */
+function operationMeasures(one: PluginTransaction): string[] {
+  const earlier = one.transactionDate && one.bookingDate !== null && one.transactionDate < one.bookingDate;
+  return [
+    ...(one.transactionDate ? ["withTransactionDate"] : []),
+    ...(earlier ? ["withEarlierTransactionDate"] : []),
+    ...(one.instant ? ["withInstant"] : []),
+  ];
+}
+
 /**
  * The first reading of a bank as numbers only (step 1 of N1: the trial on a real bank, 04-now.md
  * §4.2). It says what the bank exposes — accounts, kinds of balance, ids of the movements, codes,
@@ -357,6 +367,7 @@ export function measureReading(
     if (one.bookingDate !== null) days.push(one.bookingDate);
     else add("withoutBookingDate");
     if (one.valueDate !== null) add("withValueDate");
+    for (const key of operationMeasures(one)) add(key);
     if (one.counterparty !== null) add("withCounterparty");
     if (one.merchantCategoryCode !== null) add("withMerchantCode");
     if (one.bankTransactionCode !== null) add("withBankCode");

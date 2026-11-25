@@ -24,10 +24,18 @@ import type { IncomingMovement, RemoteAccount } from "./ports";
  * would be declared gone every hour (spec §7.2).
  */
 function occurredAtOf(movement: { occurredAt: Date | null; occurredOn: string }, timeZone: string): Date {
-  if (movement.occurredAt === null) return startOfDayIn(movement.occurredOn, timeZone);
-  return civilDateIn(movement.occurredAt, timeZone) === movement.occurredOn
-    ? movement.occurredAt
-    : startOfDayIn(movement.occurredOn, timeZone);
+  return (
+    timeOn(movement.occurredOn, movement.occurredAt, timeZone) ?? startOfDayIn(movement.occurredOn, timeZone)
+  );
+}
+
+/**
+ * The instant of a movement when it falls on its own day in the person's zone, else `null`: the
+ * invariant of {@link occurredAtOf}, for every provider that gives a day and maybe a time. `null`
+ * means the time of day is not known, and the row says so (`time_known`).
+ */
+export function timeOn(day: string, instant: Date | null, timeZone: string): Date | null {
+  return instant !== null && civilDateIn(instant, timeZone) === day ? instant : null;
 }
 
 /**
@@ -80,15 +88,14 @@ export function toIncomingMovement(
 ): IncomingMovement {
   const { transfer, ...filed } = categoryOf(movement, categories);
   const amountCents = parseCents(movement.amount);
+  const instant = movement.instant === null ? null : new Date(movement.instant);
   // A record this app wrote carries its marker in the note (`send.ts`): the plugin gives the note
   // the person's own again, and the key says which waiting movement the record is.
   return {
     externalId: movement.externalId,
     counterpartExternalId: movement.counterpartExternalId,
-    occurredAt: occurredAtOf(
-      { occurredAt: movement.instant === null ? null : new Date(movement.instant), occurredOn: movement.day },
-      timeZone,
-    ),
+    occurredAt: occurredAtOf({ occurredAt: instant, occurredOn: movement.day }, timeZone),
+    timeKnown: timeOn(movement.day, instant, timeZone) !== null,
     amountCents,
     currency: movement.currency,
     // A type the source did not name is the sign's, which is what `resolveType` (T3) concludes anyway.

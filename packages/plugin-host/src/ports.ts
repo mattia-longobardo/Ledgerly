@@ -40,7 +40,12 @@ interface IbanOwner {
 export interface ReadingMovement {
   /** Unique for the person and the provider, and the same at every reading. */
   externalId: string;
+  /** The booking day: what the identity and the cut of a switch go by. */
   day: CivilDate;
+  /** The day of the operation, when the bank gives one; the movement is shown on it. */
+  operationDay: CivilDate | null;
+  /** The instant of the operation, when the bank gives a time. */
+  instant: Date | null;
   /** Never negative: `direction` says which way the money went. */
   amount: string;
   direction: "credit" | "debit";

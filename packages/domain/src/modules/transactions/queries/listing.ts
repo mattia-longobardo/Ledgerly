@@ -142,6 +142,7 @@ export async function listTransactions(
       accountName: accountNames.get(transaction.accountId) ?? null,
       occurredAt: transaction.occurredAt,
       on,
+      timeKnown: transaction.timeKnown,
       amountCents: transaction.amountCents,
       currency: transaction.currency,
       type: transaction.type,
