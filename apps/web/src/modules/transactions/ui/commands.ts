@@ -5,8 +5,7 @@
  * DOM tests replace, which keeps them away from the network entirely.
  */
 
-import { TRANSACTIONS } from "@ledgerly/api-contract";
-import { movements, review, spending } from "@ledgerly/api-contract/transactions";
+import { giroconti, movements, review, spending } from "@ledgerly/api-contract/transactions";
 import { categories as categoryRoutes, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call, type RouteInput } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
@@ -165,12 +164,6 @@ export async function editInSource(id: string, input: SourceEditInput): Promise<
     return sourceRefusal(error);
   }
 }
-
-/**
- * The giroconti's calls. shortcut: read from the contract's root, because its `transactions` entry
- * does not export `giroconti` yet; import them from there once it does.
- */
-export const { giroconti } = TRANSACTIONS;
 
 /** The other side of a giroconto: one of the person's accounts, an account outside, or none (an income or a spending again). */
 export type TransferSide = RouteInput<typeof giroconti.setTransferSide>["body"];

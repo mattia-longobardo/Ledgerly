@@ -13,9 +13,10 @@ import {
 import type { RouteOutput } from "@ledgerly/api-client";
 import { Button } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
+import { giroconti } from "@ledgerly/api-contract/transactions";
 import { useApi } from "@ledgerly/ui/data";
 import { notify } from "@ledgerly/ui/toast";
-import { answerTransferProposal, giroconti } from "./commands";
+import { answerTransferProposal } from "./commands";
 
 type Proposal = RouteOutput<typeof giroconti.listTransferProposals>["proposals"][number];
 
