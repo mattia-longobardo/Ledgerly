@@ -102,13 +102,12 @@ describe("a payslip typed by hand (ST-21)", () => {
   it("writes the old type beside the kind, and an extra payment of the employer by its number", async () => {
     await saveEmployer(ctx, { payFrequency: "monthly", extraMonths: [12, 6] });
     const payslip = await createManualPayslip(ctx, manual({ kind: "extra", month: null, extraNumber: 2 }));
-    expect(payslip).toMatchObject({ kind: "extra", extraNumber: 2, type: "fourteenth", period: null, active: true });
+    expect(payslip).toMatchObject({ kind: "extra", extraNumber: 2, period: null, active: true });
     expect(await employerOf(ctx)).toEqual({ payFrequency: "monthly", extraMonths: [12, 6], configured: true });
   });
 
-  it("stores its fields as pairs and in the old columns, and the register sums them", async () => {
+  it("stores its fields as pairs, and the register sums them", async () => {
     const payslip = await createManualPayslip(ctx, manual({ fields: { irpefGross: 65_000n, tfrSelected: 20_000n } }));
-    expect(payslip.irpefGross).toBe(65_000n);
     const view = await manualPayslipView(ctx, payslip.id);
     expect(view?.fields).toEqual({ irpefGross: 65_000n, tfrSelected: 20_000n });
     const [year] = (await registerView(ctx)).years;
@@ -120,14 +119,14 @@ describe("a payslip typed by hand (ST-21)", () => {
     await createManualPayslip(ctx, manual());
     await rejects(createManualPayslip(ctx, manual()), "month_applied");
     await rejects(createManualPayslip(ctx, manual({ month: 5, net: 300_001n })), "invalid_value");
-    await rejects(createManualPayslip(ctx, manual({ kind: "extra", month: null, extraNumber: 4 })), "invalid_value");
+    await rejects(createManualPayslip(ctx, manual({ kind: "extra", month: null, extraNumber: 13 })), "invalid_value");
   });
 
   it("is changed in place and deleted, leaving the register", async () => {
     const payslip = await createManualPayslip(ctx, manual({ fields: { irpefGross: 1n } }));
     await updateManualPayslip(ctx, payslip.id, manual({ month: 2, gross: 280_000n, net: 200_000n }));
     const changed = await manualPayslipView(ctx, payslip.id);
-    expect(changed?.payslip).toMatchObject({ period: "2031-02-01", gross: 280_000n, irpefGross: null });
+    expect(changed?.payslip).toMatchObject({ period: "2031-02-01", gross: 280_000n });
     expect(changed?.fields).toEqual({});
     expect(await deleteManualPayslip(ctx, payslip.id)).toEqual({ deletedDocument: false });
     expect((await registerView(ctx)).years).toEqual([]);
@@ -166,7 +165,7 @@ describe("a payslip typed by hand (ST-21)", () => {
 });
 
 describe("a payslip read with a profile (E4)", () => {
-  it("writes the fields of the pack as pairs equal to its columns", async () => {
+  it("writes the fields of the pack as pairs", async () => {
     const { document } = await uploadPayslip(ctx, { name: "march.pdf", bytes: await twinPdf(MARCH) });
     await processPayslip(ctx, document.id);
     const [payslip] = await getDb().select().from(payslips).where(eq(payslips.documentId, document.id));
@@ -178,7 +177,6 @@ describe("a payslip read with a profile (E4)", () => {
     expect(pairs.length).toBeGreaterThan(0);
     for (const pair of pairs) {
       expect(COUNTRY_FIELDS.map((field) => field.key)).toContain(pair.key);
-      expect(payslip[pair.key as keyof typeof payslip]).toBe(pair.value);
     }
     expect(pairs.map((pair) => pair.key)).toContain("irpefGross");
   });

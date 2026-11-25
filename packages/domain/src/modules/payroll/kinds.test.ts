@@ -9,31 +9,22 @@ import {
   kindOf,
   kindOfType,
   manualPayslipSchema,
-  PAYSLIP_TYPES,
   periodOfManual,
   ralEstimate,
   REGISTER_FIELDS,
   type RegisterPayslip,
   SUMMED_FIELDS,
-  typeOfKind,
 } from "./rules";
 
-describe("the kind of a payslip and its old type", () => {
-  it("maps every old type to a kind and back", () => {
-    for (const type of PAYSLIP_TYPES) {
-      const { kind, extraNumber } = kindOfType(type);
-      expect(typeOfKind(kind, extraNumber)).toBe(type);
-    }
+describe("the kind of a payslip", () => {
+  it("turns the type a profile reads into a kind and an extra payment's number", () => {
+    expect(kindOfType("thirteenth")).toEqual({ kind: "extra", extraNumber: 1 });
     expect(kindOfType("fourteenth")).toEqual({ kind: "extra", extraNumber: 2 });
+    expect(kindOfType("bonus")).toEqual({ kind: "bonus", extraNumber: null });
   });
 
-  it("has no old type for a fourth extra payment", () => {
-    expect(() => typeOfKind("extra", 4)).toThrow(RangeError);
-  });
-
-  it("reads the stored kind first, the old type on a row without one", () => {
-    expect(kindOf({ type: "thirteenth", kind: null })).toEqual({ kind: "extra", extraNumber: 1 });
-    expect(kindOf({ type: "bonus", kind: "bonus", extraNumber: null })).toEqual({ kind: "bonus", extraNumber: null });
+  it("is the stored kind and number", () => {
+    expect(kindOf({ kind: "extra", extraNumber: 4 })).toEqual({ kind: "extra", extraNumber: 4 });
   });
 });
 
@@ -58,7 +49,8 @@ describe("the catalogue of fields (E4)", () => {
 
 describe("ralEstimate with the employer's extra payments (E6)", () => {
   const month = (period: string, gross: bigint): RegisterPayslip => ({
-    type: "ordinary",
+    kind: "ordinary",
+    extraNumber: null,
     year: 2026,
     period,
     gross,
@@ -68,7 +60,6 @@ describe("ralEstimate with the employer's extra payments (E6)", () => {
   const months = (count: number) =>
     Array.from({ length: count }, (_, index) => month(`2026-${String(index + 1).padStart(2, "0")}-01`, 100_000n));
   const extra = (number: number, gross: bigint): RegisterPayslip => ({
-    type: typeOfKind("extra", number),
     kind: "extra",
     extraNumber: number,
     year: 2026,
@@ -136,7 +127,8 @@ describe("a payslip typed by hand (ST-21)", () => {
     expect(valid({ extraNumber: 1 })).toBe(false);
     expect(valid({ kind: "extra", month: null, extraNumber: null })).toBe(false);
     expect(valid({ kind: "extra", month: 12, extraNumber: 1 })).toBe(false);
-    expect(valid({ kind: "extra", month: null, extraNumber: 4 })).toBe(false);
+    expect(valid({ kind: "extra", month: null, extraNumber: 4 })).toBe(true);
+    expect(valid({ kind: "extra", month: null, extraNumber: 13 })).toBe(false);
   });
 
   it("refuses a field outside the catalogue and a date that is not one", () => {

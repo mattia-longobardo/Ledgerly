@@ -1,11 +1,11 @@
 import { addMonths, type CivilDate, type MonthKey } from "../../../shared/dates";
 import type { Cents } from "../../../shared/money";
 import type { MoneyField } from "../fields";
-import { kindOfType, type PayslipType } from "./legacy";
+import type { PayslipType } from "./legacy";
 import { DEFAULT_EMPLOYER, type Employer, type PayslipKind } from "./payslip";
 import type { CodeRole } from "./roles";
 
-export { kindOfType, PAYSLIP_TYPES, type PayslipType, typeOfKind } from "./legacy";
+export { kindOfType, PAYSLIP_TYPES, type PayslipType } from "./legacy";
 export {
   BASE_FIELDS,
   type BaseField,
@@ -153,10 +153,8 @@ export function logicalKey(payslip: {
 }
 
 export interface RegisterPayslip {
-  type: PayslipType;
-  /** Null on a row the image before R5g wrote: its old `type` says it. */
-  kind?: PayslipKind | null;
-  extraNumber?: number | null;
+  kind: PayslipKind;
+  extraNumber: number | null;
   year: number;
   period: MonthKey | null;
   gross: Cents | null;
@@ -164,21 +162,21 @@ export interface RegisterPayslip {
   netPay: Cents | null;
 }
 
-/** A payslip's kind and extra payment's number: stored, or from its old type. */
-export function kindOf(payslip: Pick<RegisterPayslip, "kind" | "extraNumber"> & { type: string }): {
+/** A payslip's kind and extra payment's number. */
+export function kindOf(payslip: Pick<RegisterPayslip, "kind" | "extraNumber">): {
   kind: PayslipKind;
   extraNumber: number | null;
 } {
-  return payslip.kind ? { kind: payslip.kind, extraNumber: payslip.extraNumber ?? null } : kindOfType(payslip.type);
+  return { kind: payslip.kind, extraNumber: payslip.extraNumber };
 }
 
 /** An extra payment (13th, 14th…): kept out of monthly averages, in the yearly totals (spec §7.8 "Medie"). */
-export function isExtra(payslip: Pick<RegisterPayslip, "type" | "kind" | "extraNumber">): boolean {
+export function isExtra(payslip: Pick<RegisterPayslip, "kind" | "extraNumber">): boolean {
   return kindOf(payslip).kind === "extra";
 }
 
 /** An ordinary payslip: one month's pay, what the means and the KPIs read. */
-export function isOrdinary(payslip: Pick<RegisterPayslip, "type" | "kind" | "extraNumber">): boolean {
+export function isOrdinary(payslip: Pick<RegisterPayslip, "kind" | "extraNumber">): boolean {
   return kindOf(payslip).kind === "ordinary";
 }
 

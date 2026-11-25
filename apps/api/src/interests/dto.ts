@@ -30,8 +30,6 @@ function ruleRow(row: ViewRow): Row {
       rate: fractionToPercent(tier.annualRate),
     })),
     tax: fractionToPercent(rule.taxRate),
-    // Deprecated: worked out from the day count, so R5f can drop the column (R5f.1).
-    dayBasis: rule.dayCount === "360" ? ("360" as const) : ("365" as const),
     dayCount: rule.dayCount,
     periodAnchor: rule.periodAnchor,
     paymentWindowDays: rule.paymentWindowDays,

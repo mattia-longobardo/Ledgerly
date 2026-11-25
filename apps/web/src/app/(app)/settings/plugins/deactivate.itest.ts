@@ -10,7 +10,7 @@ import { listAccounts } from "@domain/modules/accounts/queries";
 import { restoreSourceAccounts } from "@domain/modules/accounts/service";
 import { createRule } from "@domain/modules/interests/service";
 import {
-  allowanceOf,
+  listTypeAllowances,
   listLeaveDays,
   pendingCount,
   saveLeaveDay,
@@ -164,7 +164,6 @@ async function walletInUse() {
   await createRule(ctx, {
     accountId: general.id,
     taxRate: "0",
-    dayBasis: "365",
     settlement: "monthly",
     validFrom: "2026-01-01",
     validTo: null,
@@ -383,7 +382,7 @@ describe("Turn off Trek", () => {
     const window = { from: "2026-01-01", to: "2026-12-31" } as const;
     const days = await listLeaveDays(ctx, window);
     const before = await numbers();
-    const allowance = await allowanceOf(ctx, 2026);
+    const allowances = await listTypeAllowances(ctx);
 
     const trek: Source = { provider: TREK_PROVIDER, pluginId: "trek", days: true, bank: false };
     expect((await deactivationCounts(ctx, trek)).pendingDays).toBe(pending);
@@ -393,7 +392,7 @@ describe("Turn off Trek", () => {
     expect((await listLeaveDays(ctx, window)).map((one) => [one.on, one.typeId, one.fraction])).toEqual(
       days.map((one) => [one.on, one.typeId, one.fraction]),
     );
-    expect(await allowanceOf(ctx, 2026)).toEqual(allowance);
+    expect(await listTypeAllowances(ctx)).toEqual(allowances);
     expect(differences(before, await numbers())).toEqual([]);
     expect(await listConnections(ctx)).toEqual([]);
   });

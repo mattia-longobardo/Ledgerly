@@ -21,15 +21,12 @@ import {
   restDayInputSchema,
 } from "../rules";
 import { leaveAllowances, leaveDays, leaveRestDays, leaveSettings, leaveTypes } from "../schema";
-import { legacyAllowanceField, timeoffAllowances } from "../schema/legacy";
 import { TimeOffError } from "./errors";
 
 type TypeRow = typeof leaveTypes.$inferSelect;
 
-/** A type as the screens and the API read it: the rules' view and the old kind it still writes. */
-export interface LeaveTypeView extends LeaveType {
-  legacyKind: string | null;
-}
+/** A type as the screens and the API read it: the rules' view. */
+export type LeaveTypeView = LeaveType;
 
 const asType = (row: TypeRow): LeaveTypeView => ({
   id: row.id,
@@ -40,7 +37,6 @@ const asType = (row: TypeRow): LeaveTypeView => ({
   toCalendar: row.toCalendar,
   balanceKey: row.balanceKey,
   calendarKind: row.calendarKind,
-  legacyKind: row.legacyKind,
 });
 
 /**
@@ -271,27 +267,16 @@ export async function saveTypeAllowance(
   const parsed = allowanceInputSchema.safeParse(input);
   if (!parsed.success) throw new TimeOffError("invalid_input");
   if (!Number.isInteger(year) || year < 1990 || year > 2200) throw new TimeOffError("invalid_input");
-  const type = await leaveTypeOf(ctx, typeId);
   const fixed = (value: number | null) => (value === null ? null : value.toFixed(2));
   const values = { days: fixed(parsed.data.days), carriedDays: fixed(parsed.data.carriedDays) };
-  const legacy = legacyAllowanceField(type.legacyKind);
-  await getDb().transaction(async (tx) => {
-    await tx
-      .insert(leaveAllowances)
-      .values(userScoped(ctx).stamp({ typeId, year, ...values }))
-      .onConflictDoUpdate({
-        target: [leaveAllowances.userId, leaveAllowances.typeId, leaveAllowances.year],
-        set: { ...values, updatedAt: new Date() },
-      });
-    if (legacy === null) return;
-    await tx
-      .insert(timeoffAllowances)
-      .values(userScoped(ctx).stamp({ year, [legacy]: values.days }))
-      .onConflictDoUpdate({
-        target: [timeoffAllowances.userId, timeoffAllowances.year],
-        set: { [legacy]: values.days, updatedAt: new Date() },
-      });
-  });
+  await leaveTypeOf(ctx, typeId);
+  await getDb()
+    .insert(leaveAllowances)
+    .values(userScoped(ctx).stamp({ typeId, year, ...values }))
+    .onConflictDoUpdate({
+      target: [leaveAllowances.userId, leaveAllowances.typeId, leaveAllowances.year],
+      set: { ...values, updatedAt: new Date() },
+    });
   return { typeId, year, days: parsed.data.days, carriedDays: parsed.data.carriedDays };
 }
 

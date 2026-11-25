@@ -778,14 +778,7 @@
      },
      "fund": {
       "archivedAt": null,
-      "debitAccountId": null,
-      "debitDay": null,
-      "depositFeeCents": null,
-      "isin": null,
-      "monthlyCents": null,
-      "receivesPayroll": false,
-      "startOn": "2030-11-01",
-      "ter": null
+      "startOn": "2030-11-01"
      },
      "metrics": {
       "accruedCents": "0",
@@ -823,7 +816,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -842,7 +834,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -861,7 +852,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -880,7 +870,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -899,7 +888,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -918,7 +906,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -937,7 +924,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -956,7 +942,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -975,7 +960,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -994,7 +978,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -1013,7 +996,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -1032,7 +1014,6 @@
       {
        "competenceQuarter": null,
        "competenceYear": null,
-       "documentId": null,
        "employerCents": "0",
        "employerName": null,
        "employerTaxCode": null,
@@ -3262,217 +3243,174 @@
  },
  "timeOff": {
   "2031": {
-   "accrual": {
-    "rol": {
-     "leads": false,
-     "payslipPeriod": "2031-04-01",
-     "rate": {
-      "minutesPerMonth": 399.6
-     },
-     "yearEndMinutes": 4917
+   "allowances": {
+    "ROL": {
+     "carriedDays": null,
+     "days": 4,
+     "year": 2031
     },
-    "vacation": {
-     "leads": false,
-     "payslipPeriod": "2031-04-01",
-     "rate": {
-      "minutesPerMonth": 399.5999999999998
-     },
-     "yearEndMinutes": 4857
+    "Vacation": {
+     "carriedDays": null,
+     "days": 26,
+     "year": 2031
     }
    },
-   "allowance": {
-    "note": null,
-    "totalDays": null,
-    "year": 2031
+   "balances": {
+    "ROL": {
+     "accrual": {
+      "leads": false,
+      "payslipPeriod": "2031-04-01",
+      "rate": {
+       "minutesPerMonth": 399.6
+      },
+      "yearEndMinutes": 4917
+     },
+     "allowanceMinutes": 1920,
+     "carriedMinutes": 360,
+     "residual": {
+      "countedThrough": "2031-03-01",
+      "plannedMinutes": 240,
+      "remainingMinutes": 1720,
+      "snapshotPeriod": "2031-04-01",
+      "takenMinutes": 0
+     }
+    },
+    "Vacation": {
+     "accrual": {
+      "leads": false,
+      "payslipPeriod": "2031-04-01",
+      "rate": {
+       "minutesPerMonth": 399.5999999999998
+      },
+      "yearEndMinutes": 4857
+     },
+     "allowanceMinutes": 12480,
+     "carriedMinutes": 300,
+     "residual": {
+      "countedThrough": "2031-03-01",
+      "plannedMinutes": 1440,
+      "remainingMinutes": 1660,
+      "snapshotPeriod": "2031-04-01",
+      "takenMinutes": 0
+     }
+    }
    },
    "months": {
     "2031-01-01": {
      "counted": true,
      "missingMinutes": 0,
      "month": "2031-01-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-02-01": {
      "counted": true,
      "missingMinutes": 480,
      "month": "2031-02-01",
-     "payroll": {
-      "rolMinutes": 0,
-      "vacationMinutes": 480
+     "payrollByType": {
+      "Vacation": {
+       "minutes": 480
+      }
      },
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "plannedMinutes": 0
     },
     "2031-03-01": {
      "counted": true,
      "missingMinutes": 240,
      "month": "2031-03-01",
-     "payroll": {
-      "rolMinutes": 240,
-      "vacationMinutes": 0
+     "payrollByType": {
+      "ROL": {
+       "minutes": 240
+      }
      },
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "plannedMinutes": 0
     },
     "2031-04-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-04-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-05-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-05-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-06-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-06-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-07-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-07-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-08-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-08-01",
-     "payroll": null,
+     "payrollByType": null,
      "plannedMinutes": 1440,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 1440
+     "recordedByType": {
+      "Vacation": {
+       "minutes": 1440
+      }
      }
     },
     "2031-09-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-09-01",
-     "payroll": null,
+     "payrollByType": null,
      "plannedMinutes": 240,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 240,
-      "vacationMinutes": 0
+     "recordedByType": {
+      "ROL": {
+       "minutes": 240
+      }
      }
     },
     "2031-10-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-10-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-11-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-11-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     },
     "2031-12-01": {
      "counted": false,
      "missingMinutes": 0,
      "month": "2031-12-01",
-     "payroll": null,
-     "plannedMinutes": 0,
-     "recorded": {
-      "otherMinutes": 0,
-      "rolMinutes": 0,
-      "vacationMinutes": 0
-     }
+     "payrollByType": null,
+     "plannedMinutes": 0
     }
    },
-   "overdrawn": [],
-   "rol": {
-    "allowanceMinutes": 1920,
-    "carriedMinutes": 360,
-    "residual": {
-     "countedThrough": "2031-03-01",
-     "plannedMinutes": 240,
-     "remainingMinutes": 1720,
-     "snapshotPeriod": "2031-04-01",
-     "takenMinutes": 0
-    }
-   },
-   "totalAllowanceMinutes": null,
    "totals": {
-    "byKind": {
-     "rol": {
+    "byType": {
+     "ROL": {
       "minutes": 240
      },
-     "vacation": {
+     "Vacation": {
       "minutes": 1440
      }
     },
     "plannedMinutes": 1680,
     "takenMinutes": 0,
     "totalMinutes": 1680
-   },
-   "vacation": {
-    "allowanceMinutes": 12480,
-    "carriedMinutes": 300,
-    "residual": {
-     "countedThrough": "2031-03-01",
-     "plannedMinutes": 1440,
-     "remainingMinutes": 1660,
-     "snapshotPeriod": "2031-04-01",
-     "takenMinutes": 0
-    }
    }
   }
  }

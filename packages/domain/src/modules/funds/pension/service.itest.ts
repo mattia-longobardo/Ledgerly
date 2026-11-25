@@ -159,7 +159,8 @@ describe("competences from applied payslips (plan F6 L1)", () => {
     const [competence] = await competencesOf(ctx, fund.id);
     expect(competence).toMatchObject({
       payrollPeriod: null,
-      payslipType: "thirteenth",
+      kind: "extra",
+      extraNumber: 1,
       quarter: 4,
       workerCents: 500n,
       workerAdjustmentCents: -2_000n,
@@ -421,7 +422,6 @@ describe("reconciliation on the recorded operations, with no document (release N
     expect(operation).toMatchObject({
       classification: "contribution",
       source: "manual",
-      documentId: null,
       sourceId: (await payslipSourceOf(fund.id)).id,
       competenceYear: 2031,
       competenceQuarter: 1,

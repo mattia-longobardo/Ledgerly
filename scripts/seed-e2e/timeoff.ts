@@ -1,5 +1,5 @@
 // scripts/seed-e2e/timeoff.ts — the users and the data of the flow `timeoff` (tests/e2e/timeoff/).
-import { saveLeaveDay, saveTypeAllowance, saveYearNote } from "@domain/modules/timeoff/service";
+import { saveLeaveDay, saveTypeAllowance } from "@domain/modules/timeoff/service";
 import { oldLeaveTypes } from "../../test/leave-types";
 import { today } from "@domain/shared/dates";
 import { contextOf, workingDay } from "./common";
@@ -18,7 +18,6 @@ export async function seedTimeOff(email: string): Promise<void> {
   const types = await oldLeaveTypes(ctx);
   await saveTypeAllowance(ctx, types.vacation, year, { days: 26 });
   await saveTypeAllowance(ctx, types.rol, year, { days: 4 });
-  await saveYearNote(ctx, year, { totalDays: null, note: "CCNL" });
   await saveLeaveDay(ctx, { from: workingDay(on, -14), typeId: types.vacation, fraction: 1 });
   await saveLeaveDay(ctx, { from: workingDay(on, 21), typeId: types.vacation, fraction: 1 });
   await saveLeaveDay(ctx, { from: workingDay(on, -7), typeId: types.rol, fraction: 0.5 });

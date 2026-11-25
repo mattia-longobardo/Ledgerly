@@ -9,11 +9,10 @@ import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../../platform/db/errors";
 import { userScoped } from "../../../platform/db/scope";
 import { appliedEventOf } from "../applied";
-import { MONEY_FIELDS, type MoneyField } from "../fields";
 import { payslipApplied, payslipWithdrawn } from "../events";
-import { baseColumnsOf, type ManualPayslip, manualPayslipSchema, type PayslipKind, periodOfManual, typeOfKind } from "../rules";
+import { baseColumnsOf, type ManualPayslip, manualPayslipSchema, type PayslipKind, periodOfManual } from "../rules";
 import { payslips } from "../schema";
-import { ACTIVE_KEYS, ofKind, PayrollError, type Payslip } from "./codes";
+import { ACTIVE_KEY, ofKind, PayrollError, type Payslip } from "./codes";
 import { type Pairs, pairsOf, writePairs } from "./fields";
 
 /** A manual payslip as the API reads it: the row, its pairs and its document's name. */
@@ -70,26 +69,17 @@ async function attachable(ctx: Pick<Ctx, "userId">, documentId: string, transact
   if (!(await transition(ctx, documentId, "applied", {}, transaction))) throw new PayrollError("invalid_state");
 }
 
-/** The fields of a pack as the fixed columns they are too, until R5f. */
-function legacyColumns(fields: Readonly<Record<string, bigint>>): Partial<Record<MoneyField, bigint>> {
-  return Object.fromEntries(MONEY_FIELDS.flatMap((field) => (field in fields ? [[field, fields[field]]] : [])));
-}
-
 function rowOf(input: ManualPayslip) {
-  const type = typeOfKind(input.kind, input.extraNumber);
   return {
     employerKey: "",
     employeeKey: "",
     year: input.year,
     period: periodOfManual(input),
-    type,
     kind: input.kind,
     extraNumber: input.extraNumber,
     source: "manual" as const,
     paidOn: input.paidOn,
     ...baseColumnsOf(input),
-    // The fixed columns stay written beside the pairs until R5f: every field of a pack is one.
-    ...legacyColumns(input.fields),
   };
 }
 
@@ -98,7 +88,7 @@ async function writing<T>(work: () => Promise<T>): Promise<T> {
     return await work();
   } catch (error) {
     // Another write took the month between the check and the insert: retrying shows `month_applied`.
-    if (ACTIVE_KEYS.some((key) => hasPgError(error, UNIQUE_VIOLATION, key))) throw new PayrollError("conflict");
+    if (hasPgError(error, UNIQUE_VIOLATION, ACTIVE_KEY)) throw new PayrollError("conflict");
     throw error;
   }
 }
@@ -147,11 +137,9 @@ export async function updateManualPayslip(ctx: Pick<Ctx, "userId">, id: string, 
         await attachable(ctx, parsed.documentId, transaction);
       }
       await payslipWithdrawn(ctx, id, transaction);
-      // Every pair's column back to null first: a field the person removed is no longer written.
-      const cleared = Object.fromEntries(MONEY_FIELDS.map((field) => [field, null]));
       const [payslip] = await transaction
         .update(payslips)
-        .set({ ...cleared, ...row, documentId: parsed.documentId })
+        .set({ ...row, documentId: parsed.documentId })
         .where(and(eq(payslips.id, id), userScoped(ctx).owns(payslips)))
         .returning();
       await writePairs(ctx, id, parsed.fields, transaction);

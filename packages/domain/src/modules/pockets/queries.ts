@@ -213,24 +213,9 @@ async function pocketLedgers(
   const expenses = await expensesByPocket(ctx, open, todayOn);
   const ledgers = open.map((pocket) => {
     const own = byPocket.get(pocket.id) ?? [];
-    // Withdrawals recorded by hand before expenses were counted still count, and are listed.
-    const manual: Spend[] = own
-      .filter((movement) => movement.kind === "withdrawal")
-      .map((movement) => ({
-        id: movement.id,
-        on: movement.on,
-        cents: -movement.amountCents,
-        payee: movement.reason,
-        note: null,
-        accountId: null,
-        linked: false,
-        manual: true,
-      }));
-    const spent = [...(expenses.get(pocket.id) ?? []), ...manual].sort(newestFirst);
-    const ledger = pocketLedger(
-      own.filter((movement) => movement.kind !== "withdrawal"),
-      spent,
-    );
+    // A spend is an expense of the pocket's category: none is stored as a withdrawal (R5f).
+    const spent = [...(expenses.get(pocket.id) ?? [])].sort(newestFirst);
+    const ledger = pocketLedger(own, spent);
     return { pocket, own, spent, ledger, balanceCents: pocketBalance(ledger) };
   });
   return { rows, ledgers };

@@ -6,13 +6,7 @@ import "server-only";
 import { getAccount } from "@ledgerly/domain/accounts";
 import { AccountError, removeAccount } from "@ledgerly/domain/accounts";
 import { BudgetError, limitsOnAccount, moveLimitsAccount } from "@ledgerly/domain/budgets";
-import {
-  FundError,
-  fundsOnAccount,
-  moveFundAccount,
-  moveFundSourceAccount,
-  releaseFormerAccountReferences,
-} from "@ledgerly/domain/funds";
+import { FundError, fundsOnAccount, moveFundAccount, moveFundSourceAccount } from "@ledgerly/domain/funds";
 import { InterestError, moveRuleAccount, rulesToMove } from "@ledgerly/domain/interests";
 import { movePocketAccount, PocketError, pocketsToMove } from "@ledgerly/domain/pockets";
 import {
@@ -147,7 +141,6 @@ export async function moveDependent(
  */
 export async function deleteAccount(ctx: Pick<Ctx, "userId">, accountId: string): Promise<void> {
   if ((await accountDependents(ctx, accountId)).length > 0) throw new DeleteError("in_use");
-  await releaseFormerAccountReferences(ctx, accountId);
   let deleted;
   try {
     deleted = await removeAccount(ctx, accountId);

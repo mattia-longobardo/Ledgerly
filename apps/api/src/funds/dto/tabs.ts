@@ -1,6 +1,6 @@
 // Funds · the one serializer of a fund's other tabs, of what a removal hands back and of the reads of
 // the forms (audit API-2, FND-3). The numbers are the views'; here they only change form, never value.
-import type { z } from "zod";
+import { z } from "zod";
 import type { FUNDS } from "@ledgerly/api-contract";
 import type {
   FundFee,
@@ -12,8 +12,10 @@ import type {
   movementCandidates,
 } from "@ledgerly/domain/funds";
 import { fractionToPercent } from "@ledgerly/domain/interests";
-import { kindOf } from "@ledgerly/domain/payroll";
+import { PAYSLIP_KINDS } from "@ledgerly/api-contract/payroll";
 import { debitOut, fundRef, maybe, money, operationOut, periodOut } from "./home";
+
+const PAYSLIP_KIND = z.enum(PAYSLIP_KINDS);
 
 type Valuations = z.input<typeof FUNDS.funds.getFundValuations.response>;
 type Contributions = z.input<typeof FUNDS.funds.getFundContributions.response>;
@@ -130,13 +132,9 @@ function payslipsOut(detail: Detail, payslips: ContributionsData["payslips"]) {
       payslipId: competence.payslipId,
       documentId: detail.payslipDocuments.get(competence.payslipId) ?? null,
       month: competence.payrollPeriod,
-      payslipType: competence.payslipType,
-      // shortcut: the competence stores the old type only; kind from it until R5f stores the kind.
-      ...kindOf({
-        type: competence.payslipType,
-        kind: null,
-        extraNumber: null,
-      }),
+      // The competence keeps payroll's kind as it came: read here against the contract's words.
+      kind: PAYSLIP_KIND.parse(competence.kind),
+      extraNumber: competence.extraNumber,
       year: competence.year,
       index,
       worker: maybe(competence.workerCents),

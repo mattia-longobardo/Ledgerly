@@ -21,14 +21,6 @@ function canonicalTimeZone(value: string): string | null {
   return new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions().timeZone;
 }
 
-const patronSaintSchema = z
-  .object({ month: z.number().int().min(1).max(12), day: z.number().int().min(1).max(31) })
-  .refine(({ month, day }) => {
-    // 2023 is not a leap year, so 29 February is correctly rejected as an impossible day.
-    const probe = new Date(Date.UTC(2023, month - 1, day));
-    return probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
-  }, "Not a real calendar day");
-
 export const preferencesInputSchema = z.object({
   timeZone: z
     .string()
@@ -50,14 +42,13 @@ export const preferencesInputSchema = z.object({
   // «Nascondi importi» (R5e, G5): one switch for every client of the person.
   hideAmounts: z.boolean().default(false),
   minutesPerDay: z.number().int().min(60).max(720),
-  patronSaint: patronSaintSchema.nullable(),
 });
 
 export type Preferences = z.infer<typeof preferencesInputSchema>;
 
 /** What Time off › Settings changes: only leave reads these, and each form saves its own. */
 export const timeOffPreferencesSchema = preferencesInputSchema
-  .pick({ minutesPerDay: true, patronSaint: true })
+  .pick({ minutesPerDay: true })
   .partial()
   .strict();
 export type TimeOffPreferences = z.infer<typeof timeOffPreferencesSchema>;
@@ -75,7 +66,6 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   monthlySummary: false,
   hideAmounts: false,
   minutesPerDay: 480,
-  patronSaint: null,
 });
 
 /** A short, human label for a session's user agent (Settings › Security › Sessions). */

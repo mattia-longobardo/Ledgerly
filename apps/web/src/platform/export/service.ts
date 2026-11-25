@@ -417,7 +417,6 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
       columns: [
         "year",
         "period",
-        "type",
         "kind",
         "extraNumber",
         "source",
@@ -433,7 +432,6 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         summary.rows.map((row) => ({
           year: row.payslip.year,
           period: row.payslip.period,
-          type: row.payslip.type,
           ...kindOf(row.payslip),
           source: row.payslip.source,
           paidOn: row.payslip.paidOn,

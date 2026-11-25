@@ -2,14 +2,7 @@
 export { markPosted, postEntry } from "./service/posting";
 export { interestsView, publishingRulesOn, ruleAccounts, ruleDetail, rulesOnAccount } from "./queries";
 export type { RuleRow } from "./queries";
-export {
-  ACCRUAL_READING_MAX_AGE_HOURS,
-  DAY_BASES,
-  fractionToPercent,
-  ruleInputOf,
-  runsAt,
-  SETTLEMENTS,
-} from "./rules";
+export { ACCRUAL_READING_MAX_AGE_HOURS, fractionToPercent, ruleInputOf, runsAt, SETTLEMENTS } from "./rules";
 export type { PlainRule, Tier } from "./rules";
 export { interestRules } from "./schema";
 export {

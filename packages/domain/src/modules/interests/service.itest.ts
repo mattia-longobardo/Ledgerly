@@ -1,10 +1,7 @@
-import { eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { removeAccount, saveBalanceEntry } from "../accounts/service";
 import { upsertFromProvider } from "../transactions/service";
 import type { Ctx } from "../../platform/context";
-import { getDb } from "../../platform/db/client";
-import { interestRules } from "./schema";
 import { monthKey, startOfDayIn, today } from "../../shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
@@ -21,7 +18,6 @@ function rule(overrides: Record<string, unknown> = {}) {
   return {
     accountId,
     taxRate: "0",
-    dayBasis: "365" as const,
     settlement: "monthly" as const,
     validFrom: "2026-01-01",
     validTo: "2026-03-31",
@@ -73,7 +69,7 @@ describe("accrual and settlement (spec §7.6)", () => {
       ctx,
       rule({
         validTo: "2026-01-31",
-        dayBasis: "360",
+        dayCount: "360",
         tiers: [
           { upToCents: 500_000n, annualRate: "0.036" },
           { upToCents: null, annualRate: "0" },
@@ -84,38 +80,8 @@ describe("accrual and settlement (spec §7.6)", () => {
     expect((await ruleDetail(ctx, created.id)).settlements[0].entry.netCents).toBe(31n * 50n);
   });
 
-  it("keeps the accruals of a rule of before R5g, which had only a day basis (E6)", async () => {
-    const old = rule({
-      validTo: "2026-01-31",
-      dayBasis: "360",
-      tiers: [{ upToCents: null, annualRate: "0.036" }],
-    });
-    const created = await createRule(ctx, old);
-    expect(created).toMatchObject({
-      dayBasis: "360",
-      dayCount: "360",
-      periodAnchor: "calendar",
-      paymentWindowDays: null,
-    });
-    // A row of before the migration: `day_count` at its column default; the data step of
-    // drizzle/0075 (same statement) brings it back to the day basis.
-    await getDb().update(interestRules).set({ dayCount: "365" }).where(eq(interestRules.id, created.id));
-    await getDb().execute(
-      sql`UPDATE "interest_rules" SET "day_count" = "day_basis" WHERE "day_count" IS DISTINCT FROM "day_basis"`,
-    );
-    await updateRule(ctx, created.id, old);
-    const detail = await ruleDetail(ctx, created.id);
-    expect(detail.rule.dayCount).toBe("360");
-    // 10.000 € × 3,6 % / 360 = 1,00 € a day, as before.
-    expect(detail.settlements.map((row) => row.entry.netCents)).toEqual([3_100n]);
-  });
-
-  it("accrues act_act on the days of the year, and writes the day basis as 365", async () => {
-    const created = await createRule(
-      ctx,
-      rule({ dayBasis: undefined, dayCount: "act_act", validTo: "2026-01-31" }),
-    );
-    expect(created.dayBasis).toBe("365");
+  it("accrues act_act on the days of the year", async () => {
+    const created = await createRule(ctx, rule({ dayCount: "act_act", validTo: "2026-01-31" }));
     // 2026 is not a leap year: the same 1,00 € a day as on 365.
     expect((await ruleDetail(ctx, created.id)).settlements[0].entry.netCents).toBe(3_100n);
   });

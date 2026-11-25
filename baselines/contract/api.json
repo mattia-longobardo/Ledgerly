@@ -719,21 +719,18 @@
       "days": [
        {
         "on": "2031-08-11",
-        "kind": "vacation",
         "fraction": 1,
         "typeId": "<id-29>",
         "minutes": null
        },
        {
         "on": "2031-08-12",
-        "kind": "vacation",
         "fraction": 1,
         "typeId": "<id-29>",
         "minutes": null
        },
        {
         "on": "2031-08-13",
-        "kind": "vacation",
         "fraction": 1,
         "typeId": "<id-29>",
         "minutes": null
@@ -757,21 +754,18 @@
       "days": [
        {
         "on": "2031-08-11",
-        "kind": "vacation",
         "fraction": 1,
         "typeId": "<id-29>",
         "minutes": null
        },
        {
         "on": "2031-08-12",
-        "kind": "vacation",
         "fraction": 1,
         "typeId": "<id-29>",
         "minutes": null
        },
        {
         "on": "2031-08-13",
-        "kind": "vacation",
         "fraction": 1,
         "typeId": "<id-29>",
         "minutes": null
@@ -811,7 +805,6 @@
       "days": [
        {
         "on": "2031-09-19",
-        "kind": "rol",
         "fraction": 0.5,
         "typeId": "<id-30>",
         "minutes": null
@@ -835,7 +828,6 @@
       "days": [
        {
         "on": "2031-09-19",
-        "kind": "rol",
         "fraction": 0.5,
         "typeId": "<id-30>",
         "minutes": null
@@ -887,37 +879,6 @@
    "today": "2031-10-15",
    "minutesPerDay": 480,
    "weekStart": 1,
-   "allowance": {
-    "year": 2031,
-    "vacationDays": 26,
-    "rolDays": 4,
-    "totalDays": null,
-    "note": null
-   },
-   "vacation": {
-    "residual": {
-     "basis": "payslip",
-     "remainingMinutes": 1660,
-     "takenMinutes": 0,
-     "plannedMinutes": 1440,
-     "snapshotPeriod": "2031-04-01",
-     "countedThrough": "2031-03-01"
-    },
-    "allowanceMinutes": 12480,
-    "carriedMinutes": 300
-   },
-   "rol": {
-    "residual": {
-     "basis": "payslip",
-     "remainingMinutes": 1720,
-     "takenMinutes": 0,
-     "plannedMinutes": 240,
-     "snapshotPeriod": "2031-04-01",
-     "countedThrough": "2031-03-01"
-    },
-    "allowanceMinutes": 1920,
-    "carriedMinutes": 360
-   },
    "bars": [
     {
      "month": 1,
@@ -1003,7 +964,6 @@
      "source": "day",
      "id": "<id-33>",
      "on": "2031-08-11",
-     "kind": "vacation",
      "typeId": "<id-29>",
      "fraction": 1,
      "minutes": null,
@@ -1016,7 +976,6 @@
      "source": "day",
      "id": "<id-34>",
      "on": "2031-08-12",
-     "kind": "vacation",
      "typeId": "<id-29>",
      "fraction": 1,
      "minutes": null,
@@ -1029,7 +988,6 @@
      "source": "day",
      "id": "<id-35>",
      "on": "2031-08-13",
-     "kind": "vacation",
      "typeId": "<id-29>",
      "fraction": 1,
      "minutes": null,
@@ -1042,7 +1000,6 @@
      "source": "day",
      "id": "<id-36>",
      "on": "2031-09-19",
-     "kind": "rol",
      "typeId": "<id-30>",
      "fraction": 0.5,
      "minutes": null,
@@ -1055,37 +1012,10 @@
    "years": [
     2031
    ],
-   "unrecorded": [
-    {
-     "month": "2031-02-01",
-     "kind": "vacation",
-     "payrollMinutes": 480,
-     "recordedMinutes": 0,
-     "missingMinutes": 480
-    },
-    {
-     "month": "2031-03-01",
-     "kind": "rol",
-     "payrollMinutes": 240,
-     "recordedMinutes": 0,
-     "missingMinutes": 240
-    }
-   ],
-   "overdrawn": [],
    "totals": {
     "takenMinutes": 0,
     "plannedMinutes": 1680,
     "totalMinutes": 1680,
-    "byKind": [
-     {
-      "kind": "vacation",
-      "minutes": 1440
-     },
-     {
-      "kind": "rol",
-      "minutes": 240
-     }
-    ],
     "byType": [
      {
       "typeId": "<id-29>",
@@ -1101,12 +1031,6 @@
    "months": [
     {
      "month": "2031-01-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1115,15 +1039,6 @@
     },
     {
      "month": "2031-02-01",
-     "payroll": {
-      "vacationMinutes": 480,
-      "rolMinutes": 0
-     },
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": [
       {
        "typeId": "<id-29>",
@@ -1137,15 +1052,6 @@
     },
     {
      "month": "2031-03-01",
-     "payroll": {
-      "vacationMinutes": 0,
-      "rolMinutes": 240
-     },
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": [
       {
        "typeId": "<id-30>",
@@ -1159,12 +1065,6 @@
     },
     {
      "month": "2031-04-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1173,12 +1073,6 @@
     },
     {
      "month": "2031-05-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1187,12 +1081,6 @@
     },
     {
      "month": "2031-06-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1201,12 +1089,6 @@
     },
     {
      "month": "2031-07-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1215,12 +1097,6 @@
     },
     {
      "month": "2031-08-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 1440,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [
       {
@@ -1234,12 +1110,6 @@
     },
     {
      "month": "2031-09-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 240,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [
       {
@@ -1253,12 +1123,6 @@
     },
     {
      "month": "2031-10-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1267,12 +1131,6 @@
     },
     {
      "month": "2031-11-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1281,12 +1139,6 @@
     },
     {
      "month": "2031-12-01",
-     "payroll": null,
-     "recorded": {
-      "vacationMinutes": 0,
-      "rolMinutes": 0,
-      "otherMinutes": 0
-     },
      "payrollByType": null,
      "recordedByType": [],
      "plannedMinutes": 0,
@@ -1294,146 +1146,8 @@
      "counted": false
     }
    ],
-   "totalAllowanceMinutes": null,
-   "allowanceMismatch": null,
    "holidays": [],
-   "residualInputs": {
-    "vacation": {
-     "snapshot": {
-      "period": "2031-04-01",
-      "remainingHours": 51.66
-     },
-     "allowanceMinutes": 12480,
-     "carriedMinutes": 300,
-     "days": [
-      {
-       "on": "2031-08-11",
-       "kind": "vacation",
-       "fraction": 1,
-       "typeId": "<id-29>",
-       "minutes": null
-      },
-      {
-       "on": "2031-08-12",
-       "kind": "vacation",
-       "fraction": 1,
-       "typeId": "<id-29>",
-       "minutes": null
-      },
-      {
-       "on": "2031-08-13",
-       "kind": "vacation",
-       "fraction": 1,
-       "typeId": "<id-29>",
-       "minutes": null
-      }
-     ],
-     "countedThrough": "2031-03-01",
-     "today": null,
-     "minutesPerDay": 480
-    },
-    "rol": {
-     "snapshot": {
-      "period": "2031-04-01",
-      "remainingHours": 32.66
-     },
-     "allowanceMinutes": 1920,
-     "carriedMinutes": 360,
-     "days": [
-      {
-       "on": "2031-09-19",
-       "kind": "rol",
-       "fraction": 0.5,
-       "typeId": "<id-30>",
-       "minutes": null
-      }
-     ],
-     "countedThrough": "2031-03-01",
-     "today": null,
-     "minutesPerDay": 480
-    }
-   },
-   "external": null,
-   "accrual": {
-    "vacation": {
-     "rate": {
-      "minutesPerMonth": 399.5999999999998,
-      "source": "payslip"
-     },
-     "yearEndMinutes": 4857,
-     "payslipPeriod": "2031-04-01",
-     "leads": false
-    },
-    "rol": {
-     "rate": {
-      "minutesPerMonth": 399.6,
-      "source": "payslip"
-     },
-     "yearEndMinutes": 4917,
-     "payslipPeriod": "2031-04-01",
-     "leads": false
-    }
-   },
-   "forecastInputs": {
-    "vacation": {
-     "rate": {
-      "minutesPerMonth": 399.5999999999998,
-      "source": "payslip"
-     },
-     "opening": {
-      "source": "payslip",
-      "minutes": 3100,
-      "accruedThrough": "2031-04-01",
-      "spentFrom": "2031-04-01"
-     },
-     "days": [
-      {
-       "on": "2031-08-11",
-       "kind": "vacation",
-       "fraction": 1,
-       "typeId": "<id-29>",
-       "minutes": null
-      },
-      {
-       "on": "2031-08-12",
-       "kind": "vacation",
-       "fraction": 1,
-       "typeId": "<id-29>",
-       "minutes": null
-      },
-      {
-       "on": "2031-08-13",
-       "kind": "vacation",
-       "fraction": 1,
-       "typeId": "<id-29>",
-       "minutes": null
-      }
-     ],
-     "minutesPerDay": 480
-    },
-    "rol": {
-     "rate": {
-      "minutesPerMonth": 399.6,
-      "source": "payslip"
-     },
-     "opening": {
-      "source": "payslip",
-      "minutes": 1960,
-      "accruedThrough": "2031-04-01",
-      "spentFrom": "2031-04-01"
-     },
-     "days": [
-      {
-       "on": "2031-09-19",
-       "kind": "rol",
-       "fraction": 0.5,
-       "typeId": "<id-30>",
-       "minutes": null
-      }
-     ],
-     "minutesPerDay": 480
-    }
-   }
+   "external": null
   }
  },
  "GET /nothing-here": {
@@ -1454,7 +1168,6 @@
        "payslipId": "<id-38>",
        "year": 2031,
        "period": "2031-04-01",
-       "type": "ordinary",
        "kind": "ordinary",
        "extraNumber": null,
        "source": "read",
@@ -1513,7 +1226,6 @@
        "payslipId": "<id-40>",
        "year": 2031,
        "period": "2031-03-01",
-       "type": "ordinary",
        "kind": "ordinary",
        "extraNumber": null,
        "source": "read",
@@ -2747,16 +2459,6 @@
      "share": 1
     }
    ],
-   "funds": {
-    "total": "7719.00",
-    "rows": [
-     {
-      "id": "<id-41>",
-      "name": "Fideuram Piano Accumulo",
-      "value": "7719.00"
-     }
-    ]
-   },
    "total": {
     "value": "20369.00",
     "valuePartial": false,

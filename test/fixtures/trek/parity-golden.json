@@ -38,146 +38,159 @@
   "leaveDays": [
     {
       "on": "2025-12-15",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 08:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-03-10",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-04-01",
-      "kind": "sick",
+      "type": "Other",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": null,
-      "trek_fraction": null,
-      "trek_kind": null
+      "external_fraction": null,
+      "external_kind": null,
+      "external_state": null
     },
     {
       "on": "2026-05-05",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "0.5",
       "note": null,
       "origin": "external",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "0.5",
-      "trek_kind": "vacation"
+      "external_fraction": "0.5",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-05-06",
-      "kind": "comp",
+      "type": "Time off in lieu",
       "fraction": "1.0",
       "note": null,
       "origin": "external",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-06-16",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-06-17",
-      "kind": "rol",
+      "type": "ROL",
       "fraction": "0.5",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-06-17",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "0.5",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-06-18",
-      "kind": "comp",
+      "type": "Time off in lieu",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-06-19",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "upsert",
       "synced_at": null,
-      "trek_fraction": null,
-      "trek_kind": null
+      "external_fraction": null,
+      "external_kind": null,
+      "external_state": "refused"
     },
     {
       "on": "2026-06-22",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "1.0",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-07-01",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "0.5",
       "note": null,
       "origin": "manual",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "0.5",
-      "trek_kind": "vacation"
+      "external_fraction": "0.5",
+      "external_kind": "vacation",
+      "external_state": "synced"
     },
     {
       "on": "2026-08-03",
-      "kind": "vacation",
+      "type": "Vacation",
       "fraction": "1.0",
       "note": null,
       "origin": "external",
       "pending": "none",
       "synced_at": "2026-06-10 09:07:00+00",
-      "trek_fraction": "1.0",
-      "trek_kind": "vacation"
+      "external_fraction": "1.0",
+      "external_kind": "vacation",
+      "external_state": "synced"
     }
   ],
   "runs": [

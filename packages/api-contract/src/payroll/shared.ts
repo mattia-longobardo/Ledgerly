@@ -8,14 +8,12 @@ import { PAYROLL_LEAVE_KINDS } from "../timeoff/shared";
 
 // The vocabularies are the domain's (`@ledgerly/domain/payroll`, `imports`): the contract imports zod
 // only (10-modularity.md §10.2), so `tools/contract.test.ts` holds the lists equal.
-/** Deprecated (R5g): the old type; read `kind` and `extraNumber`. */
-export const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "fifteenth", "bonus", "settlement"] as const;
 export const PAYSLIP_KINDS = ["ordinary", "extra", "bonus", "settlement"] as const;
 /** `read`: from a document, through the review; `manual`: typed by hand, applied at once. */
 export const PAYSLIP_SOURCES = ["read", "manual"] as const;
 export const PAY_FREQUENCIES = ["monthly", "semimonthly", "biweekly", "weekly"] as const;
-/** The most extra payments an employer has, until the old type goes (R5f). */
-export const MAX_EXTRA_PAYMENTS = 3;
+/** The most extra payments an employer has: one a month. */
+export const MAX_EXTRA_PAYMENTS = 12;
 export const DOCUMENT_STATES = [
   "received",
   "scanning",
@@ -162,8 +160,6 @@ const registerRow = z.object({
   year: z.number().int(),
   /** The month paid; null for an extra payment and for the months a payslip does not name. */
   period: monthStart().nullable(),
-  /** Deprecated (R5g): read `kind` and `extraNumber`. */
-  type: z.enum(PAYSLIP_TYPES),
   ...kindOfPayslip,
   source: z.enum(PAYSLIP_SOURCES),
   /** Its document; null for a payslip typed by hand without one. */
@@ -240,8 +236,6 @@ export const payslipReview = z.object({
       id: id(),
       year: z.number().int(),
       period: monthStart().nullable(),
-      /** Deprecated (R5g): read `kind` and `extraNumber`. */
-      type: z.enum(PAYSLIP_TYPES),
       ...kindOfPayslip,
       source: z.enum(PAYSLIP_SOURCES),
       /** The country's fields, as pairs. */
@@ -306,7 +300,6 @@ export const REGISTER_EXAMPLE = {
           payslipId: PAYSLIP_ID,
           year: 2026,
           period: "2026-03-01",
-          type: "ordinary",
           kind: "ordinary",
           extraNumber: null,
           source: "read",
@@ -347,7 +340,6 @@ export const REVIEW_EXAMPLE = {
     id: PAYSLIP_ID,
     year: 2026,
     period: "2026-03-01",
-    type: "ordinary",
     kind: "ordinary",
     extraNumber: null,
     source: "read",

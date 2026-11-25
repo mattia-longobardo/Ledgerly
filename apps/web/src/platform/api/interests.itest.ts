@@ -66,7 +66,6 @@ const body = (accountId: string, overrides: Record<string, unknown> = {}) => ({
     { upTo: null, rate: "1.5" },
   ],
   tax: "26",
-  dayBasis: "365",
   settlement: "monthly",
   payeeMatch: null,
   mode: "analyze_only",

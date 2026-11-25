@@ -306,7 +306,8 @@ export function catalogOut(view: Awaited<ReturnType<typeof catalogView>>): Catal
       url: provider.url,
       revokeUrl: provider.revokeUrl,
       connect: provider.connect,
-      status: provider.status,
+      // The catalog lists only what can be connected (R5b): every entry is available.
+      status: "available",
       connected: provider.connected,
     })),
     existing: view.existing.map((one) => ({

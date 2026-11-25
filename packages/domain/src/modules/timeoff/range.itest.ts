@@ -9,7 +9,7 @@ import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
-import { oldLeaveTypes, type OldTypes } from "../../../../../test/leave-types";
+import { oldLeaveTypes, type OldTypes, wordOf } from "../../../../../test/leave-types";
 import { timeOffView } from "./queries";
 import { calendar, type LeaveUndo } from "./rules";
 import {
@@ -55,7 +55,7 @@ afterAll(closeDatabase);
 /** The rows of the year as the assertions read them: date, kind, size, what Trek is owed. */
 async function rows(of: Ctx = ctx) {
   return (await listLeaveDays(of, WINDOW))
-    .map((row) => [row.on, row.kind, row.fraction, row.pending])
+    .map((row) => [row.on, wordOf(of === ctx ? T : O, row.typeId), row.fraction, row.pending])
     .sort((a, b) => `${a[0]} ${a[1]}`.localeCompare(`${b[0]} ${b[1]}`));
 }
 
@@ -93,7 +93,7 @@ describe("writing a range", () => {
       note: "pm",
     });
     expect(result.days).toHaveLength(1);
-    expect(result.days[0]).toMatchObject({ on: TUE, kind: "comp", fraction: "0.5", note: "pm" });
+    expect(result.days[0]).toMatchObject({ on: TUE, typeId: T.comp, fraction: "0.5", note: "pm" });
   });
 
   it("writes every row or none: a failure on one day leaves the whole range unwritten", async () => {
@@ -246,7 +246,7 @@ describe("what a range replaces", () => {
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
     await saveLeaveRange(ctx, { from: MON, to: TUE, typeId: T.vacation, fraction: 0.5 });
     const row = (await listLeaveDays(ctx, WINDOW)).find((one) => one.on === TUE);
-    expect(row).toMatchObject({ id: day.id, fraction: "0.5", pending: "upsert", observedFraction: "1.0" });
+    expect(row).toMatchObject({ id: day.id, fraction: "0.5", pending: "upsert", externalFraction: "1.0" });
     expect(row?.syncedAt).not.toBeNull();
   });
 
@@ -303,9 +303,9 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
       [TUE, "rol", "0.5", "upsert"],
       [TUE, "vacation", "0.5", "upsert"],
     ]);
-    expect(stored.find((row) => row.kind === "vacation")).toMatchObject({
+    expect(stored.find((row) => row.typeId === T.vacation)).toMatchObject({
       id: whole.id,
-      observedFraction: "1.0",
+      externalFraction: "1.0",
     });
   });
 
@@ -504,8 +504,8 @@ describe("undo", () => {
       id: day.id,
       note: "trip",
       pending: "upsert",
-      observedFraction: "1.0",
-      observedKind: "vacation",
+      externalFraction: "1.0",
+      externalKind: "vacation",
     });
     expect(row.syncedAt).not.toBeNull();
   });
@@ -536,7 +536,7 @@ describe("undo", () => {
     await restoreLeave(ctx, result.undo);
     const days = await listLeaveDays(ctx, WINDOW);
     expect(days).toHaveLength(1);
-    expect(days[0]).toMatchObject({ kind: "vacation", fraction: "1.0", note: "trip" });
+    expect(days[0]).toMatchObject({ typeId: T.vacation, fraction: "1.0", note: "trip" });
   });
 
   it("leaves alone a row that is as it was, so nothing is queued for Trek without a reason", async () => {

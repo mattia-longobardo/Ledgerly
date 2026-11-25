@@ -266,7 +266,6 @@ describe("the payslips of the export (rewrite plan R5g, criterion 6)", () => {
       expect.objectContaining({
         kind: "extra",
         extraNumber: 1,
-        type: "thirteenth",
         source: "manual",
         gross: "3000.00",
         taxes: "600.00",

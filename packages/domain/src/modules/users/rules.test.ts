@@ -7,10 +7,8 @@ describe("preferencesInputSchema", () => {
       ...DEFAULT_PREFERENCES,
       locale: "it",
       timeZone: "Europe/London",
-      patronSaint: { month: 12, day: 7 },
     });
     expect(parsed.locale).toBe("it");
-    expect(parsed.patronSaint).toEqual({ month: 12, day: 7 });
   });
 
   it("takes EUR or an ECB currency as the display currency, and EUR when none is sent", () => {
@@ -41,36 +39,6 @@ describe("preferencesInputSchema", () => {
   it("stores the canonical zone name", () => {
     const parsed = preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, timeZone: "Europe/Rome" });
     expect(parsed.timeZone).toBe("Europe/Rome");
-  });
-
-  it("rejects an impossible patron-saint date", () => {
-    expect(() =>
-      preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, patronSaint: { month: 2, day: 30 } }),
-    ).toThrow();
-  });
-
-  it("rejects 29 February (the probe year is not a leap year)", () => {
-    expect(() =>
-      preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, patronSaint: { month: 2, day: 29 } }),
-    ).toThrow();
-  });
-
-  it("rejects an out-of-range patron-saint month", () => {
-    expect(() =>
-      preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, patronSaint: { month: 13, day: 1 } }),
-    ).toThrow();
-  });
-
-  it("rejects a zero patron-saint day", () => {
-    expect(() =>
-      preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, patronSaint: { month: 1, day: 0 } }),
-    ).toThrow();
-  });
-
-  it("rejects a non-integer patron-saint day", () => {
-    expect(() =>
-      preferencesInputSchema.parse({ ...DEFAULT_PREFERENCES, patronSaint: { month: 1, day: 15.5 } }),
-    ).toThrow();
   });
 
   it("bounds the working day", () => {

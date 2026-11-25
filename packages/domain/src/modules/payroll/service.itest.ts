@@ -90,7 +90,7 @@ describe("upload and reading (spec §9.3 steps 1–3)", () => {
     const [payslip] = await payslipsOf(ctx);
     expect(payslip).toMatchObject({
       documentId: id,
-      type: "ordinary",
+      kind: "ordinary",
       year: 2031,
       period: "2031-03-01",
       employerKey: "01234567890",
@@ -285,7 +285,7 @@ describe("applying (spec §7.8 \"Applicazione\")", () => {
   it("keeps a 13th apart from December and gives it no leave (acceptance 2, 6)", async () => {
     await applied(THIRTEENTH);
     const [payslip] = await payslipsOf(ctx);
-    expect(payslip).toMatchObject({ type: "thirteenth", period: null, active: true, employerFundEffective: null });
+    expect(payslip).toMatchObject({ kind: "extra", extraNumber: 1, period: null, active: true });
     expect(await getDb().select().from(payrollLeaveEvents)).toEqual([]);
     expect(await getDb().select().from(leaveBalanceSnapshots)).toEqual([]);
   });
@@ -298,7 +298,7 @@ describe("applying (spec §7.8 \"Applicazione\")", () => {
         .update(payslips)
         .set({ active: true, appliedAt: new Date() })
         .where(eq(payslips.documentId, second)),
-    ).rejects.toSatisfy((error) => hasPgError(error, "23505", "payslips_active_key_uq"));
+    ).rejects.toSatisfy((error) => hasPgError(error, "23505", "payslips_active_kind_uq"));
   });
 });
 

@@ -12,12 +12,8 @@ import {
   THEMES,
 } from "./rules";
 
-/**
- * What `modules` may hold: the addons, and `funds`, an addon until R5b made it part of Investments
- * (§13.7). Rows of before keep it; nothing reads it (`addonsOf` drops a name `ADDONS` has not). The
- * default and the check stay as the migration wrote them; R5f removes the name.
- */
-const STORED_MODULES = [ADDONS[0], "funds", ...ADDONS.slice(1)];
+/** What `modules` may hold: the addons (R5f removed `funds`, part of Investments since R5b). */
+const STORED_MODULES = [...ADDONS];
 
 export const userPreferences = pgTable(
   "user_preferences",
@@ -44,8 +40,6 @@ export const userPreferences = pgTable(
     // «Nascondi importi» (R5e, G5): the person's own, so every client of theirs hides amounts alike.
     hideAmounts: boolean("hide_amounts").notNull().default(false),
     minutesPerDay: integer("minutes_per_day").notNull(),
-    patronMonth: smallint("patron_month"),
-    patronDay: smallint("patron_day"),
     // The addons the person has on (R5a, H52). Every row written before R5a has them all (PA13):
     // for the people of today nothing changes.
     modules: text("modules")
@@ -63,7 +57,6 @@ export const userPreferences = pgTable(
   (table) => [
     check("user_preferences_week_start_ck", sql`${table.weekStart} in (0, 1)`),
     check("user_preferences_minutes_ck", sql`${table.minutesPerDay} between 60 and 720`),
-    check("user_preferences_patron_ck", sql`(${table.patronMonth} is null) = (${table.patronDay} is null)`),
     checkIn("user_preferences_locale_ck", table.locale, LOCALES),
     checkIn("user_preferences_number_format_ck", table.numberFormat, NUMBER_FORMATS),
     checkIn("user_preferences_decimal_separator_ck", table.decimalSeparator, DECIMAL_SEPARATORS, true),
@@ -76,13 +69,5 @@ export const userPreferences = pgTable(
     ),
     checkIn("user_preferences_theme_ck", table.theme, THEMES),
     checkIn("user_preferences_default_range_ck", table.defaultRange, DEFAULT_RANGES),
-    check(
-      "user_preferences_patron_month_ck",
-      sql`${table.patronMonth} is null or ${table.patronMonth} between 1 and 12`,
-    ),
-    check(
-      "user_preferences_patron_day_ck",
-      sql`${table.patronDay} is null or ${table.patronDay} between 1 and 31`,
-    ),
   ],
 );

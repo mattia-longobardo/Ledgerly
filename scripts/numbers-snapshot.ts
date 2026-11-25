@@ -166,19 +166,31 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
   const timeOff: Record<string, unknown> = {};
   for (const year of timeOffNow?.years ?? []) {
     const view = year === thisYear && timeOffNow ? timeOffNow : await timeOffView(ctx, year);
-    // The two old kinds as the API still answers them (R5g): the same figures as before the types,
-    // without the ids of the types, which differ from one database to the other.
+    // Every figure by the name of its type: the ids of the types differ from one database to the other.
     const wire = timeOffYear(view, null);
+    const names = new Map(view.types.map((type) => [type.id, type.name]));
+    // Keyed by the type's name, as a fund is by its own: one entry per type in every list here.
+    const named = <T extends { typeId: string | null }>(list: readonly T[]) =>
+      Object.fromEntries(list.map(({ typeId, ...one }) => [(typeId && names.get(typeId)) ?? "-", one]));
     timeOff[String(year)] = {
-      allowance: view.allowance,
-      vacation: wire.vacation,
-      rol: wire.rol,
-      totals: { ...wire.totals, byType: undefined },
-      // Release N5.1: what a month grants and the forecast at the year's end, per kind.
-      accrual: wire.accrual,
-      overdrawn: wire.overdrawn,
-      totalAllowanceMinutes: wire.totalAllowanceMinutes,
-      months: wire.months.map((month) => ({ ...month, payrollByType: undefined, recordedByType: undefined })),
+      allowances: named(view.allowances),
+      // The residual, the allowance and (release N5.1) what a month grants and the year's end, by type.
+      balances: named(
+        wire.balances.map(({ typeId, residual, allowanceMinutes, carriedMinutes, accrual }) => ({
+          typeId,
+          residual,
+          allowanceMinutes,
+          carriedMinutes,
+          accrual,
+        })),
+      ),
+      totals: { ...wire.totals, byType: named(wire.totals.byType) },
+      overdrawn: named(wire.overdrawnByType),
+      months: wire.months.map((month) => ({
+        ...month,
+        payrollByType: month.payrollByType === null ? null : named(month.payrollByType),
+        recordedByType: named(month.recordedByType),
+      })),
     };
   }
 

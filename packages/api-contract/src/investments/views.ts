@@ -261,11 +261,6 @@ export const investmentsHome = z.object({
   byClass: z.array(slice(z.enum([...ASSET_CLASSES, "unclassified"]))),
   byService: z.array(slice(id())),
   byCurrency: z.array(slice(z.string())),
-  /** The pension funds, read only, and their sum. Kept for the clients before R5b; R5f removes it. */
-  funds: z.object({
-    total: money().nullable(),
-    rows: z.array(z.object({ id: id(), name: z.string(), value: money().nullable() })),
-  }),
   /** The one list of R5b: one total, the two groups with their KPIs and their rows. */
   ...portfolioParts,
 });
@@ -379,8 +374,7 @@ export const investmentsCatalog = z.object({
   providers: z.array(
     connectable.extend({
       connect: z.enum(["apikey", "manual"]),
-      /** `planned`: listed under «Coming soon», it cannot be connected yet. */
-      status: z.enum(["available", "planned"]),
+      status: z.enum(["available"]),
       connected: z.array(z.object({ accountId: id(), name: z.string() })),
     }),
   ),

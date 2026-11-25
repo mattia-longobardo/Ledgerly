@@ -223,7 +223,6 @@ for (const index of [0, 1, 2, 3, 4, 5]) {
 const rule = await createRule(ctx, {
   accountId: second.id,
   taxRate: "0.26",
-  dayBasis: "365",
   settlement: "monthly",
   validFrom: `${thisYear}-01-01`,
   validTo: null,

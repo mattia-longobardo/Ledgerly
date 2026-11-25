@@ -4,7 +4,7 @@ import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../../platform/db/errors";
 import { userScoped } from "../../../platform/db/scope";
-import { fundContributionSources, fundDepositRules, funds } from "../schema";
+import { fundContributionSources, funds } from "../schema";
 import { matchDebits } from "./debits";
 import { FundError } from "./model";
 import { requireAccount } from "./reads";
@@ -72,24 +72,4 @@ export async function moveFundSourceAccount(
     .returning();
   if (!row) throw new FundError("not_found");
   if (row.kind === "bank_debit" && row.state === "active") await matchDebits(ctx, [row.fundId]);
-}
-
-/**
- * The model before N6 points at accounts too: `funds.debit_account_id` and `fund_deposit_rules`.
- * No code reads them (they stay for the image before, until R5f), and the sources above replaced
- * them, so they are not listed: a deletion clears them, write only, or their foreign key would
- * refuse it. The image before then sees a fund with no debit account, which is what it is.
- */
-export async function releaseFormerAccountReferences(
-  ctx: Pick<Ctx, "userId">,
-  accountId: string,
-): Promise<void> {
-  await getDb()
-    .update(funds)
-    .set({ debitAccountId: null })
-    .where(and(userScoped(ctx).owns(funds), eq(funds.debitAccountId, accountId)));
-  await getDb()
-    .update(fundDepositRules)
-    .set({ accountId: null })
-    .where(and(userScoped(ctx).owns(fundDepositRules), eq(fundDepositRules.accountId, accountId)));
 }

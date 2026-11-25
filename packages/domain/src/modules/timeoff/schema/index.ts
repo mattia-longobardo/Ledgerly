@@ -15,12 +15,12 @@ import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../../pla
 import { users } from "../../../platform/auth/schema";
 import { EXTERNAL_STATES, LEAVE_COLORS, LEAVE_UNITS, PENDING_STATES } from "../rules";
 import { inList } from "../../../platform/db/checks";
-import { LEAVE_ORIGINS, legacyLeaveDayChecks, legacyLeaveDayColumns } from "./legacy";
-
-export { timeoffAllowances } from "./legacy";
 
 /** The format of a word a type is known by outside: a payslip's balance, the calendar's kind. */
 const WORD = "^[a-z][a-z0-9_-]{0,39}$";
+
+/** Where a day came from: typed here, or read off the external calendar (R5c). */
+export const LEAVE_ORIGINS = ["manual", "external"] as const;
 
 /**
  * A type of leave (rewrite plan R5g, E6): data of the person, not a name in the code. The country
@@ -31,8 +31,7 @@ const WORD = "^[a-z][a-z0-9_-]{0,39}$";
  * - `to_calendar`: its days go to the external calendar;
  * - `balance_key`: the word a payslip prints its balance and its use under (payroll's vocabulary);
  * - `calendar_kind`: the word the external calendar holds its days under. The first type, by
- *   `position`, that has one gives the word every other type of the calendar goes across as;
- * - `legacy_kind`: the old kind it writes in `leave_days.kind` until R5f (null for a new type).
+ *   `position`, that has one gives the word every other type of the calendar goes across as.
  */
 export const leaveTypes = pgTable(
   "leave_types",
@@ -48,7 +47,6 @@ export const leaveTypes = pgTable(
     toCalendar: boolean("to_calendar").notNull(),
     balanceKey: text("balance_key"),
     calendarKind: text("calendar_kind"),
-    legacyKind: text("legacy_kind"),
     position: smallint("position").notNull(),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
@@ -62,8 +60,7 @@ export const leaveTypes = pgTable(
     check(
       "leave_types_words_ck",
       sql`coalesce(${table.balanceKey} ~ ${sql.raw(`'${WORD}'`)}, true)
-        and coalesce(${table.calendarKind} ~ ${sql.raw(`'${WORD}'`)}, true)
-        and coalesce(${table.legacyKind} ~ ${sql.raw(`'${WORD}'`)}, true)`,
+        and coalesce(${table.calendarKind} ~ ${sql.raw(`'${WORD}'`)}, true)`,
     ),
   ],
 );
@@ -165,8 +162,9 @@ export const leaveDays = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     on: date("on").notNull(),
-    /** Nullable only for the rows written by the image before R5g; every row since has one. */
-    typeId: uuid("type_id").references(() => leaveTypes.id, { onDelete: "restrict" }),
+    typeId: uuid("type_id")
+      .notNull()
+      .references(() => leaveTypes.id, { onDelete: "restrict" }),
     /** Half a day or a whole one; for a type counted in hours, the nearest of the two. */
     fraction: numeric("fraction", { precision: 2, scale: 1 }).notNull(),
     /** The length of a row of a type counted in hours; null for the others. */
@@ -175,7 +173,6 @@ export const leaveDays = pgTable(
     origin: text("origin", { enum: LEAVE_ORIGINS }).notNull().default("manual"),
     pending: text("pending", { enum: PENDING_STATES }).notNull().default("none"),
     syncedAt: moment("synced_at"),
-    ...legacyLeaveDayColumns(),
     /**
      * The observed pair in the words of contract 2 (rewrite plan R5c), the one read since R5g. The
      * kind is the calendar's own word, an open vocabulary: its check is a format (rule M13).
@@ -187,7 +184,6 @@ export const leaveDays = pgTable(
     updatedAt: updatedAtColumn(),
   },
   (table) => [
-    ...legacyLeaveDayChecks(table),
     unique("leave_days_user_on_type_uq").on(table.userId, table.on, table.typeId),
     index("leave_days_type_idx").on(table.typeId),
     index("leave_days_user_on_idx").on(table.userId, table.on),

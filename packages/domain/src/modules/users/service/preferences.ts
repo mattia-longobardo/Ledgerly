@@ -42,10 +42,6 @@ function fromRow(row: Row): Preferences {
     monthlySummary: row.monthlySummary,
     hideAmounts: row.hideAmounts,
     minutesPerDay: row.minutesPerDay,
-    patronSaint:
-      row.patronMonth !== null && row.patronDay !== null
-        ? { month: row.patronMonth, day: row.patronDay }
-        : null,
   };
 }
 
@@ -120,8 +116,6 @@ export function rowValues(prefs: Preferences) {
     monthlySummary: prefs.monthlySummary,
     hideAmounts: prefs.hideAmounts,
     minutesPerDay: prefs.minutesPerDay,
-    patronMonth: prefs.patronSaint?.month ?? null,
-    patronDay: prefs.patronSaint?.day ?? null,
   };
 }
 
@@ -130,7 +124,6 @@ const profileFormSchema = preferencesInputSchema.omit({
   // Not a field of the Profile form: a form that does not send it must not turn it off.
   hideAmounts: true,
   minutesPerDay: true,
-  patronSaint: true,
   defaultRange: true,
 });
 
@@ -153,7 +146,7 @@ export async function changePreferences(
 }
 
 /**
- * What the Profile form saves. Hours and patron saint are not its to write any more (PERS-158): they
+ * What the Profile form saves. Hours are not its to write any more (PERS-158): they
  * are left out, so a form loaded before a change on Time off › Settings cannot put the old values
  * back. `defaultRange` has no control left and nothing reads it: it just stays as it is.
  */

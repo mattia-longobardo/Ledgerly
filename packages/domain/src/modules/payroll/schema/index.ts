@@ -7,7 +7,6 @@ import { LEAVE_KINDS } from "../fields";
 import type { CheckResult, Warning } from "../parse/checks";
 import { CODE_ROLES, LINE_UNITS, MAX_EXTRA_PAYMENTS, PAY_FREQUENCIES, PAYSLIP_KINDS, PAYSLIP_SOURCES } from "../rules";
 import { inList } from "../../../platform/db/checks";
-import { legacyFieldColumns, legacyPayslipChecks, legacyTypeColumn } from "./legacy";
 
 const money = (name: string) => bigint(name, { mode: "bigint" });
 const hours = (name: string) => numeric(name, { precision: 8, scale: 2 });
@@ -72,9 +71,7 @@ export const payslips = pgTable(
     employeeKey: text("employee_key").notNull(),
     year: smallint("year").notNull(),
     period: date("period"),
-    ...legacyTypeColumn(),
-    /** Null only on a row the image before R5g wrote: its old `type` says it. */
-    kind: text("kind", { enum: PAYSLIP_KINDS }),
+    kind: text("kind", { enum: PAYSLIP_KINDS }).notNull(),
     /** The employer's extra payment it is: 1 for the first (a 13th), 2 for the second… */
     extraNumber: smallint("extra_number"),
     source: text("source", { enum: PAYSLIP_SOURCES }).notNull().default("read"),
@@ -92,24 +89,13 @@ export const payslips = pgTable(
     taxesTotal: money("taxes_total"),
     employeeSocial: money("employee_social"),
     netPay: money("net_pay"),
-    ...legacyFieldColumns(),
 
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("payslips_document_uq").on(table.documentId),
-    uniqueIndex("payslips_active_key_uq")
-      .on(
-        table.userId,
-        table.employerKey,
-        table.employeeKey,
-        table.year,
-        table.type,
-        sql`coalesce(${table.period}, '0001-01-01'::date)`,
-      )
-      .where(sql`${table.active}`),
-    // The key the code checks since R5f.1: kind and extra payment, not the old type.
+    // A month is applied once: by kind and extra payment.
     uniqueIndex("payslips_active_kind_uq")
       .on(
         table.userId,
@@ -122,7 +108,6 @@ export const payslips = pgTable(
       )
       .where(sql`${table.active}`),
     index("payslips_user_year_idx").on(table.userId, table.year),
-    ...legacyPayslipChecks(table),
     check("payslips_kind_ck", sql`${table.kind} is null or ${table.kind} in (${sql.raw(inList(PAYSLIP_KINDS))})`),
     check("payslips_source_ck", sql`${table.source} in (${sql.raw(inList(PAYSLIP_SOURCES))})`),
     check("payslips_document_ck", sql`${table.source} = 'manual' or ${table.documentId} is not null`),

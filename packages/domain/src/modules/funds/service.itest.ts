@@ -18,7 +18,7 @@ import { fundsExport } from "./overview";
 import { allPeriod } from "./period";
 import { type FundDetail, fundDetail, fundDetailFlows, hasPayrollCalendar } from "./queries";
 import { periodReturns } from "./rules";
-import { fundContributionSources, fundDepositRules, fundFees, funds } from "./schema";
+import { fundContributionSources, fundFees } from "./schema";
 import {
   addContribution,
   addFee,
@@ -31,7 +31,6 @@ import {
   matchDebits,
   proposeDebitMatch,
   recordValuation,
-  releaseFormerAccountReferences,
   removeFee,
   removeSource,
   restoreSource,
@@ -1060,29 +1059,5 @@ describe("the fees of a fund (release N6)", () => {
         fees: [{ ...onAssets, sourceIndex: 0 }],
       }),
     ).rejects.toMatchObject({ code: "invalid" });
-  });
-});
-
-describe("the references of the model before N6 to an account (PERS-419)", () => {
-  it("are cleared, write only, so the account can be deleted; nothing else of the fund changes", async () => {
-    const account = await anAccount(ctx, "Old");
-    const fund = await debitFund(ctx, input({ initialCents: null }));
-    await getDb().update(funds).set({ debitAccountId: account }).where(eq(funds.id, fund.id));
-    await getDb()
-      .insert(fundDepositRules)
-      .values({ userId: ctx.userId, fundId: fund.id, payeeMatch: "former", accountId: account });
-    await expect(removeAccount(ctx, account)).rejects.toMatchObject({ code: "in_use" });
-
-    await releaseFormerAccountReferences(ctx, account);
-    await removeAccount(ctx, account);
-    expect(await getAccount(ctx, account)).toBeNull();
-    const [row] = await getDb().select().from(funds).where(eq(funds.id, fund.id));
-    expect(row).toMatchObject({
-      debitAccountId: null,
-      name: fund.name,
-      valuationAccountId: fund.valuationAccountId,
-    });
-    const rules = await getDb().select().from(fundDepositRules).where(eq(fundDepositRules.fundId, fund.id));
-    expect(rules.map((one) => [one.payeeMatch, one.accountId])).toEqual([["former", null]]);
   });
 });

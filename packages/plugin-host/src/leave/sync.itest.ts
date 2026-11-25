@@ -31,7 +31,7 @@ import {
 import type { CalendarCalls } from "./calls";
 import { isCalendarBusy, syncCalendarNow, calendarFiguresOf } from "./sync";
 import { TREK_PROVIDER } from "../../../../test/fixtures/providers";
-import { oldLeaveTypes, type OldTypes } from "../../../../test/leave-types";
+import { oldLeaveTypes, type OldTypes, wordOf } from "../../../../test/leave-types";
 
 let ctx: Ctx;
 let types: OldTypes;
@@ -89,7 +89,7 @@ describe("a pass", () => {
     expect(dates(trek)).toEqual([TUE]);
 
     const after = await rowOn(TUE);
-    expect(after).toMatchObject({ pending: "none", observedFraction: "1.0", observedKind: "vacation" });
+    expect(after).toMatchObject({ pending: "none", externalFraction: "1.0", externalKind: "vacation" });
     expect(after?.syncedAt).not.toBeNull();
     expect(await pendingCount(ctx)).toBe(0);
   });
@@ -150,7 +150,7 @@ describe("a pass", () => {
 
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 0.5 });
     expect(trek.toggles.at(-1)?.action).toBe("updated");
-    expect(await rowOn(TUE)).toMatchObject({ pending: "none", observedFraction: "0.5" });
+    expect(await rowOn(TUE)).toMatchObject({ pending: "none", externalFraction: "0.5" });
   });
 
   it("leaves a failed send pending, and settles it on the next pass", async () => {
@@ -208,10 +208,10 @@ describe("a pass", () => {
     const adopted = await rowOn(WED);
     expect(adopted).toMatchObject({
       origin: "external",
-      kind: "vacation",
+      typeId: types.vacation,
       fraction: "1.0",
       pending: "none",
-      observedKind: "vacation",
+      externalKind: "vacation",
     });
     // Adopting it must not then send it back.
     expect(trek.toggles).toHaveLength(0);
@@ -252,10 +252,10 @@ describe("a pass", () => {
     // Trek has no ROL of its own, so what it is told is "this person is away".
     expect(trek.entryOn(WED)).toMatchObject({ fraction: 1, kind: "vacation" });
     expect(await rowOn(WED)).toMatchObject({
-      kind: "rol",
+      typeId: types.rol,
       pending: "none",
-      observedKind: "vacation",
-      observedFraction: "1.0",
+      externalKind: "vacation",
+      externalFraction: "1.0",
     });
 
     // And the day survives the next pass, exactly as a vacation day does.
@@ -302,7 +302,7 @@ describe("a pass", () => {
     const rows = await listLeaveDays(ctx, WINDOW);
     expect(rows).toHaveLength(2);
     for (const row of rows) {
-      expect(row).toMatchObject({ pending: "none", observedFraction: "1.0", observedKind: "vacation" });
+      expect(row).toMatchObject({ pending: "none", externalFraction: "1.0", externalKind: "vacation" });
     }
     expect(await pendingCount(ctx)).toBe(0);
 
@@ -326,7 +326,7 @@ describe("a pass", () => {
     expect(trek.toggles.at(-1)?.action).toBe("updated");
     const rows = await listLeaveDays(ctx, WINDOW);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ kind: "vacation", pending: "none", observedFraction: "0.5" });
+    expect(rows[0]).toMatchObject({ typeId: types.vacation, pending: "none", externalFraction: "0.5" });
     expect(await pendingCount(ctx)).toBe(0);
   });
 });
@@ -439,7 +439,7 @@ describe("a Trek that may only read", () => {
     const result = await pass(trek, spied(trek));
     expect(trek.toggles).toHaveLength(0);
     expect(result?.counts).toMatchObject({ applied: 0, failed: 0, readOnly: 1, unsettled: 1 });
-    expect(await rowOn(TUE)).toMatchObject({ pending: "upsert", observedKind: null });
+    expect(await rowOn(TUE)).toMatchObject({ pending: "upsert", externalKind: null });
     expect((await listRuns(ctx, { limit: 1 }))[0]).toMatchObject({ state: "failed", errorCode: "read_only" });
     const [connection] = await listConnections(ctx);
     expect(connection).toMatchObject({ state: "error", errorCode: "read_only" });
@@ -497,7 +497,9 @@ describe("a pass after the leave panel", () => {
     expect(dates(trek)).toEqual([TUE, WED]);
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 1, kind: "vacation" });
     // The replaced ROL row is gone for good, and nothing is left pending.
-    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.on, row.kind, row.pending])).toEqual([
+    expect(
+      (await listLeaveDays(ctx, WINDOW)).map((row) => [row.on, wordOf(types, row.typeId), row.pending]),
+    ).toEqual([
       [TUE, "vacation", "none"],
       [WED, "vacation", "none"],
     ]);
@@ -512,9 +514,9 @@ describe("a pass after the leave panel", () => {
     await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: types.other, fraction: 1 });
     await pass(trek);
     expect(dates(trek)).toEqual([]);
-    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
-      ["other", "none"],
-    ]);
+    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [wordOf(types, row.typeId), row.pending])).toEqual(
+      [["other", "none"]],
+    );
   });
 
   it("a row Trek knows, removed and then restored, costs Trek nothing: the day never leaves it", async () => {
@@ -532,7 +534,7 @@ describe("a pass after the leave panel", () => {
     await pass(trek);
     expect(trek.toggles).toHaveLength(sent);
     expect(dates(trek)).toEqual([TUE]);
-    expect(await rowOn(TUE)).toMatchObject({ id: day.id, pending: "none", observedFraction: "1.0" });
+    expect(await rowOn(TUE)).toMatchObject({ id: day.id, pending: "none", externalFraction: "1.0" });
   });
 
   it("a row Trek knows, removed, sent, and then restored comes back to Trek", async () => {
@@ -573,8 +575,8 @@ describe("a pass after the leave panel", () => {
     await pass(trek);
     expect(trek.toggles).toHaveLength(sent);
     expect(dates(trek)).toEqual([TUE]);
-    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
-      ["rol", "none"],
-    ]);
+    expect((await listLeaveDays(ctx, WINDOW)).map((row) => [wordOf(types, row.typeId), row.pending])).toEqual(
+      [["rol", "none"]],
+    );
   });
 });

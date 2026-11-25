@@ -5,11 +5,6 @@ import { z } from "zod";
 import { defineRoute } from "../route";
 import { id } from "../primitives";
 
-const patronSaint = z.object({
-  month: z.number().int().min(1).max(12),
-  day: z.number().int().min(1).max(31),
-});
-
 const preferences = z.object({
   /** An IANA zone name; dates of every answer are civil dates in this zone. */
   timeZone: z.string(),
@@ -27,7 +22,6 @@ const preferences = z.object({
   hideAmounts: z.boolean(),
   /** Time off: the minutes of a working day. */
   minutesPerDay: z.number().int().min(60).max(720),
-  patronSaint: patronSaint.nullable(),
 });
 
 const PREFERENCES_EXAMPLE = {
@@ -43,7 +37,6 @@ const PREFERENCES_EXAMPLE = {
   monthlySummary: false,
   hideAmounts: false,
   minutesPerDay: 480,
-  patronSaint: null,
 };
 
 export const getPreferences = defineRoute({

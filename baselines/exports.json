@@ -187,7 +187,6 @@
     "subscriptions"
   ],
   "packages/api-contract/src/timeoff/index.ts": [
-    "LEAVE_KINDS",
     "holidays",
     "timeoff",
     "types"
@@ -460,7 +459,6 @@
     "recentOperations",
     "recordValuation",
     "registerTotals",
-    "releaseFormerAccountReferences",
     "removeFee",
     "removeSource",
     "replaceCompetences",
@@ -544,7 +542,6 @@
   ],
   "packages/domain/src/modules/interests/index.ts": [
     "ACCRUAL_READING_MAX_AGE_HOURS",
-    "DAY_BASES",
     "InterestError",
     "PlainRule",
     "RuleRow",
@@ -718,7 +715,6 @@
     "FIELD_NAMES",
     "FieldGroup",
     "FieldName",
-    "PayslipType",
     "RegisterRow",
     "SUMMED_FIELDS",
     "SummedField",
@@ -863,7 +859,6 @@
   ],
   "packages/domain/src/modules/timeoff/index.ts": [
     "AccrualView",
-    "Allowance",
     "LEAVE_COLORS",
     "LEAVE_UNITS",
     "LeaveAnswer",
@@ -883,7 +878,6 @@
     "TypeAllowance",
     "TypeBalance",
     "addRestDay",
-    "allowanceOf",
     "bookLeave",
     "calendarDays",
     "calendarSync",
@@ -892,7 +886,6 @@
     "deleteRestDay",
     "forgetPendingDays",
     "leaveSettingsOf",
-    "listAllowances",
     "listLeaveDays",
     "listLeaveTypes",
     "listRestDays",
@@ -905,7 +898,6 @@
     "saveLeaveSettings",
     "saveLeaveType",
     "saveTypeAllowance",
-    "saveYearNote",
     "timeOffView",
     "unbookLeave",
     "unbookLeaveRange",

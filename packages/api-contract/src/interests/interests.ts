@@ -13,7 +13,6 @@ import {
   byRule,
   bySettlement,
   CATEGORY_ID,
-  DAY_BASES,
   DAY_COUNTS,
   ENTRY_ID,
   INTEREST_ERRORS,
@@ -178,9 +177,7 @@ const ruleBody = z
     runHour: z.number().int().min(0).max(23).nullable(),
     tiers: z.array(z.object({ upTo: amountInput().nullable(), rate: percentInput() }).strict()).min(1),
     tax: percentInput(),
-    /** Deprecated since R5g: read only without `dayCount`. */
-    dayBasis: z.enum(DAY_BASES).optional(),
-    /** The day-count convention; missing: `dayBasis`, or "365". */
+    /** The day-count convention; missing: "365". */
     dayCount: z.enum(DAY_COUNTS).optional(),
     periodAnchor: z.enum(PERIOD_ANCHORS).optional(),
     /** Days after the settlement date the payment is looked for; null or missing: the default window. */

@@ -195,7 +195,6 @@ describe("the routes of a payslip typed by hand and of the employer (rewrite pla
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       kind: "ordinary",
-      type: "ordinary",
       gross: "3000.00",
       fields: { irpefGross: "650.00" },
     });
@@ -245,7 +244,7 @@ describe("the routes of a payslip typed by hand and of the employer (rewrite pla
       (
         await send(alice, "PUT", employer.setPayrollEmployer.path, {
           payFrequency: "monthly",
-          extraMonths: [1, 2, 3, 4],
+          extraMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12],
         })
       ).status,
     ).toBe(400);

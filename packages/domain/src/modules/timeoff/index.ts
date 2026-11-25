@@ -10,13 +10,11 @@ export type { LeaveType, LeaveUndo, MonthBar, MonthGroup, ResidualView } from ".
 export {
   TimeOffError,
   addRestDay,
-  allowanceOf,
   closePendingDeletes,
   deleteLeaveType,
   deleteRestDay,
   forgetPendingDays,
   leaveSettingsOf,
-  listAllowances,
   listLeaveDays,
   listLeaveTypes,
   listRestDays,
@@ -29,6 +27,5 @@ export {
   saveLeaveSettings,
   saveLeaveType,
   saveTypeAllowance,
-  saveYearNote,
 } from "./service";
-export type { Allowance, LeaveSettings, LeaveTypeView, RestDay, TypeAllowance } from "./service";
+export type { LeaveSettings, LeaveTypeView, RestDay, TypeAllowance } from "./service";
