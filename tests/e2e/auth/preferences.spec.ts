@@ -1,6 +1,6 @@
 // tests/e2e/auth/preferences.spec.ts
 import { expect, type Page, test } from "@playwright/test";
-import { USERS } from "../_shared/env";
+import { passwordOf, USERS } from "../_shared/env";
 import { previewClient, signInWithPassword } from "../_shared/helpers";
 
 test.use({ extraHTTPHeaders: previewClient(2) });
@@ -18,7 +18,7 @@ test("theme and language preferences apply at once, persist, and come from the a
   page,
 }) => {
   const html = page.locator("html");
-  await signInWithPassword(page, USERS.prefs.email, USERS.prefs.password);
+  await signInWithPassword(page, USERS.prefs.email, passwordOf(USERS.prefs.email));
   await expect(html).toHaveAttribute("data-theme", "light");
 
   await page.goto("/settings/profile");

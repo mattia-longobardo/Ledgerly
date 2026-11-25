@@ -1,6 +1,6 @@
 // tests/e2e/auth/auth.spec.ts
 import { expect, test } from "@playwright/test";
-import { USERS } from "../_shared/env";
+import { passwordOf, USERS } from "../_shared/env";
 import { pageAlert, previewClient, signInWithPassword } from "../_shared/helpers";
 
 test.use({ extraHTTPHeaders: previewClient(1) });
@@ -22,7 +22,7 @@ test("a wrong password is refused with a message @site", async ({ page }) => {
 
 // The site already has its admin, so a test user is an ordinary one: no admin pages for it.
 test("a user signs in with a password, reaches the app and signs out @smoke @site", async ({ page }) => {
-  await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
+  await signInWithPassword(page, USERS.owner.email, passwordOf(USERS.owner.email));
   await expect(page.getByRole("heading", { name: "No accounts yet" })).toBeVisible();
   await expect(page).toHaveTitle("Overview · Ledgerly");
   const nav = page.getByRole("navigation", { name: "Primary" });

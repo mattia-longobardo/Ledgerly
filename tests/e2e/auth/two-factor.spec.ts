@@ -3,7 +3,7 @@
 // challenge and its error. Signed-in users only start from seeded sessions, so the run's
 // rate-limited password sign-ins are spent here once.
 import { expect, test } from "@playwright/test";
-import { USERS, sessionState } from "../_shared/env";
+import { passwordOf, USERS, sessionState } from "../_shared/env";
 import { pageAlert, previewClient } from "../_shared/helpers";
 import { totpCode, totpSecretFor } from "../_shared/totp";
 
@@ -17,7 +17,7 @@ test.describe("a password account without TOTP", () => {
     await expect(page).toHaveURL("/sign-in/two-factor/setup");
     await expect(page.getByRole("heading", { name: "Set up two-factor authentication" })).toBeVisible();
 
-    await page.getByLabel("Password").fill(USERS.enroll.password);
+    await page.getByLabel("Password").fill(passwordOf(USERS.enroll.email));
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("img", { name: "QR code for the authenticator app" })).toBeVisible();
     await expect(page.getByTestId("recovery-codes").getByRole("listitem")).toHaveCount(10);
@@ -41,7 +41,7 @@ test.describe("a password account with TOTP", () => {
   test("gets no session from the password alone, and a wrong code is refused @site", async ({ page }) => {
     await page.goto("/sign-in");
     await page.getByLabel("Email").fill(USERS.prefs.email);
-    await page.getByLabel("Password").fill(USERS.prefs.password);
+    await page.getByLabel("Password").fill(passwordOf(USERS.prefs.email));
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL("/sign-in/two-factor");
 

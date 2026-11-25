@@ -6,8 +6,8 @@ import { id } from "../primitives";
 import { byId, CONNECTION_ERRORS, CONNECTION_ID } from "./shared";
 
 const bankRedirect = z.object({
-  /** Where the person gives the bank access; it comes back to the instance. */
-  url: z.url(),
+  /** Where the person gives the bank access, `https:` only; it comes back to the instance. */
+  url: z.url({ protocol: /^https$/ }),
 });
 
 export const listBanks = defineRoute({
@@ -169,11 +169,14 @@ export const resumeSourceAccount = defineRoute({
 
 const byPlugin = z.object({ pluginId: z.string().regex(/^[a-z0-9-]{1,64}$/) });
 
+// A plugin's application and its state are the web's session only, as the keys of a broker are: a
+// token that replaced them would send the next bank authorisation to another application.
+
 export const setPluginActive = defineRoute({
   id: "set_plugin_active",
   method: "PATCH",
   path: "/plugins/{pluginId}",
-  scope: "write",
+  scope: "session",
   capability: "connections",
   summary:
     "Turns a plugin on or off for the person. `404`: the instance has no such plugin, the refusal " +
@@ -191,7 +194,7 @@ export const savePluginCredentials = defineRoute({
   id: "save_plugin_credentials",
   method: "PUT",
   path: "/plugins/{pluginId}/credentials",
-  scope: "write",
+  scope: "session",
   capability: "connections",
   summary: "Checks and saves the credentials of a plugin's application. The key never comes back.",
   actions: [],
@@ -213,7 +216,7 @@ export const removePluginCredentials = defineRoute({
   id: "remove_plugin_credentials",
   method: "DELETE",
   path: "/plugins/{pluginId}/credentials",
-  scope: "write",
+  scope: "session",
   capability: "connections",
   summary: "Removes the credentials of a plugin's application.",
   actions: [],

@@ -49089,7 +49089,7 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "session"
       }
     },
     "/plugins/{pluginId}/credentials": {
@@ -49180,7 +49180,7 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "session"
       },
       "put": {
         "operationId": "save_plugin_credentials",
@@ -49294,7 +49294,7 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "session"
       }
     },
     "/pockets": {

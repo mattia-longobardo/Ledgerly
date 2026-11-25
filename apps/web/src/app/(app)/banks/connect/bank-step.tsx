@@ -10,6 +10,7 @@ import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { Skeleton } from "@ledgerly/ui/skeleton";
 import { EmptyState } from "@ledgerly/ui/states";
+import { isBankPage } from "./bank-page";
 import { type BankChoice, listBanksAction, startBankAccessAction } from "./calls";
 import type { BankStepError } from "./return-errors";
 
@@ -109,11 +110,11 @@ export function BankStep({ countries, defaultCountry, returned }: BankStepProps)
     startOpening(async () => {
       try {
         const result = await startBankAccessAction(country, bank);
-        if (result.ok) {
+        if (result.ok && isBankPage(result.url)) {
           window.location.assign(result.url);
           return;
         }
-        setStartError(startMessage(result.error, bank));
+        setStartError(startMessage(result.ok ? "failed" : result.error, bank));
       } catch {
         setStartError(t("errors.network"));
       }

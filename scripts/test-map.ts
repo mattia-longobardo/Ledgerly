@@ -704,7 +704,15 @@ export const MODULES: Module[] = [
   // the journeys of every flow run, and the screens of the changed modules only.
   {
     id: "e2e-data",
-    files: ["scripts/seed-e2e.ts", "scripts/seed-e2e/common.ts", "tests/e2e/_shared/env.ts"],
+    files: [
+      "scripts/seed-e2e.ts",
+      "scripts/seed-e2e/common.ts",
+      "scripts/seed-e2e/users.ts",
+      "tests/e2e/_shared/env.ts",
+      "tools/e2e-secrets.test.ts",
+      "tools/e2e-seed.itest.ts",
+    ],
+    integration: ["tools/e2e-seed.itest.ts"],
     usedBy: ["e2e:*"],
   },
   // The `layout` user, whom every flow's screens are measured on.

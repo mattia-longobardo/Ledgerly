@@ -4,6 +4,14 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · The plugins' application and state: the web's session only (not additive)
+
+`PATCH /plugins/{pluginId}`, `PUT /plugins/{pluginId}/credentials` and
+`DELETE /plugins/{pluginId}/credentials` have the scope `session`, as the keys of a broker and the IBAN:
+a Client API token, `write` included, gets `403`. A token that could replace the credentials of a
+plugin's application could send the next bank authorisation to an application of somebody else. No MCP
+tool reached them. The web's pages use the session and change nothing.
+
 ## Unreleased · R5f.2 · The clean-up: the deprecated keys are removed (not additive)
 
 `GET /meta` answers `apiLevel` 2 and `minClientLevel` 2. Removed:

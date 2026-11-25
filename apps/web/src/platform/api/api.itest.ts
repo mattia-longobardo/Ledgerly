@@ -530,7 +530,8 @@ describe("users and settings: connections", () => {
 
   it("answers not found for a source or a plugin the person does not have", async () => {
     expect((await call("/sources/nothing/deactivation", aliceToken)).status).toBe(404);
-    expect((await call("/plugins/nothing", aliceToken, send("PATCH", { active: true }))).status).toBe(404);
+    // A plugin's state is the web's session only (session.itest.ts): a token is refused first.
+    expect((await call("/plugins/nothing", aliceToken, send("PATCH", { active: true }))).status).toBe(403);
     expect((await call("/banks?country=it", aliceToken)).status).toBe(400);
   });
 });

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
+import { isBankPage } from "./bank-page";
 import { renewBankAccessAction, retryBankReadingAction } from "./calls";
 
 /** "Try again now" on the outcome of a first reading that failed (ux/n1-plugin-bank.md §6.6). */
@@ -54,7 +55,7 @@ export function RenewAccess({ connectionId, bank }: { connectionId: string; bank
           startOpening(async () => {
             try {
               const result = await renewBankAccessAction(connectionId);
-              if (result.ok) {
+              if (result.ok && isBankPage(result.url)) {
                 window.location.assign(result.url);
                 return;
               }

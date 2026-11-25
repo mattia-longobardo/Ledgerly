@@ -72,7 +72,8 @@ export const authStartRequestSchema = z.object({
   state: z.string().min(16).max(200),
   redirectUrl: z.url(),
 });
-export const authStartResponseSchema = z.object({ url: z.url() });
+/** The bank's page, `https:` only: the web opens it with `location.assign` (no `javascript:`). */
+export const authStartResponseSchema = z.object({ url: z.url({ protocol: /^https$/ }) });
 export type AuthStartResponse = z.infer<typeof authStartResponseSchema>;
 
 export const accountSchema = z.object({

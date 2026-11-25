@@ -7,6 +7,8 @@
 //
 // E2E_BASE_URL points them at a local preview instead, against `ledgerly_test`
 // (scripts/preview-on-test.sh, docs/design/funds-ux.md §10).
+import { readFileSync } from "node:fs";
+
 export const BASE_URL = process.env.E2E_BASE_URL ?? "https://dash.longobardo.me";
 
 /**
@@ -25,128 +27,117 @@ export const ORIGIN_PROXY_PORT = Number(new URL(ORIGIN_PROXY).port);
 // Better Auth rate-limits password sign-ins to 5 per minute per client (/sign-in/email,
 // src/platform/auth/auth.ts), and the whole run is one client. The suite spends 4; a spec that
 // only needs to be signed in starts from a session the seed prepared and spends none.
+// No password is written here: the repo is public, and the seed draws a new one for every user and
+// every run (PASSWORDS_FILE, read with `passwordOf`).
 export const USERS = {
-  owner: { email: "owner@example.test", password: "owner-password-123", name: "Owner" },
-  prefs: { email: "prefs@example.test", password: "prefs-password-123", name: "Prefs" },
-  accounts: { email: "accounts@example.test", password: "accounts-password-123", name: "Accounts" },
+  owner: { email: "owner@example.test", name: "Owner" },
+  prefs: { email: "prefs@example.test", name: "Prefs" },
+  accounts: { email: "accounts@example.test", name: "Accounts" },
   // Phase 1b (docs/design/investments.md §1.8): an account in EUR and one in USD, and the display
   // currency switched in Settings. Its own user, so no other journey sees its totals change.
-  currency: { email: "currency@example.test", password: "currency-password-123", name: "Currency" },
-  expenses: { email: "expenses@example.test", password: "expenses-password-123", name: "Expenses" },
-  budgets: { email: "budgets@example.test", password: "budgets-password-123", name: "Budgets" },
-  pockets: { email: "pockets@example.test", password: "pockets-password-123", name: "Pockets" },
+  currency: { email: "currency@example.test", name: "Currency" },
+  expenses: { email: "expenses@example.test", name: "Expenses" },
+  budgets: { email: "budgets@example.test", name: "Budgets" },
+  pockets: { email: "pockets@example.test", name: "Pockets" },
   subscriptions: {
     email: "subscriptions@example.test",
-    password: "subscriptions-password-123",
     name: "Subscriptions",
   },
-  interests: { email: "interests@example.test", password: "interests-password-123", name: "Interests" },
-  funds: { email: "funds@example.test", password: "funds-password-123", name: "Funds" },
+  interests: { email: "interests@example.test", name: "Interests" },
+  funds: { email: "funds@example.test", name: "Funds" },
   // Funds F2: years in each state of docs/design/funds-ux.md §6, with invented amounts. The `funds`
   // user starts empty on purpose, and `layout` has one year only.
-  fundsHome: { email: "funds-home@example.test", password: "funds-home-password-123", name: "Funds Home" },
+  fundsHome: { email: "funds-home@example.test", name: "Funds Home" },
   // Funds F3: a fund's page, a fund with a debit plan and a fund fed by the payslip with its
   // operations, with invented amounts. Its own user, so the years of `fundsHome` keep meaning what its spec says.
   fundsDetail: {
     email: "funds-detail@example.test",
-    password: "funds-detail-password-123",
     name: "Funds Detail",
   },
   // Funds F4: the same funds in Italian, so the words of the new pages are read in both languages.
   fundsCopy: {
     email: "funds-copy@example.test",
-    password: "funds-copy-password-123",
     name: "Funds Copy",
   },
   investments: {
     email: "investments@example.test",
-    password: "investments-password-123",
     name: "Investments",
   },
   // R5d: a manual portfolio with cash and one purchase, and a service kept by value, for the screen
   // check; `portfolioJourney` starts with a service kept by value only, and the journey writes on it.
-  portfolio: { email: "portfolio@example.test", password: "portfolio-password-123", name: "Portfolio" },
+  portfolio: { email: "portfolio@example.test", name: "Portfolio" },
   portfolioJourney: {
     email: "portfolio-journey@example.test",
-    password: "portfolio-journey-password-123",
     name: "Portfolio Journey",
   },
   // R5d, step 2: two manual portfolios with purchase plans and an instalment of today proposed — one
   // with its bank transaction found, one with no cash (P2) — for the screen check; `plansJourney` has the
   // same and the journey writes on it.
-  plans: { email: "plans@example.test", password: "plans-password-123", name: "Plans" },
+  plans: { email: "plans@example.test", name: "Plans" },
   plansJourney: {
     email: "plans-journey@example.test",
-    password: "plans-journey-password-123",
     name: "Plans Journey",
   },
-  payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
+  payroll: { email: "payroll@example.test", name: "Payroll" },
   // R5g, criterion 3: a person with no country, no reading profile and no payslip, who types them by
   // hand (`payrollManual`, the journey); `payrollHand` has one typed by hand, for the screen check.
   payrollManual: {
     email: "payroll-manual@example.test",
-    password: "payroll-manual-password-123",
     name: "Payroll Manual",
   },
   payrollHand: {
     email: "payroll-hand@example.test",
-    password: "payroll-hand-password-123",
     name: "Payroll Hand",
   },
   // Release N6: the journey of a fund fed by the payslip, with no document. It starts with no fund.
   fundsPayslip: {
     email: "funds-payslip@example.test",
-    password: "funds-payslip-password-123",
     name: "Funds Payslip",
   },
   // Release N6: the form "Add pension fund". It starts with an account and no fund, so the payslip
   // is free for the fund the form creates.
-  fundsNew: { email: "funds-new@example.test", password: "funds-new-password-123", name: "Funds New" },
+  fundsNew: { email: "funds-new@example.test", name: "Funds New" },
   // Release N6: the funds the form, the sources and the fees are driven on. Its own user, because
   // these journeys add and remove what the pages of `fundsDetail` and `layout` are measured with.
   fundsSetup: {
     email: "funds-setup@example.test",
-    password: "funds-setup-password-123",
     name: "Funds Setup",
   },
-  timeoff: { email: "timeoff@example.test", password: "timeoff-password-123", name: "Timeoff" },
+  timeoff: { email: "timeoff@example.test", name: "Timeoff" },
   // The same year of time off, for the phone's journey (tests/e2e/timeoff/mobile.spec.ts): it books a day
   // while the desktop's journey counts the days of `timeoff`.
   timeoffPhone: {
     email: "timeoff-phone@example.test",
-    password: "timeoff-phone-password-123",
     name: "Timeoff Phone",
   },
   // The holiday calendars and the working day (tests/e2e/timeoff/holidays.spec.ts): they change how
   // a day is counted, so not on the user whose days `timeoff.spec.ts` counts beside them.
   timeoffHolidays: {
     email: "timeoff-holidays@example.test",
-    password: "timeoff-holidays-password-123",
     name: "Timeoff Holidays",
   },
   // F8: the admin journey. Its own user rather than a promoted `owner`, so every spec that signs
   // in as an ordinary one keeps meaning what it says.
-  admin: { email: "admin@example.test", password: "admin-password-123", name: "Admin" },
+  admin: { email: "admin@example.test", name: "Admin" },
   // F8.1: Settings › Categories, which starts from the default tree and needs nobody else's data.
-  categories: { email: "categories@example.test", password: "categories-password-123", name: "Categories" },
+  categories: { email: "categories@example.test", name: "Categories" },
   // F8: the Client API and "Export my data", which need nobody else's data.
-  security: { email: "security@example.test", password: "security-password-123", name: "Security" },
+  security: { email: "security@example.test", name: "Security" },
   // F9: the one user every screen is measured on (tests/e2e/<flow>/a11y.spec.ts). It is seeded with
   // something on every page — accounts, movements, budgets, pockets, subscriptions, an interest
   // rule, a fund with a debit plan, a fund fed by the payslip and an applied payslip — because a layout check run against an
   // empty state measures an empty state. The module journeys keep their own users, which start
   // empty on purpose, so filling this one breaks none of them.
-  layout: { email: "layout@example.test", password: "layout-password-123", name: "Layout" },
+  layout: { email: "layout@example.test", name: "Layout" },
   // R5a and R5e: copies of `layout`, for the journeys that turn addons off and hide the amounts —
   // a change every page of the user shows, so never on the user the screens are measured on.
-  addons: { email: "addons@example.test", password: "addons-password-123", name: "Addons" },
-  hidden: { email: "hidden@example.test", password: "hidden-password-123", name: "Hidden" },
+  addons: { email: "addons@example.test", name: "Addons" },
+  hidden: { email: "hidden@example.test", name: "Hidden" },
   // R5a: two people with the first start still ahead of them, as a sign-up leaves them: `welcome` for
   // the screen checks, which never end it, and `welcomeJourney` for the journey that does.
-  welcome: { email: "welcome@example.test", password: "welcome-password-123", name: "Welcome" },
+  welcome: { email: "welcome@example.test", name: "Welcome" },
   welcomeJourney: {
     email: "welcome-journey@example.test",
-    password: "welcome-journey-password-123",
     name: "Welcome Journey",
   },
   // Release N2: one connection in each of the five states (ux/n2-connection-status.md §2), the
@@ -154,125 +145,122 @@ export const USERS = {
   // "Banks" on its guide, with nothing saved.
   connections: {
     email: "connections@example.test",
-    password: "connections-password-123",
     name: "Connections",
   },
   // Release N3: the movement written by hand (ux/n3-categories-manual.md §9). Its own user, with
   // an account kept by hand, an account a bank only reads and one manual movement: the journey
   // changes balances, and no other journey's numbers may move with it.
-  manual: { email: "manual@example.test", password: "manual-password-123", name: "Manual" },
+  manual: { email: "manual@example.test", name: "Manual" },
   // Release N3, second part: the automatic categories (ux/n3-categories-manual.md). `review` has
   // the default groups and movements in every state — automatic, suggested, with no category;
   // `reviewNew` has movements and no category at all, for the first step of the guided review.
-  sources: { email: "sources@example.test", password: "sources-password-123", name: "Sources" },
+  sources: { email: "sources@example.test", name: "Sources" },
   // Release N4b: an account of a source and the same account in a bank, not imported yet.
-  switching: { email: "switching@example.test", password: "switching-password-123", name: "Switching" },
-  review: { email: "review@example.test", password: "review-password-123", name: "Review" },
-  reviewNew: { email: "review-new@example.test", password: "review-new-password-123", name: "Review New" },
+  switching: { email: "switching@example.test", name: "Switching" },
+  review: { email: "review@example.test", name: "Review" },
+  reviewNew: { email: "review-new@example.test", name: "Review New" },
   // The users of the journeys that change their data, each a copy of the user the screen check
   // measures (`a11y.spec.ts`), so that no journey moves what a screen is measured with, and no
   // two journeys share a user: each spec starts from its own data.
   reviewJourney: {
     email: "review-journey@example.test",
-    password: "review-journey-password-123",
     name: "Review Journey",
   },
   reviewNewJourney: {
     email: "review-new-journey@example.test",
-    password: "review-new-journey-password-123",
     name: "Review New Journey",
   },
   manualJourney: {
     email: "manual-journey@example.test",
-    password: "manual-journey-password-123",
     name: "Manual Journey",
   },
   sendJourney: {
     email: "send-journey@example.test",
-    password: "send-journey-password-123",
     name: "Send Journey",
   },
   sourceCategories: {
     email: "source-categories@example.test",
-    password: "source-categories-password-123",
     name: "Source Categories",
   },
   switchJourney: {
     email: "switch-journey@example.test",
-    password: "switch-journey-password-123",
     name: "Switch Journey",
   },
   connectionsJourney: {
     email: "connections-journey@example.test",
-    password: "connections-journey-password-123",
     name: "Connections Journey",
   },
   // Release N3.4: Settings › Rules (categories-and-rules.md §4). `rules` is measured by the screen
   // check; `rulesJourney`, a copy, is the one the journey writes on.
-  rules: { email: "rules@example.test", password: "rules-password-123", name: "Rules" },
+  rules: { email: "rules@example.test", name: "Rules" },
   rulesJourney: {
     email: "rules-journey@example.test",
-    password: "rules-journey-password-123",
     name: "Rules Journey",
   },
   // The sync schedule editor (tests/e2e/connections/schedule.spec.ts): a Trek link and two services.
-  schedule: { email: "schedule@example.test", password: "schedule-password-123", name: "Schedule" },
+  schedule: { email: "schedule@example.test", name: "Schedule" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
   // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
   // the instance's real users too, and a spec must never touch one.
   disposable: {
     email: "disposable@example.test",
-    password: "disposable-password-123",
     name: "Disposable",
   },
   // H56 (PERS-619): one user per column of the matrix of the plugins' states (scripts/seed-e2e/plugins.ts).
   pluginsOff: {
     email: "plugins-off@example.test",
-    password: "plugins-off-password-123",
     name: "Plugins Off",
   },
-  pluginsOn: { email: "plugins-on@example.test", password: "plugins-on-password-123", name: "Plugins On" },
+  pluginsOn: { email: "plugins-on@example.test", name: "Plugins On" },
   pluginsLive: {
     email: "plugins-live@example.test",
-    password: "plugins-live-password-123",
     name: "Plugins Live",
   },
   pluginsErrors: {
     email: "plugins-errors@example.test",
-    password: "plugins-errors-password-123",
     name: "Plugins Errors",
   },
   pluginsMixed: {
     email: "plugins-mixed@example.test",
-    password: "plugins-mixed-password-123",
     name: "Plugins Mixed",
   },
   pluginsDisconnected: {
     email: "plugins-disconnected@example.test",
-    password: "plugins-disconnected-password-123",
     name: "Plugins Disconnected",
   },
   pluginsCleanup: {
     email: "plugins-cleanup@example.test",
-    password: "plugins-cleanup-password-123",
     name: "Plugins Cleanup",
   },
   pluginsGone: {
     email: "plugins-gone@example.test",
-    password: "plugins-gone-password-123",
     name: "Plugins Gone",
   },
   pluginsJourney: {
     email: "plugins-journey@example.test",
-    password: "plugins-journey-password-123",
     name: "Plugins Journey",
   },
   // TOTP (docs/auth-design.md D2). The seed turns TOTP on for every user above, as the site's
   // TWO_FACTOR_POLICY=required would make them; these two are left without it on purpose:
   // `enroll` walks through the forced setup, `pending` keeps the setup page open for the a11y check.
-  enroll: { email: "enroll@example.test", password: "enroll-password-123", name: "Enroll" },
-  pending: { email: "pending@example.test", password: "pending-password-123", name: "Pending" },
+  enroll: { email: "enroll@example.test", name: "Enroll" },
+  pending: { email: "pending@example.test", name: "Pending" },
 } as const;
+
+/**
+ * The users a run on the deployed site needs: the `@smoke` and `@site` tests and the docs' shots.
+ * The site's own setup (global-setup.ts) seeds these alone; the preview seeds every user.
+ */
+export const SITE_USERS: readonly (keyof typeof USERS)[] = [
+  "owner",
+  "prefs",
+  "enroll",
+  "currency",
+  "pockets",
+  "admin",
+  "layout",
+  "security",
+];
 
 /** The users the seed leaves without TOTP. */
 export const WITHOUT_TOTP: ReadonlySet<keyof typeof USERS> = new Set(["enroll", "pending"]);
@@ -374,6 +362,17 @@ export const STATE_DIR = "tests/e2e/.state";
 
 /** Each TOTP user's base32 secret, written by the seed, read by the specs that sign in by hand. */
 export const TOTP_FILE = `${STATE_DIR}/totp.json`;
+
+/** Each user's password, drawn by the seed for this run only; the folder is not in git. */
+export const PASSWORDS_FILE = `${STATE_DIR}/passwords.json`;
+
+/** The password the seed drew for this address. */
+export function passwordOf(email: string): string {
+  const passwords = JSON.parse(readFileSync(PASSWORDS_FILE, "utf8")) as Record<string, string>;
+  const password = passwords[email];
+  if (!password) throw new Error(`No password for ${email}: run the seed first`);
+  return password;
+}
 
 /** The name the MCP spec registers its client under; the seed's remove deletes it (no owner, no cascade). */
 export const E2E_MCP_CLIENT_NAME = "Ledgerly e2e MCP";

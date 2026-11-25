@@ -77,7 +77,7 @@ is in the row of its module and in the row `data`): all its rows count.
 | `apps/web/src/app/(legal)/**`, `apps/web/src/app/manifest.webmanifest/**`, `apps/web/src/app/*.png`, `apps/web/src/app/icon.svg`, `apps/web/src/app/favicon.ico`, `scripts/icons.mjs`, `apps/web/src/app/(app)/navigation*`, `apps/web/src/app/(app)/palette-commands*` | `shell` | flow `shell` | `e2e:addons` |
 | `apps/web/src/app/(app)/settings/addons/**`, `apps/web/src/app/(app)/settings/notifications/**`, `apps/web/src/app/(app)/addon-layout.tsx`, `apps/web/src/app/(app)/addons-context.tsx`, `apps/web/src/app/(app)/todo-card*`, `apps/web/src/app/(app)/settings/profile/hide-amounts*`, `packages/ui/src/hidden-amounts*`, `apps/web/src/app/(start)/**`, `apps/web/src/app/(app)/settings/profile/country-form*`, `apps/web/src/platform/country*` | `addons` | flow `addons` | `e2e:screens`, `e2e:interests` |
 | `scripts/perf-*`, `baselines/performance.json` | `perf` | — | `npm run perf` |
-| `scripts/seed-e2e.ts`, `scripts/seed-e2e/common.ts`, `tests/e2e/_shared/env.ts` | `e2e-data` | — | `e2e:*` |
+| `scripts/seed-e2e.ts`, `scripts/seed-e2e/common.ts`, `scripts/seed-e2e/users.ts`, `tests/e2e/_shared/env.ts`, `tools/e2e-secrets.test.ts`, `tools/e2e-seed.itest.ts` | `e2e-data` | `sh scripts/test-integration.sh 'tools/e2e-seed.itest.ts'` | `e2e:*` |
 | `scripts/seed-e2e/layout.ts` | `seed-layout` | flow `screens` | `e2e:*` |
 | `scripts/seed-e2e/investments.ts` | `seed-investments` | flow `investments`<br>flow `connections` | — |
 | `scripts/seed-e2e/transactions.ts` | `seed-transactions` | flow `transactions`<br>flow `categories` | — |
@@ -223,6 +223,21 @@ midway can leave data on its user: run `seed` again before the next try.
   when one would pass the limit.
 
 A new test gets `@smoke` only when it replaces one of the list: the set stays under one minute.
+
+### The test users on the site
+
+The repo is public, so the seed (`scripts/seed-e2e.ts`) keeps nothing secret in it:
+
+- **A new password for every user and every run**, drawn with `randomBytes` and written only in
+  `tests/e2e/.state/passwords.json` (not in git); specs read it with `passwordOf`. `tools/e2e-secrets.test.ts`
+  fails on a password written in the seed or the specs.
+- **`admin` gets the role after its TOTP**: each user is created without a password, made an ordinary
+  user, then given one (`scripts/seed-e2e/users.ts`); `tools/e2e-seed.itest.ts` checks after every write
+  that no test admin can sign in without TOTP.
+- **The site gets only `SITE_USERS`** (`tests/e2e/_shared/env.ts`): the users of `@smoke`, `@site` and
+  the docs' shots. The preview gets every user.
+- **No user stays behind**: a seed that fails removes what it created, a global setup that fails runs
+  `remove`, and `remove` fails while a `@example.test` user is still in the database.
 
 ### What `a11y` measures (`tests/e2e/_shared/a11y.ts`)
 

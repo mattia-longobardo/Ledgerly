@@ -335,6 +335,33 @@ describe("the session cookie on /api/v1", () => {
     }
   });
 
+  it("gives a plugin's state and its application's credentials to the session only", async () => {
+    const routes = [
+      { method: "PATCH", path: "/plugins/enablebanking", body: { active: true } },
+      {
+        method: "PUT",
+        path: "/plugins/enablebanking/credentials",
+        body: { applicationId: "app", privateKey: "key" },
+      },
+      { method: "DELETE", path: "/plugins/enablebanking/credentials" },
+    ];
+    // The session reaches each use case.
+    const answers = [];
+    for (const route of routes) answers.push((await call(route.path, alice, route)).status);
+    expect(answers.filter((status) => status === 401 || status === 403)).toEqual([]);
+    const nothing = await call("/plugins/nothing", alice, { method: "PATCH", body: { active: true } });
+    expect(nothing.status).toBe(404);
+    // A token with every scope it can be granted: 403, with or without the cookie.
+    const token = await tokenFor(alice, ["read", "write", "imports", "investments:read"]);
+    for (const who of [{ bearer: token }, { bearer: token, cookie: alice.cookie }]) {
+      for (const route of routes) expect((await call(route.path, who, route)).status, route.path).toBe(403);
+    }
+    const names = reads.map((tool) => tool.name);
+    for (const name of ["set_plugin_active", "save_plugin_credentials", "remove_plugin_credentials"]) {
+      expect(names).not.toContain(name);
+    }
+  });
+
   it("lets only the session ask the LLM fallback for a payslip, never a token", async () => {
     const path = `/payroll/payslips/${randomUUID()}/llm-fill`;
     // The session reaches the use case: no fallback is configured on the test instance.

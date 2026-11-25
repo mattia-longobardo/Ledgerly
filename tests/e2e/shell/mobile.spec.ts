@@ -1,13 +1,13 @@
 // tests/e2e/shell/mobile.spec.ts — the flow `shell` at the width of a phone (400 px: the project
 // `mobile` of playwright.config.ts runs every `mobile.spec.ts`).
 import { expect, test } from "@playwright/test";
-import { USERS } from "../_shared/env";
+import { passwordOf, USERS } from "../_shared/env";
 import { previewClient, signInWithPassword } from "../_shared/helpers";
 
 test.use({ extraHTTPHeaders: previewClient(3) });
 
 test("phones get bottom tabs and a More sheet instead of the sidebar @site", async ({ page }) => {
-  await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
+  await signInWithPassword(page, USERS.owner.email, passwordOf(USERS.owner.email));
   const tabs = page
     .getByRole("navigation", { name: "Primary" })
     .filter({ has: page.getByRole("button", { name: "More" }) });

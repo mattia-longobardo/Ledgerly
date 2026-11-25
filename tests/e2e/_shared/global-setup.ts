@@ -5,7 +5,13 @@ import { runSeed } from "./homelab";
 import { startOriginProxy } from "./origin";
 
 export default async function globalSetup(): Promise<(() => Promise<void>) | undefined> {
-  runSeed("seed");
-  if (!ORIGIN) return undefined;
-  return startOriginProxy(ORIGIN, new URL(BASE_URL).host, ORIGIN_PROXY_PORT);
+  try {
+    runSeed("seed");
+    if (!ORIGIN) return undefined;
+    return await startOriginProxy(ORIGIN, new URL(BASE_URL).host, ORIGIN_PROXY_PORT);
+  } catch (error) {
+    // A failed setup gets no teardown from Playwright: the test users leave here.
+    runSeed("remove");
+    throw error;
+  }
 }
