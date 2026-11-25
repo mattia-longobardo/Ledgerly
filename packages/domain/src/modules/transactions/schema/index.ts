@@ -5,6 +5,7 @@ export {
   categoryMemory,
   categoryModels,
   categoryGroupMarks,
+  categoryLabels,
   categoryMergeDismissals,
   categoryUndos,
   categoryRuleUndos,

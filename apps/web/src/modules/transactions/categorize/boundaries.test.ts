@@ -32,6 +32,10 @@ const PRIVATE = [
   "category_model_version",
   "automaticThreshold",
   "suggestionThreshold",
+  // PERS-634: the threshold of a suggested group, and the labels imported with no movement.
+  "groupThreshold",
+  "categoryLabels",
+  "category_labels",
   // R6: the embedding model, its vectors and what the cold start learns.
   "embedding",
   "embedder",

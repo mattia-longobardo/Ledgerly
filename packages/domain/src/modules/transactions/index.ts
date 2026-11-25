@@ -16,8 +16,17 @@ export {
 } from "./categorize/review";
 export type { MergeProposal, MergeUndo } from "./categorize/review";
 export type { TransferProposal, TransferSide } from "./service";
-export { categorise, isPreparing, measureCategories, suggestFor } from "./categorize/service";
+export {
+  categorise,
+  type CategorySuggestions,
+  isPreparing,
+  measureCategories,
+  suggestFor,
+  suggestionsFor,
+  suggestionsForMovement,
+} from "./categorize/service";
 export { setEmbedder } from "./categorize/service";
+export { importCategoryLabels, type LabelsImport, LabelsImportError } from "./categorize/labels";
 export type { Embedder } from "./rules/embedding";
 export type { Measure, Reach, Tally } from "./rules/categories-measure";
 export type { Diagnosis, TopK } from "./rules/categories-diagnosis";

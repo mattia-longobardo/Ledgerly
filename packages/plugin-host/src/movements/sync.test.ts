@@ -115,6 +115,20 @@ describe("toIncomingMovement", () => {
     expect(toIncomingMovement(movement(), CATEGORIES, ROME).type).toBe("expense");
   });
 
+  it("gives a giroconto no category: Wallet's Transfer is never adopted or created here", () => {
+    const listed = new Map([
+      ["wc-transfer", category({ externalId: "wc-transfer", name: "Transfer", transfer: true })],
+    ]);
+    const incoming = toIncomingMovement(movement({ categoryExternalId: "wc-transfer" }), listed, ROME);
+    expect(incoming).toMatchObject({
+      type: "transfer",
+      categoryExternalId: null,
+      categoryName: null,
+      categoryGroupExternalId: null,
+      categoryGroupName: null,
+    });
+  });
+
   it("renames the transfer reference to the one the module pairs on", () => {
     const incoming = toIncomingMovement(movement({ transferCounterExternalId: "wr-2" }), CATEGORIES, ROME);
     expect(incoming.counterpartExternalId).toBe("wr-2");

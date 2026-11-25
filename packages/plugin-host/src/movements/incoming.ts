@@ -72,10 +72,20 @@ function namedCategory(movement: SourceMovement, listed: SourceCategory | undefi
 function categoryOf(movement: SourceMovement, categories: ReadonlyMap<string, SourceCategory>) {
   const category = movement.category;
   const listed = category === null ? undefined : categories.get(category.externalId);
+  // The source's own word for a giroconto: its built-in Transfer category, whatever the record
+  // type says. The source leaves such a movement out of its statistics, and so does the app. A
+  // giroconto has no category here, so the source's Transfer is never adopted or created as one.
+  if (category?.transfer === true || listed?.transfer === true) {
+    return {
+      transfer: true,
+      categoryExternalId: null,
+      categoryName: null,
+      categoryGroupExternalId: null,
+      categoryGroupName: null,
+    };
+  }
   return {
-    // The source's own word for a giroconto: its built-in Transfer category, whatever the record
-    // type says. The source leaves such a movement out of its statistics, and so does the app.
-    transfer: category?.transfer === true || listed?.transfer === true,
+    transfer: false,
     categoryExternalId: category?.externalId ?? null,
     ...namedCategory(movement, listed),
   };

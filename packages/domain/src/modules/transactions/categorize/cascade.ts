@@ -7,14 +7,14 @@
  * embeddings as features, and a text the classifier cannot place may still get a suggestion from
  * the category it reads closest to (the cold start). Elsewhere the cascade is the one of before.
  */
-import { type Model, predict } from "./classifier";
+import { type Model, predict, predictGroup, ranked } from "./classifier";
 import { cosine, type Embedder } from "../rules/embedding";
 import { type GroupKey, brandGroup, merchantTypeGroup, STRUCTURE_GROUP, structureOf } from "./tables";
-import { type MovementText, memoryKey, shownText, wordsOf } from "./text";
+import { memoryKey, merchantKey, type MovementText, shownText, wordsOf } from "./text";
 import type { Thresholds } from "./thresholds";
 
 /** Why a category was given or suggested: a closed list, a fixed sentence for each (ux §2.2). */
-type Reason = "memory" | "similar" | "merchant_type" | "brand" | "salary" | "fee";
+type Reason = "memory" | "similar" | "group" | "merchant_type" | "brand" | "salary" | "fee";
 
 /** Which level of the cascade gave an automatic category. */
 type AutomaticOrigin = "memory" | "model" | "table";
@@ -38,6 +38,10 @@ export interface Knowledge {
   categoryKind: ReadonlyMap<string, "income" | "expense">;
   /** R6: the embedding level, in the worker only; `null` everywhere else and when it is off. */
   embedded?: EmbeddedKnowledge | null;
+  /** PERS-634: the group of each category — its parent, or itself for a group. */
+  categoryGroup?: ReadonlyMap<string, string>;
+  /** PERS-634: the least confidence at which a group is suggested; `null` or absent: none is. */
+  groupThreshold?: number | null;
 }
 
 /** A category as the embedding model reads it: its name and, for a default group, the group's words. */
@@ -117,9 +121,31 @@ function coldStart(
  * and of the movement's own kind — an income is never filed under a spending category — and a
  * level that cannot answer hands over to the next.
  */
-export function decide(movement: CascadeMovement, knowledge: Knowledge): Decision {
-  const fits = (categoryId: string | undefined): categoryId is string =>
+/** Whether a category is one the person still has, of the movement's own kind. */
+function fitsOf(knowledge: Knowledge, movement: CascadeMovement) {
+  return (categoryId: string | undefined): categoryId is string =>
     categoryId !== undefined && knowledge.categoryKind.get(categoryId) === movement.kind;
+}
+
+/**
+ * The group, when no sub-category could be given or suggested (PERS-634, decision 14A): today's
+ * classifier, its categories' probabilities summed by group, at the group's own threshold.
+ */
+function groupSuggestion(
+  movement: CascadeMovement,
+  knowledge: Knowledge,
+  fits: (categoryId: string | undefined) => categoryId is string,
+): Decision {
+  const { model, categoryGroup, groupThreshold } = knowledge;
+  if (model === null || categoryGroup === undefined || groupThreshold == null) return NONE;
+  const group = predictGroup(model, movement, (categoryId) => categoryGroup.get(categoryId));
+  return group !== null && group.confidence >= groupThreshold && fits(group.categoryId)
+    ? { kind: "suggestion", categoryId: group.categoryId, reason: "group", params: {} }
+    : NONE;
+}
+
+export function decide(movement: CascadeMovement, knowledge: Knowledge): Decision {
+  const fits = fitsOf(knowledge, movement);
 
   // 0 · Structure: what the bank itself says the movement is.
   const structure = structureOf(movement.bankTransactionCode);
@@ -137,8 +163,9 @@ export function decide(movement: CascadeMovement, knowledge: Knowledge): Decisio
     }
   }
 
-  // 1 · Memory: the last three times, the same category.
-  const remembered = knowledge.memory.get(memoryKey(movement));
+  // 1 · Memory: the last three times at this merchant, the same category. A memory stored before
+  // PERS-634 is keyed by the whole text: it answers until the next training rewrites it.
+  const remembered = knowledge.memory.get(merchantKey(movement)) ?? knowledge.memory.get(memoryKey(movement));
   if (fits(remembered)) {
     return {
       kind: "automatic",
@@ -214,7 +241,22 @@ export function decide(movement: CascadeMovement, knowledge: Knowledge): Decisio
     }
   }
 
-  return suggestion;
+  // 4 · The group, when no sub-category is likely enough (PERS-634).
+  return suggestion.kind === "none" ? groupSuggestion(movement, knowledge, fits) : suggestion;
+}
+
+/**
+ * The categories the selector shows first (PERS-634, decision 14A): the cascade's own answer, then
+ * the classifier's likeliest, of the movement's kind, `count` at most. A suggested group is not
+ * among them: they are what to choose inside it.
+ */
+export function topCategories(movement: CascadeMovement, knowledge: Knowledge, count = 3): string[] {
+  const fits = fitsOf(knowledge, movement);
+  const decision = decide(movement, knowledge);
+  const first = decision.kind === "none" || decision.reason === "group" ? [] : [decision.categoryId];
+  const classifier = classifierOf(knowledge);
+  const likeliest = classifier.model === null ? [] : ranked(classifier.model, movement, classifier.embedder);
+  return [...new Set([...first, ...likeliest])].filter((categoryId) => fits(categoryId)).slice(0, count);
 }
 
 /**

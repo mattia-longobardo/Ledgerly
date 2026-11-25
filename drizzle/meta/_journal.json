@@ -568,6 +568,13 @@
       "when": 1795680000000,
       "tag": "0080_wallet_category_tree",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795690000000,
+      "tag": "0081_category_labels",
+      "breakpoints": true
     }
   ]
 }
