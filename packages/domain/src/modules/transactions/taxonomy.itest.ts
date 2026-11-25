@@ -244,10 +244,10 @@ describe("updateCategory", () => {
     const saved = await updateCategory(ctx, category.id, {
       name: "Food",
       parentId: "",
-      type: "transfer",
+      type: "income",
       color: "#aabbcc",
     });
-    expect(saved).toMatchObject({ name: "Food", parentId: null, type: "transfer", color: "#aabbcc" });
+    expect(saved).toMatchObject({ name: "Food", parentId: null, type: "income", color: "#aabbcc" });
   });
 
   it("moves a category into a group and back out, the group's type coming with it (F2.5)", async () => {

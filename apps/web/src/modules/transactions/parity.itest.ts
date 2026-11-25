@@ -179,7 +179,7 @@ describe("transactions, old Server Action = new call", () => {
     const oldId = await write(old);
     const newId = await write(now);
     const [category] = await transactions
-      .createDefaultGroups(ctx, ["groceries"], "it")
+      .createDefaultGroups(ctx, ["food_drinks"], "it")
       .then(() => transactions.listCategories(ctx));
     const label = await transactions.createLabel(ctx, { name: "Home", color: null });
 
@@ -204,7 +204,7 @@ describe("transactions, old Server Action = new call", () => {
     // Read movements on an account no source categorises: they wait in «To review» (the fixture of
     // the cascade's tests, on an account kept by hand, which every page counts as categorisable).
     const bank = "plugin:testbank";
-    await transactions.createDefaultGroups(ctx, ["groceries", "shopping", "other"], "en");
+    await transactions.createDefaultGroups(ctx, ["food_drinks", "shopping", "others"], "en");
     const zeta = (await pair()).old;
     const incoming = (payee: string, day: number, cents: bigint) => ({
       externalId: `${payee}-${day}`,

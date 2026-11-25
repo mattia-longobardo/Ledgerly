@@ -4,7 +4,7 @@
 import type { Ctx } from "../../platform/context";
 import { duplicatesOf, markDuplicate, twinOf } from "./service/duplicates";
 import { dailyNetByAccount, manualMovementsByAccount, transactionIdsOfAccount } from "./queries/movements";
-import { linkOwnTransfers } from "./service/provider";
+import { linkOwnTransfers } from "./service/giroconti";
 
 export const movementsOfAccounts = {
   dailyNetByAccount,

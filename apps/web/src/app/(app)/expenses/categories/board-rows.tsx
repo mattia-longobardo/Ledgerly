@@ -53,17 +53,17 @@ function liveItems({
   ];
   if (line.parentId === null)
     items.push({ label: text("color"), onSelect: () => board.setDialog({ kind: "color", line }) });
-  if (isGroup && line.type !== "transfer") {
+  if (isGroup) {
     items.push({
       label: text("addCategory"),
       onSelect: () => board.setDialog({ kind: "add", group: line, macro: line.type }),
     });
     items.push({ label: text("openGroup"), onSelect: () => push(line.href) });
   }
-  if (line.parentId !== null && line.type !== "transfer")
+  if (line.parentId !== null)
     items.push({ label: text("move.group"), onSelect: () => board.setDialog({ kind: "move", line }) });
-  // A group, or a category of Transfers (§5.6): its movements count as the macro of arrival.
-  if (line.parentId === null || line.type === "transfer") {
+  // A group (§5.6): its movements count as the macro of arrival.
+  if (line.parentId === null) {
     const count = board.childrenOf(line.id).length;
     items.push({
       label: text("macroMove.open"),
@@ -160,7 +160,7 @@ function LineName({ line, strong, board }: { line: BoardLine; strong: boolean; b
 }
 
 /** Out and in, as Transfers shows a line or the movements between accounts. */
-export function TransferFigures({
+function TransferFigures({
   outTotal,
   inTotal,
   muted,
@@ -224,19 +224,6 @@ function Figures({ line, bar, transfer }: { line: BoardLine; bar: boolean; trans
 function ArchivedBadge({ line }: { line: BoardLine }) {
   const settingsText = useTranslations("settings.categories");
   return line.archived ? <Badge tone="neutral">{settingsText("archived")}</Badge> : null;
-}
-
-/** A category of Transfers: one flat row (CR2). */
-export function TransferRow({ line, board }: { line: BoardLine; board: RowContext }) {
-  return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2">
-      <ColorDot color={line.color} />
-      <LineName line={line} strong={false} board={board} />
-      <ArchivedBadge line={line} />
-      <Figures line={line} bar={false} transfer />
-      <RowMenu line={line} isGroup={false} board={board} />
-    </li>
-  );
 }
 
 /** A category under its group. */

@@ -1,6 +1,9 @@
 export const TRANSACTION_TYPES = ["income", "expense", "transfer"] as const;
 export const TRANSACTION_STATES = ["cleared", "pending"] as const;
-export const CATEGORY_TYPES = ["income", "expense", "transfer"] as const;
+/** A giroconto has no category (2026-11-25): the macros of the categories are two. */
+export const CATEGORY_TYPES = ["income", "expense"] as const;
+/** A proposed giroconto waits for the person, or they said the two are not one. */
+export const TRANSFER_PROPOSAL_STATES = ["open", "rejected"] as const;
 /**
  * Who wrote a movement (rewrite plan, 04-now.md §4.5): a provider's reading, or the person, by
  * hand. A reading never changes, removes or declares gone a `manual` movement.

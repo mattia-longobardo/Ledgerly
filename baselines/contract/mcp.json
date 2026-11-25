@@ -179,7 +179,7 @@
    {
     "name": "list_categories",
     "title": "Categories",
-    "description": "The user's categories as GET /api/v1/categories: groups and sub-categories in tree order, the macro each counts in (income, expense, transfer) and how many movements use it.",
+    "description": "The user's categories as GET /api/v1/categories: groups and sub-categories in tree order, the macro each counts in (income, expense) and how many movements use it. A giroconto has no category.",
     "inputSchema": {
      "$schema": "http://json-schema.org/draft-07/schema#",
      "type": "object",

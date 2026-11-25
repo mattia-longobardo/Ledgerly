@@ -59,11 +59,11 @@ export function monthLabel(month: MonthKey, locale: UiLocale): string {
  * N3.2): Income, Expenses, Transfers, in this order, each in its tree order. A sub-category has its
  * group's type, so a group never leaves its children.
  */
-export function withMacroTitles<T extends { type: "income" | "expense" | "transfer" }>(
+export function withMacroTitles<T extends { type: "income" | "expense" }>(
   options: readonly T[],
-  titles: Record<"income" | "expense" | "transfer", string>,
+  titles: Record<"income" | "expense", string>,
 ): (T & { section: string })[] {
-  const order = ["income", "expense", "transfer"] as const;
+  const order = ["income", "expense"] as const;
   return order.flatMap((type) =>
     options.filter((option) => option.type === type).map((option) => ({ ...option, section: titles[type] })),
   );

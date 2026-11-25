@@ -1104,7 +1104,7 @@ describe("linkOwnTransfers (F2.5)", () => {
   beforeEach(resetDatabase);
   afterAll(closeDatabase);
 
-  it("pairs the two legs of a giroconto Wallet left unlinked, and leaves its income and spending alone", async () => {
+  it("pairs the two legs of a giroconto Wallet left unlinked, and leaves its categorised spending alone", async () => {
     const ctx = await newContext();
     // ISO 13616's example IBANs: valid check digits, nobody's account.
     const ing = await anAccount(ctx, "ING", "IT60 X054 2811 1010 0000 0123 456");
@@ -1115,7 +1115,7 @@ describe("linkOwnTransfers (F2.5)", () => {
       ing,
       [
         movement({ externalId: "w-out", type: "transfer", ...out }),
-        // Names Revolut's IBAN too, but Wallet counts it as spending: so does the app.
+        // Names Revolut's IBAN too, but Wallet files it under a category: it stays spending.
         movement({ externalId: "w-gift", amountCents: -2_500n, note: "GB82WEST12345698765432" }),
       ],
       { provider: WALLET_PROVIDER },
@@ -1126,9 +1126,7 @@ describe("linkOwnTransfers (F2.5)", () => {
       [movement({ externalId: "w-in", type: "transfer", amountCents: 50_000n, payee: "Mario", note: null })],
       { provider: WALLET_PROVIDER },
     );
-    expect((await transactionsSummary(ctx)).unpairedTransferCount).toBe(2);
-
-    expect(await linkOwnTransfers(ctx)).toBe(2);
+    // The reading itself pairs them (rule 5 of the giroconti, 2026-11-25).
     expect(await transactionsSummary(ctx)).toMatchObject({
       expenseCents: -2_500n,
       transferCount: 2,

@@ -234,23 +234,18 @@ describe("spendingLayers", () => {
 });
 
 describe("withMacroTitles", () => {
-  it("lists Income, Expenses, Transfers in this order, each under its title, groups with their children", () => {
+  it("lists Income and Expenses in this order, each under its title, groups with their children", () => {
     const options = [
       { id: "home", type: "expense" as const },
       { id: "rent", type: "expense" as const },
-      { id: "savings", type: "transfer" as const },
       { id: "salary", type: "income" as const },
     ];
     expect(
-      withMacroTitles(options, { income: "In", expense: "Out", transfer: "Moved" }).map((one) => [
-        one.id,
-        one.section,
-      ]),
+      withMacroTitles(options, { income: "In", expense: "Out" }).map((one) => [one.id, one.section]),
     ).toEqual([
       ["salary", "In"],
       ["home", "Out"],
       ["rent", "Out"],
-      ["savings", "Moved"],
     ]);
   });
 });

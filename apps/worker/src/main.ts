@@ -29,6 +29,7 @@ import {
 import { runTask, SCHEDULE, SCHEDULE_TIME_ZONE, SCHEDULED_TIERS, tasks } from "@ledgerly/web/jobs";
 import { setEmbedder } from "@ledgerly/domain/transactions";
 import { loadEmbedder } from "./embedder";
+import { linkAllTransfers } from "./link-transfers";
 import { measureAll } from "./measure";
 import { dueTiers, minuteOf } from "./scheduler";
 import { instanceDefaults } from "@ledgerly/domain/users";
@@ -79,9 +80,15 @@ function categoriesModel() {
   return model.embedder;
 }
 
+/** The commands that answer and exit: `--health`, and `--link-transfers` once after its release. */
+async function oneShot(): Promise<void> {
+  if (process.argv.includes("--health")) process.exit(await health());
+  if (process.argv.includes("--link-transfers")) process.exit(await linkAllTransfers());
+}
+
 async function main(): Promise<void> {
   wireDomain();
-  if (process.argv.includes("--health")) process.exit(await health());
+  await oneShot();
   const embedder = categoriesModel();
   if (process.argv.includes("--measure-categories")) {
     if (embedder === null) process.exit(1);

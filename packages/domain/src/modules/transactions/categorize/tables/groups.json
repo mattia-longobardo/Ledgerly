@@ -1,152 +1,494 @@
 [
   {
-    "key": "home",
+    "key": "food_drinks",
     "type": "expense",
-    "en": "Home",
-    "it": "Casa",
+    "color": "#ed4a49",
+    "en": "Food & Drinks",
+    "it": "Cibo e bevande",
     "examples": {
-      "en": "Rent, mortgage, bills, maintenance",
-      "it": "Affitto, mutuo, bollette, manutenzione"
-    }
-  },
-  {
-    "key": "groceries",
-    "type": "expense",
-    "en": "Groceries",
-    "it": "Spesa alimentare",
-    "examples": {
-      "en": "Supermarket, food shops",
-      "it": "Supermercato, alimentari"
-    }
-  },
-  {
-    "key": "restaurants",
-    "type": "expense",
-    "en": "Restaurants and bars",
-    "it": "Ristoranti e bar",
-    "examples": {
-      "en": "Lunches, dinners, coffee, deliveries",
-      "it": "Pranzi, cene, caffè, consegne"
-    }
-  },
-  {
-    "key": "transport",
-    "type": "expense",
-    "en": "Transport",
-    "it": "Trasporti",
-    "examples": {
-      "en": "Fuel, trains, public transport, tolls",
-      "it": "Carburante, treni, mezzi pubblici, pedaggi"
-    }
-  },
-  {
-    "key": "health",
-    "type": "expense",
-    "en": "Health",
-    "it": "Salute",
-    "examples": {
-      "en": "Pharmacy, medical visits, health insurance",
-      "it": "Farmacia, visite, assicurazione sanitaria"
-    }
+      "en": "Groceries, restaurants, bars",
+      "it": "Spesa, ristoranti, bar"
+    },
+    "children": [
+      {
+        "key": "food_drinks.bar_cafe",
+        "en": "Bar, cafe",
+        "it": "Bar, caffè"
+      },
+      {
+        "key": "food_drinks.restaurants",
+        "en": "Restaurant, fast-food",
+        "it": "Ristoranti, fast food"
+      },
+      {
+        "key": "food_drinks.groceries",
+        "en": "Groceries",
+        "it": "Spesa alimentare"
+      }
+    ]
   },
   {
     "key": "shopping",
     "type": "expense",
+    "color": "#3fa9e5",
     "en": "Shopping",
     "it": "Shopping",
     "examples": {
-      "en": "Clothing, electronics, home goods",
-      "it": "Abbigliamento, elettronica, casa"
-    }
+      "en": "Clothes, electronics, pharmacy, gifts",
+      "it": "Abbigliamento, elettronica, farmacia, regali"
+    },
+    "children": [
+      {
+        "key": "shopping.drugstore",
+        "en": "Drug-store, chemist",
+        "it": "Farmacia, drogheria"
+      },
+      {
+        "key": "shopping.leisure_time",
+        "en": "Leisure time",
+        "it": "Tempo libero"
+      },
+      {
+        "key": "shopping.stationery_tools",
+        "en": "Stationery, tools",
+        "it": "Cartoleria, attrezzi"
+      },
+      {
+        "key": "shopping.gifts",
+        "en": "Gifts, joy",
+        "it": "Regali"
+      },
+      {
+        "key": "shopping.electronics",
+        "en": "Electronics, accessories",
+        "it": "Elettronica, accessori"
+      },
+      {
+        "key": "shopping.pets",
+        "en": "Pets, animals",
+        "it": "Animali"
+      },
+      {
+        "key": "shopping.home_garden",
+        "en": "Home, garden",
+        "it": "Casa, giardino"
+      },
+      {
+        "key": "shopping.kids",
+        "en": "Kids",
+        "it": "Bambini"
+      },
+      {
+        "key": "shopping.health_beauty",
+        "en": "Health and beauty",
+        "it": "Salute e bellezza"
+      },
+      {
+        "key": "shopping.jewels",
+        "en": "Jewels, accessories",
+        "it": "Gioielli, accessori"
+      },
+      {
+        "key": "shopping.clothes",
+        "en": "Clothes & Footwear",
+        "it": "Abbigliamento e scarpe"
+      }
+    ]
   },
   {
-    "key": "leisure",
+    "key": "housing",
     "type": "expense",
-    "en": "Leisure",
-    "it": "Tempo libero",
+    "color": "#df911a",
+    "en": "Housing",
+    "it": "Casa",
     "examples": {
-      "en": "Sport, cinema, books, hobbies",
-      "it": "Sport, cinema, libri, hobby"
-    }
+      "en": "Rent, mortgage, bills, maintenance",
+      "it": "Affitto, mutuo, bollette, manutenzione"
+    },
+    "children": [
+      {
+        "key": "housing.property_insurance",
+        "en": "Property insurance",
+        "it": "Assicurazione casa"
+      },
+      {
+        "key": "housing.maintenance",
+        "en": "Maintenance, repairs",
+        "it": "Manutenzione, riparazioni"
+      },
+      {
+        "key": "housing.services",
+        "en": "Services",
+        "it": "Servizi"
+      },
+      {
+        "key": "housing.utilities",
+        "en": "Energy, utilities",
+        "it": "Energia, utenze"
+      },
+      {
+        "key": "housing.mortgage",
+        "en": "Mortgage",
+        "it": "Mutuo"
+      },
+      {
+        "key": "housing.rent",
+        "en": "Rent",
+        "it": "Affitto"
+      }
+    ]
   },
   {
-    "key": "travel",
+    "key": "transportation",
     "type": "expense",
-    "en": "Travel",
-    "it": "Viaggi",
+    "color": "#a8afb8",
+    "en": "Transportation",
+    "it": "Trasporti",
     "examples": {
-      "en": "Flights, hotels, holidays",
-      "it": "Voli, alberghi, vacanze"
-    }
+      "en": "Trains, taxis, public transport",
+      "it": "Treni, taxi, mezzi pubblici"
+    },
+    "children": [
+      {
+        "key": "transportation.business_trips",
+        "en": "Business trips",
+        "it": "Viaggi di lavoro"
+      },
+      {
+        "key": "transportation.long_distance",
+        "en": "Long distance",
+        "it": "Lunga distanza"
+      },
+      {
+        "key": "transportation.taxi",
+        "en": "Taxi",
+        "it": "Taxi"
+      },
+      {
+        "key": "transportation.public_transport",
+        "en": "Public transport",
+        "it": "Trasporto pubblico"
+      }
+    ]
   },
   {
-    "key": "subscriptions",
+    "key": "vehicle",
     "type": "expense",
-    "en": "Subscriptions and services",
-    "it": "Abbonamenti e servizi",
+    "color": "#8e57d8",
+    "en": "Vehicle",
+    "it": "Veicoli",
     "examples": {
-      "en": "Phone, internet, streaming",
-      "it": "Telefono, internet, streaming"
-    }
+      "en": "Fuel, parking, insurance, repairs",
+      "it": "Carburante, parcheggio, assicurazione, riparazioni"
+    },
+    "children": [
+      {
+        "key": "vehicle.leasing",
+        "en": "Leasing",
+        "it": "Leasing"
+      },
+      {
+        "key": "vehicle.vehicle_insurance",
+        "en": "Vehicle insurance",
+        "it": "Assicurazione veicolo"
+      },
+      {
+        "key": "vehicle.rentals",
+        "en": "Rentals",
+        "it": "Noleggi"
+      },
+      {
+        "key": "vehicle.vehicle_maintenance",
+        "en": "Vehicle maintenance",
+        "it": "Manutenzione veicolo"
+      },
+      {
+        "key": "vehicle.parking",
+        "en": "Parking",
+        "it": "Parcheggio"
+      },
+      {
+        "key": "vehicle.fuel",
+        "en": "Fuel",
+        "it": "Carburante"
+      }
+    ]
   },
   {
-    "key": "taxes_fees",
+    "key": "life_entertainment",
     "type": "expense",
-    "en": "Taxes and fees",
-    "it": "Tasse e commissioni",
+    "color": "#4db956",
+    "en": "Life & Entertainment",
+    "it": "Vita e svago",
     "examples": {
-      "en": "Taxes, stamp duties, bank fees",
-      "it": "Imposte, bolli, commissioni della banca"
-    }
+      "en": "Holidays, sport, culture, health",
+      "it": "Vacanze, sport, cultura, salute"
+    },
+    "children": [
+      {
+        "key": "life_entertainment.gambling",
+        "en": "Lottery, gambling",
+        "it": "Lotterie, giochi"
+      },
+      {
+        "key": "life_entertainment.alcohol_tobacco",
+        "en": "Alcohol, tobacco",
+        "it": "Alcol, tabacco"
+      },
+      {
+        "key": "life_entertainment.charity",
+        "en": "Charity, gifts",
+        "it": "Beneficenza, regali"
+      },
+      {
+        "key": "life_entertainment.holidays",
+        "en": "Holiday, trips, hotels",
+        "it": "Vacanze, viaggi, hotel"
+      },
+      {
+        "key": "life_entertainment.streaming",
+        "en": "TV, Streaming",
+        "it": "TV, streaming"
+      },
+      {
+        "key": "life_entertainment.books_subscriptions",
+        "en": "Books, audio, subscriptions",
+        "it": "Libri, audio, abbonamenti"
+      },
+      {
+        "key": "life_entertainment.education",
+        "en": "Education, development",
+        "it": "Istruzione, formazione"
+      },
+      {
+        "key": "life_entertainment.hobbies",
+        "en": "Hobbies",
+        "it": "Hobby"
+      },
+      {
+        "key": "life_entertainment.life_events",
+        "en": "Life events",
+        "it": "Eventi della vita"
+      },
+      {
+        "key": "life_entertainment.culture_events",
+        "en": "Culture, sport events",
+        "it": "Cultura, eventi sportivi"
+      },
+      {
+        "key": "life_entertainment.sport_fitness",
+        "en": "Active sport, fitness",
+        "it": "Sport, fitness"
+      },
+      {
+        "key": "life_entertainment.wellness",
+        "en": "Wellness, beauty",
+        "it": "Benessere, bellezza"
+      },
+      {
+        "key": "life_entertainment.health_care",
+        "en": "Health care, doctor",
+        "it": "Sanità, medico"
+      }
+    ]
   },
   {
-    "key": "other",
+    "key": "communication_pc",
     "type": "expense",
-    "en": "Other",
-    "it": "Altro",
+    "color": "#356ddc",
+    "en": "Communication, PC",
+    "it": "Comunicazioni, PC",
     "examples": {
-      "en": "Everything else",
-      "it": "Tutto il resto"
-    }
+      "en": "Phone, internet, software",
+      "it": "Telefono, internet, software"
+    },
+    "children": [
+      {
+        "key": "communication_pc.postal",
+        "en": "Postal services",
+        "it": "Servizi postali"
+      },
+      {
+        "key": "communication_pc.software",
+        "en": "Software, apps, games",
+        "it": "Software, app, giochi"
+      },
+      {
+        "key": "communication_pc.internet",
+        "en": "Internet",
+        "it": "Internet"
+      },
+      {
+        "key": "communication_pc.telephony",
+        "en": "Telephony, mobile phone",
+        "it": "Telefonia, cellulare"
+      }
+    ]
+  },
+  {
+    "key": "financial_expenses",
+    "type": "expense",
+    "color": "#05b9cf",
+    "en": "Financial expenses",
+    "it": "Spese finanziarie",
+    "examples": {
+      "en": "Taxes, bank fees, loans, insurance",
+      "it": "Tasse, commissioni, prestiti, assicurazioni"
+    },
+    "children": [
+      {
+        "key": "financial_expenses.child_support",
+        "en": "Child Support",
+        "it": "Mantenimento figli"
+      },
+      {
+        "key": "financial_expenses.charges_fees",
+        "en": "Charges, Fees",
+        "it": "Commissioni, spese"
+      },
+      {
+        "key": "financial_expenses.advisory",
+        "en": "Advisory",
+        "it": "Consulenze"
+      },
+      {
+        "key": "financial_expenses.fines",
+        "en": "Fines",
+        "it": "Multe"
+      },
+      {
+        "key": "financial_expenses.loans_interests",
+        "en": "Loans, interests",
+        "it": "Prestiti, interessi"
+      },
+      {
+        "key": "financial_expenses.insurances",
+        "en": "Insurances",
+        "it": "Assicurazioni"
+      },
+      {
+        "key": "financial_expenses.taxes",
+        "en": "Taxes",
+        "it": "Tasse"
+      }
+    ]
+  },
+  {
+    "key": "investments",
+    "type": "expense",
+    "color": "#e141aa",
+    "en": "Investments",
+    "it": "Investimenti",
+    "examples": {
+      "en": "Savings, financial investments, realty",
+      "it": "Risparmi, investimenti finanziari, immobili"
+    },
+    "children": [
+      {
+        "key": "investments.collections",
+        "en": "Collections",
+        "it": "Collezioni"
+      },
+      {
+        "key": "investments.savings",
+        "en": "Savings",
+        "it": "Risparmi"
+      },
+      {
+        "key": "investments.financial_investments",
+        "en": "Financial investments",
+        "it": "Investimenti finanziari"
+      },
+      {
+        "key": "investments.vehicles_chattels",
+        "en": "Vehicles, chattels",
+        "it": "Veicoli, beni mobili"
+      },
+      {
+        "key": "investments.realty",
+        "en": "Realty",
+        "it": "Immobili"
+      }
+    ]
   },
   {
     "key": "income",
     "type": "income",
-    "en": "Work",
-    "it": "Lavoro",
+    "color": "#ebc831",
+    "en": "Income",
+    "it": "Entrate",
     "examples": {
-      "en": "Salary, bonuses, expense refunds",
-      "it": "Stipendio, premi, rimborsi spese"
-    }
+      "en": "Salary, refunds, interest, sales",
+      "it": "Stipendio, rimborsi, interessi, vendite"
+    },
+    "children": [
+      {
+        "key": "income.gifts_received",
+        "en": "Gifts",
+        "it": "Regali ricevuti"
+      },
+      {
+        "key": "income.child_support_received",
+        "en": "Child Support",
+        "it": "Mantenimento figli"
+      },
+      {
+        "key": "income.refunds",
+        "en": "Refunds (tax, purchase)",
+        "it": "Rimborsi"
+      },
+      {
+        "key": "income.winnings",
+        "en": "Lottery, gambling",
+        "it": "Vincite"
+      },
+      {
+        "key": "income.checks_coupons",
+        "en": "Checks, coupons",
+        "it": "Buoni, coupon"
+      },
+      {
+        "key": "income.lending_renting",
+        "en": "Lending, renting",
+        "it": "Prestiti, noleggi"
+      },
+      {
+        "key": "income.grants",
+        "en": "Dues & grants",
+        "it": "Contributi, sussidi"
+      },
+      {
+        "key": "income.rental_income",
+        "en": "Rental income",
+        "it": "Affitti incassati"
+      },
+      {
+        "key": "income.sale",
+        "en": "Sale",
+        "it": "Vendite"
+      },
+      {
+        "key": "income.interests_dividends",
+        "en": "Interests, dividends",
+        "it": "Interessi, dividendi"
+      },
+      {
+        "key": "income.wage_invoices",
+        "en": "Wage, invoices",
+        "it": "Stipendio, fatture"
+      }
+    ]
   },
   {
-    "key": "other_income",
-    "type": "income",
-    "en": "Other income",
-    "it": "Altre entrate",
+    "key": "others",
+    "type": "expense",
+    "color": "#5e646c",
+    "en": "Others",
+    "it": "Altro",
     "examples": {
-      "en": "Gifts, refunds, interest",
-      "it": "Regali, rimborsi, interessi"
-    }
-  },
-  {
-    "key": "savings",
-    "type": "transfer",
-    "en": "Savings",
-    "it": "Risparmio",
-    "examples": {
-      "en": "To your savings or deposit account",
-      "it": "Verso il conto deposito o di risparmio"
-    }
-  },
-  {
-    "key": "credit_card",
-    "type": "transfer",
-    "en": "Credit card",
-    "it": "Carta di credito",
-    "examples": {
-      "en": "Card repayments and top-ups",
-      "it": "Saldo e ricariche della carta"
-    }
+      "en": "Everything else",
+      "it": "Tutto il resto"
+    },
+    "children": []
   }
 ]

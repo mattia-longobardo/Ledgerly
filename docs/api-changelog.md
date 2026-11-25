@@ -4,6 +4,28 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · Giroconti without a category, the default tree of 11 groups (not additive)
+
+A giroconto between two accounts has no category any more (it replaced QC7, "Transfers with flat
+categories"): it has the other account, one of the person's or one outside Ledgerly.
+
+- Removed: the value `transfer` of a category's `type` and of a macro, in `GET`/`POST /categories`,
+  `PATCH /categories/{id}`, `GET`/`POST /categories/{id}/macro-move`, `GET /categories/board`,
+  `PUT /source-categories/{id}` and the `macros` of a movement (`GET /transactions/{id}`,
+  `GET /transactions/view`). `macros` is empty on a giroconto. A movement of type `transfer` is never
+  given a category: `PUT /transactions/category` leaves it alone.
+- Added to a movement (`GET /transactions/{id}`, `GET /transactions/view`): `transferOutside` (the other
+  side is outside Ledgerly) and `transferAccountId` (the partner's account, or the one chosen while the
+  partner has not arrived). The badge `unpaired` now means "choose the account": no partner, no account,
+  not outside. `unpairedTransferCount` counts the same.
+- New: `PUT /transactions/{id}/transfer` (`account`, `outside` or `none`),
+  `POST /transactions/transfer-pairs` (a pair by hand), `GET /transactions/transfer-proposals` and
+  `POST /transactions/transfer-proposals/{id}` (`accept` true or false).
+- `POST /categories/defaults` creates each chosen group with all its sub-categories: the
+  keys are the 11 groups of `groups.json` (`food_drinks`, `shopping`, `housing`, `transportation`,
+  `vehicle`, `life_entertainment`, `communication_pc`, `financial_expenses`, `investments`, `income`,
+  `others`); `count` is the categories created.
+
 ## Unreleased · The plugins' application and state: the web's session only (not additive)
 
 `PATCH /plugins/{pluginId}`, `PUT /plugins/{pluginId}/credentials` and

@@ -13,8 +13,9 @@ import { closeDatabase, resetDatabase } from "../../../../../../../test/db";
 import { createTestUser } from "../../../../../../../test/users";
 import { macroMoveView, moveToMacro, undoMoveToMacro } from "./macro";
 
-// "Move to another section" (categories-and-rules.md §5.6, N3.3): the movements count as the macro
-// of arrival says, the budget stops (QC8), and "Undo" puts every number back.
+// "Move to another section" (categories-and-rules.md §5.6): the category changes macro, the movements
+// keep counting by their sign (a category never makes a giroconto, 2026-11-25), the budget stops
+// (QC8), and "Undo" puts every number back.
 
 function contextFor(userId: string): Ctx {
   return {
@@ -68,7 +69,7 @@ const numbers = async (accountId: string) => {
   return { summary, budgets: budgets.rows.map((row) => [row.limitCents, row.spentCents]) };
 };
 
-describe("moving a group to Transfers", () => {
+describe("moving a group to Income", () => {
   it("says what changes before the move", async () => {
     const { group } = await savingsGroup();
     const view = await macroMoveView(ctx, group.id);
@@ -83,17 +84,15 @@ describe("moving a group to Transfers", () => {
     });
   });
 
-  it("takes its movements out of income and expenses, keeps the net, and Undo puts every number back", async () => {
+  it("keeps the money where the sign puts it, stops the budget, and Undo puts every number back", async () => {
     const { group, deposit, account } = await savingsGroup();
     const before = await numbers(account.id);
 
-    const undo = await moveToMacro(ctx, group.id, { type: "transfer", parentId: null });
+    const undo = await moveToMacro(ctx, group.id, { type: "income", parentId: null });
     const after = await numbers(account.id);
-    expect((await getCategory(ctx, deposit.id)).type).toBe("transfer");
-    expect(after.summary.expenseCents).toBe(before.summary.expenseCents + 35_000n);
-    expect(after.summary.incomeCents).toBe(before.summary.incomeCents - 1_000n);
-    expect(after.summary.netCents).toBe(before.summary.netCents);
-    expect(after.summary.count).toBe(before.summary.count);
+    expect((await getCategory(ctx, deposit.id)).type).toBe("income");
+    // A category never makes a giroconto: the movements count by their sign, as before.
+    expect(after.summary).toEqual(before.summary);
     expect(after.budgets).toEqual([]);
     expect(await movementsOutOfLine(getDb(), ctx)).toBe(0);
 
@@ -102,16 +101,17 @@ describe("moving a group to Transfers", () => {
     expect((await getCategory(ctx, deposit.id)).type).toBe("expense");
   });
 
-  it("refuses a category in a group, and a group of Transfers as the place of arrival", async () => {
+  it("refuses a category in a group, a group of Transfers, and a group of the other macro as the place", async () => {
     const { deposit, food } = await savingsGroup();
-    await expect(moveToMacro(ctx, deposit.id, { type: "transfer", parentId: null })).rejects.toThrow();
-    const transfers = await createCategory(ctx, { name: "Card", type: "transfer" });
-    await expect(moveToMacro(ctx, food.id, { type: "transfer", parentId: transfers.id })).rejects.toThrow();
+    await expect(moveToMacro(ctx, deposit.id, { type: "income", parentId: null })).rejects.toThrow();
+    await expect(createCategory(ctx, { name: "Card", type: "transfer" })).rejects.toThrow();
+    const work = await createCategory(ctx, { name: "Work", type: "income" });
+    await expect(moveToMacro(ctx, food.id, { type: "expense", parentId: work.id })).rejects.toThrow();
   });
 
   it("refuses an Undo that names another person's category", async () => {
     const { group } = await savingsGroup();
-    const undo = await moveToMacro(ctx, group.id, { type: "transfer", parentId: null });
+    const undo = await moveToMacro(ctx, group.id, { type: "income", parentId: null });
     const other = contextFor((await createTestUser()).id);
     await expect(undoMoveToMacro(other, undo)).rejects.toThrow();
   });

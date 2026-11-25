@@ -118,6 +118,13 @@ export const transactionLine = transactionRow.extend({
   suggestedCategoryId: id().nullable(),
   labelIds: z.array(id()),
   transferGroupId: id().nullable(),
+  /** A giroconto with an account outside Ledgerly ("conto esterno"). */
+  transferOutside: z.boolean(),
+  /**
+   * The other account of a giroconto: the partner's, or the one chosen while the partner has not
+   * arrived. Null on a giroconto that waits for the person (badge `unpaired`, "Scegli il conto").
+   */
+  transferAccountId: id().nullable(),
   origin: z.enum(TRANSACTION_ORIGINS),
   sendState: z.enum(SEND_STATES).nullable(),
   /** The name of the source a manual movement waits for; null when it waits for none. */
@@ -132,7 +139,7 @@ export const transactionLine = transactionRow.extend({
    * `edited` above keep their meaning, for the MCP tools.
    */
   badges: z.array(z.enum(ROW_BADGES)),
-  /** The macros its category may be chosen in (`macrosFor`): a pair, `transfer` only; else by the sign. */
+  /** The macros its category may be chosen in (`macrosFor`): none for a giroconto, else by the sign. */
   macros: z.array(categoryType),
 });
 
@@ -187,6 +194,8 @@ export const TRANSACTION_LINE_EXAMPLE = {
   suggestedCategoryId: null,
   labelIds: [LABEL_ID],
   transferGroupId: null,
+  transferOutside: false,
+  transferAccountId: null,
   origin: "provider",
   sendState: null,
   sendSource: null,
@@ -194,7 +203,7 @@ export const TRANSACTION_LINE_EXAMPLE = {
   removedUpstream: false,
   edited: false,
   badges: [],
-  macros: ["expense", "transfer"],
+  macros: ["expense"],
 };
 
 export const SUMMARY_EXAMPLE = {

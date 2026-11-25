@@ -15,6 +15,7 @@ export {
   unmergeCategories,
 } from "./categorize/review";
 export type { MergeProposal, MergeUndo } from "./categorize/review";
+export type { TransferProposal, TransferSide } from "./service";
 export { categorise, isPreparing, measureCategories, suggestFor } from "./categorize/service";
 export { setEmbedder } from "./categorize/service";
 export type { Embedder } from "./rules/embedding";
@@ -102,6 +103,10 @@ export {
   followProviderCategoryName,
   hideTransactions,
   linkOwnTransfers,
+  chooseTransferSide,
+  pairByHand,
+  listTransferProposals,
+  answerTransferProposal,
   linkProviderCategory,
   listProviderCategories,
   markNotSent,

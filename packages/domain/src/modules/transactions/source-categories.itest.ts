@@ -399,29 +399,3 @@ describe("the data of the release (06-data.md §6.1)", () => {
     expect(await listSourceCategories(ctx)).toHaveLength(rows.length);
   });
 });
-
-// N3.3 (categories-and-rules.md §2.4): a source's category may count under Transfers. Its movements
-// keep their categories of the source (H34) and count as transfers; "Undo" makes them count as before.
-describe("a match to a category of Transfers", () => {
-  it("makes the source's movements transfers, keeps their own category, and Undo puts the type back", async () => {
-    await read([incoming(TOBACCO), incoming(TOBACCO)]);
-    const tobacco = await sourceNamed("Tobacco");
-    const savings = await createCategory(ctx, { name: "Savings", type: "transfer" });
-    const types = async () =>
-      (
-        await getPool().query<{ type: string }>("select type from transactions where user_id = $1", [
-          ctx.userId,
-        ])
-      ).rows.map((row) => row.type);
-
-    const change = await choose(tobacco.id, savings.id);
-    expect(change).toMatchObject({ moved: 2, macro: { from: "expense", to: "transfer" } });
-    expect(await types()).toEqual(["transfer", "transfer"]);
-    for (const row of await stored()) {
-      expect(row).toMatchObject({ source_category_id: tobacco.id, category_origin: "provider" });
-    }
-
-    await undo(change.undoId as string);
-    expect(await types()).toEqual(["expense", "expense"]);
-  });
-});
