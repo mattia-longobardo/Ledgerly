@@ -6,6 +6,7 @@ import type { csvMapSchema } from "@ledgerly/api-contract";
 import type { CivilDate } from "../../../../shared/dates";
 import type { Cents } from "../../../../shared/money";
 import type { ManualKind } from "../../manual-rules";
+import { csvText } from "@ledgerly/format/csv";
 import { isBlank } from "./records";
 import { parseAmountCell, parseDateCell } from "./values";
 
@@ -34,7 +35,8 @@ type CsvRow = { row: number; movement: CsvMovement } | { row: number; reason: st
 type Cells = readonly string[];
 
 const textOf = (cells: Cells, column: number | null, max: number): string | null => {
-  const text = column === null ? "" : (cells[column] ?? "").trim();
+  // A file of the export comes back as it left: the `'` before a formula's start is not the text.
+  const text = column === null ? "" : csvText((cells[column] ?? "").trim()).trim();
   return text === "" ? null : text.slice(0, max);
 };
 

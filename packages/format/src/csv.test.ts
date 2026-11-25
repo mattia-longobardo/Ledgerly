@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csvDocument, csvField, csvRow } from "./csv";
+import { csvDocument, csvField, csvRow, csvText } from "./csv";
 
 describe("csvField", () => {
   it("leaves a plain value alone", () => {
@@ -38,5 +38,30 @@ describe("csvDocument", () => {
 
   it("writes a header alone when there are no rows", () => {
     expect(csvDocument(["name"], [])).toBe("﻿name\r\n");
+  });
+});
+
+describe("a text that would start a formula (SEC-07)", () => {
+  it("gets a leading quote, so a spreadsheet shows it as text", () => {
+    expect(csvField('=HYPERLINK("http://x","y")')).toBe(`"'=HYPERLINK(""http://x"",""y"")"`);
+    expect(csvField("+A1*2")).toBe("'+A1*2");
+    expect(csvField("-cmd")).toBe("'-cmd");
+    expect(csvField("@SUM(A1)")).toBe("'@SUM(A1)");
+    expect(csvField("\tTab")).toBe("'\tTab");
+    expect(csvField("\rReturn")).toBe(`"'\rReturn"`);
+  });
+
+  it("leaves a number alone, negative or written in a locale's format", () => {
+    expect(csvField(-12.5)).toBe("-12.5");
+    expect(csvField("-12.50")).toBe("-12.50");
+    expect(csvField("-1.234,56")).toBe("-1.234,56");
+    expect(csvField("+5")).toBe("+5");
+    expect(csvField("2026-11-25")).toBe("2026-11-25");
+    expect(csvField("Esselunga - Milano")).toBe("Esselunga - Milano");
+  });
+
+  it("comes back as it left when read as text", () => {
+    for (const text of ["=1+1", "-cmd", "@x", "plain", "'quoted", "-12.50"])
+      expect(csvText(csvField(text))).toBe(text);
   });
 });
