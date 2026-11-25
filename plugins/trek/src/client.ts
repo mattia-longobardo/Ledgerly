@@ -231,6 +231,8 @@ export class TrekClient {
       const response = await this.options.fetch(url, {
         method: init.body === undefined ? "GET" : "POST",
         ...init,
+        // A redirect would leave the egress proxy for the plugins' network (SEC-05).
+        redirect: "error",
         signal: controller.signal,
       });
       const raw = await response.text().catch(() => "");

@@ -121,3 +121,28 @@ describe("the manifest of the contract", () => {
     expect(acceptsContract("3")).toBe(false);
   });
 });
+
+describe("a redirect from a plugin (SEC-05)", () => {
+  it("is refused, and the address it names is never called", async () => {
+    const { createServer } = await import("node:http");
+    let followed = 0;
+    const server = createServer((request, response) => {
+      if (request.url === "/elsewhere") {
+        followed += 1;
+        response.end(JSON.stringify({ access: "write" }));
+        return;
+      }
+      response.writeHead(302, { location: "/elsewhere" }).end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+    try {
+      const plugin = { ...PLUGIN, url: `http://127.0.0.1:${port}` };
+      const error = await codeOf(callPlugin(plugin, "/verify", verifyResponseSchema, { body: {} }));
+      expect(error.code).toBe("plugin_down");
+      expect(followed).toBe(0);
+    } finally {
+      server.close();
+    }
+  });
+});

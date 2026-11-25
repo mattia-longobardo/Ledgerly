@@ -55,6 +55,8 @@ export async function callPlugin<T>(
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       cache: "no-store",
+      // A plugin answers itself: a redirect could send the core's secret elsewhere (SEC-05).
+      redirect: "error",
     });
     json = await response.json();
   } catch {

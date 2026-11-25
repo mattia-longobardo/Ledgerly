@@ -130,6 +130,8 @@ async function send(wallet: Wallet, request: WalletRequest): Promise<Response> {
       method: request.method,
       headers,
       body: request.body,
+      // A redirect would leave the egress proxy for the plugins' network (SEC-05).
+      redirect: "error",
       signal: controller.signal,
     });
   } catch {

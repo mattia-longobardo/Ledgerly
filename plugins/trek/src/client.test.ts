@@ -834,3 +834,26 @@ describe("what the token may do", () => {
     expect(fake.calls.filter((call) => call.tool === "toggle_vacay_entry")).toHaveLength(2);
   });
 });
+
+describe("a redirect from Trek (SEC-05)", () => {
+  it("is refused, and the address it names is never called", async () => {
+    const { createServer } = await import("node:http");
+    let followed = 0;
+    const server = createServer((request, response) => {
+      if (request.url === "/elsewhere") followed += 1;
+      response.writeHead(request.url === "/elsewhere" ? 200 : 302, { location: "/elsewhere" }).end("{}");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+    try {
+      const client = createTrekClient(
+        { ...CONFIG, baseUrl: `http://127.0.0.1:${port}` },
+        { fetch: globalThis.fetch, sleep: async () => {}, jitter: () => 0, attempts: 1 },
+      );
+      await expect(client.getEntries(2026)).rejects.toBeInstanceOf(TrekError);
+      expect(followed).toBe(0);
+    } finally {
+      server.close();
+    }
+  });
+});

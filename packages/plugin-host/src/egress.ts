@@ -31,6 +31,7 @@ export async function grantDynamicHost(
       method: "POST",
       headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
       body: JSON.stringify({ plugin: pluginId, host: new URL(address).hostname, ttlSeconds: GRANT_SECONDS }),
+      redirect: "error",
       signal: AbortSignal.timeout(GRANT_TIMEOUT_MS),
     });
     if (!response.ok)
