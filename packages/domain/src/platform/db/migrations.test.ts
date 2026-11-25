@@ -53,6 +53,16 @@ describe("the migrations of the rewrite plan (06-data.md §6.2)", () => {
     expect(migrations.length).toBeGreaterThan(0);
   });
 
+  // Drizzle applies a migration only when its `when` is after the last one applied: an earlier one
+  // is skipped without an error (R5f.1's first deploy). The journal's times only grow.
+  it("are in the journal with times that only grow", () => {
+    const { entries } = JSON.parse(readFileSync(join(FOLDER, "meta", "_journal.json"), "utf8")) as {
+      entries: { tag: string; when: number }[];
+    };
+    const late = entries.filter((entry, index) => index > 0 && entry.when <= entries[index - 1].when);
+    expect(late.map((entry) => entry.tag)).toEqual([]);
+  });
+
   it.each(migrations)("%s only adds", (file) => {
     const statements = statementsOf(file);
     const allowed = ALLOWED[file] ?? [];
