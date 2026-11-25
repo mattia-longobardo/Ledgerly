@@ -15,8 +15,8 @@ import { contextOf } from "./common";
  * Release N3, second part (ux/n3-categories-manual.md): movements in every state of a category, on
  * an account kept by hand — the cascade reads it as it reads a bank's, and the seed needs no bank.
  * The default groups let the static tables answer: a brand with one meaning is automatic, a brand
- * that sells everything is a suggestion, an invented shop has nothing. "Bars" beside "Restaurants
- * and bars" is a pair that looks like one category.
+ * that sells everything is a suggestion, an invented shop has nothing. "Cafe" beside "Bar, cafe"
+ * is a pair that looks like one category.
  */
 export async function seedReview(email: string = USERS.review.email): Promise<void> {
   const ctx = await contextOf(email);
@@ -26,7 +26,7 @@ export async function seedReview(email: string = USERS.review.email): Promise<vo
     DEFAULT_GROUPS.map((group) => group.key),
     "en",
   );
-  await createCategory(ctx, { name: "Bars", type: "expense" });
+  await createCategory(ctx, { name: "Cafe", type: "expense" });
   const cash = await createAccount(ctx, {
     name: "Contanti",
     type: "cash",
