@@ -56,6 +56,8 @@ function responses(route: RouteContract): Json {
   const codes = [
     ...(route.scope === null ? [] : (["unauthorized", "forbidden", "rate_limited"] as const)),
     ...route.errors,
+    // A body over the limit of its format is refused before it is read (SEC-04).
+    ...(route.body && !route.errors.includes("too_large") ? (["too_large"] as const) : []),
     // A route of an addon answers this one while the person has the addon off (H52).
     ...(addonOf(route) ? (["module_inactive"] as const) : []),
   ];

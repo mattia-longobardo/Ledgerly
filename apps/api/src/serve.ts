@@ -3,6 +3,7 @@
 // with the contract's schemas, the answer is parsed with the contract's schema before it leaves:
 // a route cannot answer a shape the OpenAPI document does not describe.
 import type { Context, Hono, MiddlewareHandler } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { z } from "zod";
 import {
@@ -107,6 +108,13 @@ function fail(
   return context.json(body, statusOf(API_ERRORS[code]));
 }
 
+/**
+ * The most bytes a body may have, by format, checked before it is read (SEC-04): a multipart body
+ * carries one file of at most `MAX_DOCUMENT_BYTES` or `CSV_MAX_BYTES` (10 MiB), plus its fields;
+ * a JSON body is a form's worth of fields. Within the limit, the use case still checks the file.
+ */
+export const BODY_MAX_BYTES = { multipart: 11 * 1024 * 1024, json: 1024 * 1024 } as const;
+
 async function readBody(context: Context, format: RouteContract["bodyFormat"]): Promise<unknown> {
   try {
     // A form's fields by name, a file as the `File` it arrived as; a field sent twice: the last one.
@@ -182,7 +190,11 @@ export function serve<R extends RouteContract>(
     if (!fitsContract(route, input)) throw new ApiRefusal("invalid");
     return handler(input);
   });
-  app.on(route.method, honoPath(route.path), guard(route.scope), async (context) => {
+  const limit = bodyLimit({
+    maxSize: BODY_MAX_BYTES[route.bodyFormat === "multipart" ? "multipart" : "json"],
+    onError: (context) => fail(context, "too_large"),
+  });
+  app.on(route.method, honoPath(route.path), guard(route.scope), limit, async (context) => {
     const input: RawInput = {
       ctx: context.get("ctx"),
       headers: context.req.raw.headers,
