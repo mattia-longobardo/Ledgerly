@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type CascadeMovement, decide, type Knowledge, topCategories } from "./cascade";
 import { outOfSample, predictGroup, train } from "./classifier";
-import { categoryForName, exportLabels } from "./export-labels";
+import { categoryForName, exportLabels } from "../rules/export-labels";
 import { merchantKey } from "./text";
 import { groupThresholdFor } from "./thresholds";
 

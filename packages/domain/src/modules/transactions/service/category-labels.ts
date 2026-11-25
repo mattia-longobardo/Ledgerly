@@ -9,7 +9,7 @@ import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { decodeText, detectDelimiter, parseRecords } from "../rules/csv";
 import { categories, categoryLabels, transactions } from "../schema";
-import { categoryForName, exportLabels } from "./export-labels";
+import { categoryForName, exportLabels } from "../rules/export-labels";
 import { categoriesOf } from "./own-categories";
 
 type Who = Pick<Ctx, "userId">;

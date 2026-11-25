@@ -4,8 +4,8 @@
  * person kept their money in before — read as a text and the category they gave it, for the
  * classifier and the memory to learn from. No movement is made from one. Pure: records in, labels out.
  */
-import { parseAmountCell } from "../rules/csv/values";
-import { DEFAULT_CATEGORIES, type GroupKey } from "./tables";
+import { parseAmountCell } from "./csv/values";
+import { DEFAULT_CATEGORIES, type GroupKey } from "../categorize/tables";
 
 /** One row of the export, as the cascade learns it. */
 interface ExportLabel {

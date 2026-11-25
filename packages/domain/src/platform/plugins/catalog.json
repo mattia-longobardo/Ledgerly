@@ -3,7 +3,7 @@
     {
       "id": "enablebanking",
       "image": "ledgerly-plugin-enablebanking",
-      "digest": "sha256:0375bf4d54dc766ac11af361d91accda3a16ed6296230ca79d2ed48239c93f89",
+      "digest": "sha256:41cf78e2a939df12eca364ad258e10279eb57262956e84e43fcf357823ef5798",
       "egress": ["api.enablebanking.com"]
     },
     {

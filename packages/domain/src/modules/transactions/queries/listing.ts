@@ -161,45 +161,55 @@ export async function listTransactions(
     ),
   ]);
 
-  return rows.map(({ transaction, categoryName, categoryColor, on }) => {
-    const categoryState = categoryStateOf(transaction);
-    return {
-      id: transaction.id,
-      accountId: transaction.accountId,
-      accountName: accountNames.get(transaction.accountId) ?? null,
-      occurredAt: transaction.occurredAt,
-      on,
-      timeKnown: transaction.timeKnown,
-      amountCents: transaction.amountCents,
-      currency: transaction.currency,
-      type: transaction.type,
-      state: transaction.state,
-      categoryId: transaction.categoryId,
-      categoryName,
-      categoryColor,
-      payee: transaction.payee,
-      note: transaction.note,
-      labels: chips.get(transaction.id) ?? [],
-      transferGroupId: transaction.transferGroupId,
-      transferOutside: transaction.transferOutside,
-      transferAccountId: partners.get(transaction.id) ?? transaction.transferAccountId,
-      hiddenAt: transaction.hiddenAt,
-      removedUpstreamAt: transaction.removedUpstreamAt,
-      locallyEdited: transaction.locallyEdited,
-      origin: transaction.origin,
-      sendState: transaction.sendState,
-      categoryState,
-      categoryIsOwn: transaction.categoryKey !== null,
-      categoryReason:
-        (categoryState === "automatic" || categoryState === "suggestion") &&
-        transaction.categoryReason !== null
-          ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
-          : null,
-      suggestedCategoryId: categoryState === "suggestion" ? transaction.suggestedCategoryId : null,
-      hidden: isHidden(transaction),
-      edited: transaction.locallyEdited.length > 0,
-    };
-  });
+  return rows.map((row) => rowOf(row, { accountNames, chips, partners }));
+}
+
+/** One page row as the table reads it: the account's name, the chips and a giroconto's other account. */
+function rowOf(
+  { transaction, categoryName, categoryColor, on }: Awaited<ReturnType<typeof pageOf>>[number],
+  read: {
+    accountNames: ReturnType<typeof namesOf>;
+    chips: Awaited<ReturnType<typeof labelsFor>>;
+    partners: Map<string, string>;
+  },
+): TransactionRow {
+  const { accountNames, chips, partners } = read;
+  const categoryState = categoryStateOf(transaction);
+  return {
+    id: transaction.id,
+    accountId: transaction.accountId,
+    accountName: accountNames.get(transaction.accountId) ?? null,
+    occurredAt: transaction.occurredAt,
+    on,
+    timeKnown: transaction.timeKnown,
+    amountCents: transaction.amountCents,
+    currency: transaction.currency,
+    type: transaction.type,
+    state: transaction.state,
+    categoryId: transaction.categoryId,
+    categoryName,
+    categoryColor,
+    payee: transaction.payee,
+    note: transaction.note,
+    labels: chips.get(transaction.id) ?? [],
+    transferGroupId: transaction.transferGroupId,
+    transferOutside: transaction.transferOutside,
+    transferAccountId: partners.get(transaction.id) ?? transaction.transferAccountId,
+    hiddenAt: transaction.hiddenAt,
+    removedUpstreamAt: transaction.removedUpstreamAt,
+    locallyEdited: transaction.locallyEdited,
+    origin: transaction.origin,
+    sendState: transaction.sendState,
+    categoryState,
+    categoryIsOwn: transaction.categoryKey !== null,
+    categoryReason:
+      (categoryState === "automatic" || categoryState === "suggestion") && transaction.categoryReason !== null
+        ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
+        : null,
+    suggestedCategoryId: categoryState === "suggestion" ? transaction.suggestedCategoryId : null,
+    hidden: isHidden(transaction),
+    edited: transaction.locallyEdited.length > 0,
+  };
 }
 
 /**
