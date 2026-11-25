@@ -36,7 +36,7 @@ import { totpCode } from "../tests/e2e/_shared/totp";
 import { cookieHeader, createTestUsers, drawPassword } from "./seed-e2e/users";
 import { seedCurrency, seedSwitching } from "./seed-e2e/accounts";
 import { seedBudgets } from "./seed-e2e/budgets";
-import { seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
+import { seedHistory, seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
 import { seedPreviewPlugins, seedPreviewRates } from "./seed-e2e/common";
 import { seedConnections, seedSchedule } from "./seed-e2e/connections";
 import {
@@ -174,6 +174,7 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [[], seedPreviewPlugins],
   [["expenses"], seedExpenses],
   [["giroconti"], seedGiroconti],
+  [["history"], () => seedHistory()],
   [["budgets"], seedBudgets],
   [["pockets"], seedPockets],
   [["subscriptions"], seedSubscriptions],

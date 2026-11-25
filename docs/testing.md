@@ -117,7 +117,7 @@ runs against the deployed site.
 |---|---|---|
 | `accounts` | `npx playwright test -c playwright.preview.config.ts tests/e2e/accounts/` | `npx playwright test -c playwright.preview.config.ts accounts/accounts.spec.ts accounts/currency.spec.ts accounts/account-switch.spec.ts` |
 | `transactions` | `npx playwright test -c playwright.preview.config.ts tests/e2e/transactions/` | `npx playwright test -c playwright.preview.config.ts transactions/expenses.spec.ts transactions/giroconti.spec.ts transactions/manual-movement.spec.ts transactions/manual-send.spec.ts transactions/wide.spec.ts` |
-| `categories` | `npx playwright test -c playwright.preview.config.ts tests/e2e/categories/` | `npx playwright test -c playwright.preview.config.ts categories/categories.spec.ts categories/review.spec.ts categories/source-categories.spec.ts categories/rules.spec.ts` |
+| `categories` | `npx playwright test -c playwright.preview.config.ts tests/e2e/categories/` | `npx playwright test -c playwright.preview.config.ts categories/categories.spec.ts categories/review.spec.ts categories/source-categories.spec.ts categories/rules.spec.ts categories/history.spec.ts` |
 | `budgets` | `npx playwright test -c playwright.preview.config.ts tests/e2e/budgets/` | `npx playwright test -c playwright.preview.config.ts budgets/budgets.spec.ts` |
 | `pockets` | `npx playwright test -c playwright.preview.config.ts tests/e2e/pockets/` | `npx playwright test -c playwright.preview.config.ts pockets/pockets.spec.ts` |
 | `subscriptions` | `npx playwright test -c playwright.preview.config.ts tests/e2e/subscriptions/` | `npx playwright test -c playwright.preview.config.ts subscriptions/subscriptions.spec.ts` |

@@ -53,7 +53,7 @@ export const FLOWS: Flow[] = [
   },
   {
     id: "categories",
-    specs: ["categories", "review", "source-categories", "rules"],
+    specs: ["categories", "review", "source-categories", "rules", "history"],
     screens: ["a11y", "keyboard"],
   },
   { id: "budgets", specs: ["budgets"], screens: ["a11y", "mobile"] },

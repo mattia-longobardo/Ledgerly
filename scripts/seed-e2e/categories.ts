@@ -7,7 +7,12 @@ import { DEFAULT_GROUPS } from "@domain/modules/transactions/categorize/tables";
 import { createManualTransaction } from "@domain/modules/transactions/manual";
 import { categorisableAccountIds } from "@domain/modules/transactions/service";
 import { createCategory } from "@domain/modules/transactions/taxonomy";
+import { and, eq } from "drizzle-orm";
+import { transactions } from "@domain/modules/transactions/schema";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, today } from "@domain/shared/dates";
+import { getDb } from "@domain/platform/db/client";
+import { userScoped } from "@domain/platform/db/scope";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";
 
@@ -103,4 +108,50 @@ export async function seedRules(email: string): Promise<void> {
     conditions: [{ field: "counterparty", op: "contains", value: "bottega verdi" }],
     categoryId: shop.id,
   });
+}
+
+/**
+ * The import of another app's history and the selector's top (decision 14A): the default groups, so
+ * the import has categories to match, and on an account kept by hand one movement suggested as a
+ * group — written as the cascade writes it, because a model sure of a group only is not something a
+ * seed can train — and one with nothing. Synthetic payees only.
+ */
+export async function seedHistory(email: string = USERS.history.email): Promise<void> {
+  const ctx = await contextOf(email);
+  const on = today(ctx.timeZone);
+  await createDefaultGroups(
+    ctx,
+    DEFAULT_GROUPS.map((group) => group.key),
+    "en",
+  );
+  const cash = await createAccount(ctx, {
+    name: "Contanti",
+    type: "cash",
+    currency: "EUR",
+    openingBalance: { on: addDays(on, -10), cents: 50_000n },
+  });
+  const written = new Map<string, string>();
+  for (const [payee, back] of [
+    ["Locale Comune", 2],
+    ["Negozio Nuovo", 3],
+  ] as const) {
+    const row = await createManualTransaction(ctx, {
+      kind: "expense",
+      amountCents: 1_500n,
+      on: addDays(on, -back),
+      accountId: cash.id,
+      categoryId: null,
+      payee,
+      note: "",
+    });
+    written.set(payee, row.transaction.id);
+  }
+  const food = (await listCategories(ctx)).find(
+    (one) => one.name === "Food & Drinks" && one.parentId === null,
+  );
+  if (!food) throw new Error("seedHistory: the default group Food & Drinks is missing");
+  await getDb()
+    .update(transactions)
+    .set({ suggestedCategoryId: food.id, categoryReason: "group", categoryReasonParams: {} })
+    .where(and(eq(transactions.id, written.get("Locale Comune") ?? ""), userScoped(ctx).owns(transactions)));
 }

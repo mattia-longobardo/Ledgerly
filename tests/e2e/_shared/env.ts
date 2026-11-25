@@ -39,6 +39,8 @@ export const USERS = {
   expenses: { email: "expenses@example.test", name: "Expenses" },
   // Giroconti in each of their states, and movements with and without a time of day.
   giroconti: { email: "giroconti@example.test", name: "Giroconti" },
+  // The import of another app's history, and the category selector's top and group suggestion.
+  history: { email: "history@example.test", name: "History" },
   budgets: { email: "budgets@example.test", name: "Budgets" },
   pockets: { email: "pockets@example.test", name: "Pockets" },
   subscriptions: {
@@ -287,6 +289,7 @@ export const SESSIONS = {
   currency: { user: "currency", file: "currency-session.json" },
   expenses: { user: "expenses", file: "expenses-session.json" },
   giroconti: { user: "giroconti", file: "giroconti-session.json" },
+  history: { user: "history", file: "history-session.json" },
   budgets: { user: "budgets", file: "budgets-session.json" },
   pockets: { user: "pockets", file: "pockets-session.json" },
   subscriptions: { user: "subscriptions", file: "subscriptions-session.json" },

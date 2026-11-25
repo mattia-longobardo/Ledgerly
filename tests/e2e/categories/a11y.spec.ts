@@ -77,9 +77,62 @@ const PAGES: Screen[] = [
   // `layout` user has none.
   { name: "/settings/finance/rules", session: "rules", open: go("/settings/finance/rules") },
   { name: "/settings/finance/rules (no rule)", session: "layout", open: go("/settings/finance/rules") },
+
+  // Decision 14A: the import of another app's history. The answer is the route's, given here, so a
+  // check at every width writes nothing; history.spec.ts imports for real.
+  {
+    name: "/settings/finance (the import of a history, its result)",
+    session: "history",
+    open: async (page) => {
+      await page.route("**/api/v1/categories/labels", (route) =>
+        route.fulfill({
+          json: { imported: 3, transfers: 1, unknown: 1, unreadable: 1, unmapped: 1, duplicates: 1 },
+        }),
+      );
+      await page.goto("/settings/finance");
+      await settled(page);
+      const section = page.getByRole("region", { name: "Learn from your history" });
+      await section.getByLabel("Wallet export (CSV)").setInputFiles({
+        name: "records.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("category;amount;type;note;date;transfer;payee\n"),
+      });
+      await section.getByRole("button", { name: "Import" }).click();
+      await section.getByTestId("history-result").waitFor();
+    },
+  },
 ];
 
 const OVERLAYS: Screen[] = [
+  {
+    // Decision 14A: the selector with the three likeliest on top (the route's answer given here).
+    name: "the category selector with the likeliest on top",
+    session: "history",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      const { categories } = await (await page.request.get("/api/v1/categories")).json();
+      const top = categories.slice(1, 4).map((one: { id: string }) => one.id);
+      await page.route("**/api/v1/transactions/*/category-suggestions", (route) =>
+        route.fulfill({ json: { categoryId: null, top } }),
+      );
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page.getByRole("button", { name: "Edit category" }).locator("visible=true").first().click();
+      await page.getByRole("group", { name: "Most likely" }).waitFor();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "a group suggestion and its reason",
+    session: "history",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page.getByTestId("suggestion-chip").locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
   {
     name: "the editor of a rule, with its preview",
     session: "rules",
