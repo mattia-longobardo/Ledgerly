@@ -236,11 +236,7 @@ describe("the board of the categories (client R3)", () => {
       names: ["Alcohol, tobacco", "Tobacco"],
     });
     expect(expense.rest).toEqual({ count: 1, total: "-3.00", in: "0.00", out: "3.00" });
-    expect(board.macros.map((one: { macro: string }) => one.macro)).toEqual([
-      "income",
-      "expense",
-      "transfer",
-    ]);
+    expect(board.macros.map((one: { macro: string }) => one.macro)).toEqual(["income", "expense"]);
   });
 
   it("draws each category of GET /categories in the colour of the domain's rule (displayColor)", async () => {

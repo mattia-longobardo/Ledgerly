@@ -8,6 +8,7 @@ export {
   TRANSACTION_TYPES,
   TRANSACTION_STATES,
   CATEGORY_TYPES,
+  TRANSFER_PROPOSAL_STATES,
   TRANSACTION_ORIGINS,
   SEND_STATES,
   CATEGORY_ORIGINS,
@@ -40,8 +41,10 @@ export {
   treeOrder,
 } from "./records";
 export type { IncomingTransaction, ProviderResolution, StoredTransaction, TransactionPatch } from "./records";
-export { transferPairKey, pairTransfers, planIbanTransfers } from "./transfers";
-export type { TransferLeg, OwnIban, IbanRuleRow } from "./transfers";
+export { transferPairKey, pairTransfers } from "./transfers";
+export type { TransferLeg } from "./transfers";
+export { planOwnTransfers, proposalKey, isTransferCode } from "./giroconti";
+export type { OwnIban, OwnTransferRow, OwnTransferPlan } from "./giroconti";
 export {
   resolveType,
   toNewTransaction,
@@ -57,7 +60,7 @@ export { cadenceOfInterval, detectRecurrences } from "./recurrences";
 export type { RecurrenceInput } from "./recurrences";
 export { matchesMovement } from "./matching";
 export type { MovementRule } from "./matching";
-export { typeByMacro, typeMarkerByMacro, macrosFor } from "./macros";
+export { typeByMacro, macrosFor } from "./macros";
 export type { TypedMovement } from "./macros";
 export { ROW_BADGES, badgesOf } from "./badges";
 export type { BadgeSource, RowBadge } from "./badges";

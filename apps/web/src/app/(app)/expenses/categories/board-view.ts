@@ -55,9 +55,8 @@ function lineOf(line: Line, format: BoardFormat): BoardLine {
   };
 }
 
-/** «To categorize» opens «To review» on the period; under Transfers, the movements between accounts. */
-function restHref(macro: Macro["macro"], format: BoardFormat): string {
-  if (macro === "transfer") return withParams("/expenses", format.carry, { type: "transfer" });
+/** «To categorize» opens «To review» on the period. */
+function restHref(format: BoardFormat): string {
   const accounts = format.accounts.length > 0 ? format.accounts.join(",") : undefined;
   return withParams("/expenses/review", {}, { ...format.range, acc: accounts });
 }
@@ -87,7 +86,7 @@ export function boardOf(board: Board, format: BoardFormat): BoardMacro[] {
           total: money(view.rest.total),
           inTotal: money(view.rest.in),
           outTotal: money(view.rest.out),
-          href: restHref(view.macro, format),
+          href: restHref(format),
         }
       : null,
   }));

@@ -42,6 +42,7 @@ import * as security from "./settings/security";
 import * as server from "./settings/server";
 import * as sources from "./settings/sources";
 import * as csv from "./transactions/csv";
+import * as giroconti from "./transactions/giroconti";
 import * as manual from "./transactions/manual";
 import * as movements from "./transactions/movements";
 import * as review from "./transactions/review";
@@ -97,7 +98,7 @@ export const ACCOUNTS_ROUTES: readonly RouteContract[] = Object.values(ACCOUNTS)
 );
 
 /** Transactions by area, for `apps/api` to serve each one by name. */
-export const TRANSACTIONS = { movements, spending, manual, review, rules, csv } as const;
+export const TRANSACTIONS = { movements, spending, manual, review, rules, csv, giroconti } as const;
 
 /** Transactions, the third module of R2 (05-refactor.md §5.2), and the search across modules. */
 export const TRANSACTIONS_ROUTES: readonly RouteContract[] = [

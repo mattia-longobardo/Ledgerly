@@ -5,7 +5,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { CategoryType } from "@ledgerly/domain/transactions/client";
 
 export type Macro = CategoryType;
-export const MACROS: readonly Macro[] = ["income", "expense", "transfer"];
+export const MACROS: readonly Macro[] = ["income", "expense"];
 
 /** One category, or a group, as the board draws it: every amount already formatted. */
 export interface BoardLine {

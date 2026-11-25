@@ -83,6 +83,8 @@ export function transactionLine(row: TransactionRow, extras: LineExtras): Line {
     suggestedCategoryId: row.suggestedCategoryId,
     labelIds: row.labels.map((label) => label.id),
     transferGroupId: row.transferGroupId,
+    transferOutside: row.transferOutside,
+    transferAccountId: row.transferAccountId,
     origin: row.origin,
     sendState: row.sendState,
     sendSource: row.sendState === null ? null : (extras.sendSources.get(row.accountId) ?? null),

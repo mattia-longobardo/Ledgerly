@@ -636,7 +636,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": "source_categories#0",
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#1",
@@ -672,7 +674,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": "source_categories#3",
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#2",
@@ -683,7 +687,7 @@
       "currency": "EUR",
       "type": "transfer",
       "state": "cleared",
-      "category_id": "categories#3",
+      "category_id": null,
       "payee": null,
       "note": null,
       "transfer_group_id": "transactions#2",
@@ -698,7 +702,7 @@
       "bank_transaction_code": null,
       "origin": "provider",
       "idempotency_key": null,
-      "category_origin": "provider",
+      "category_origin": null,
       "category_confidence": null,
       "category_model_version": null,
       "suggested_category_id": null,
@@ -708,7 +712,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": "source_categories#1",
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#3",
@@ -744,7 +750,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#4",
@@ -755,7 +763,7 @@
       "currency": "EUR",
       "type": "transfer",
       "state": "cleared",
-      "category_id": "categories#7",
+      "category_id": null,
       "payee": null,
       "note": null,
       "transfer_group_id": null,
@@ -770,7 +778,7 @@
       "bank_transaction_code": null,
       "origin": "provider",
       "idempotency_key": null,
-      "category_origin": "provider",
+      "category_origin": null,
       "category_confidence": null,
       "category_model_version": null,
       "suggested_category_id": null,
@@ -780,7 +788,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": "source_categories#4",
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#5",
@@ -816,7 +826,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#6",
@@ -852,7 +864,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#7",
@@ -888,7 +902,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": "source_categories#2",
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#8",
@@ -924,7 +940,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#9",
@@ -960,7 +978,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#10",
@@ -996,7 +1016,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": "source_categories#5",
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#11",
@@ -1032,7 +1054,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     },
     {
       "id": "transactions#12",
@@ -1068,7 +1092,9 @@
       "send_state": null,
       "send_asked_on": null,
       "source_category_id": null,
-      "category_rule_id": null
+      "category_rule_id": null,
+      "transfer_outside": false,
+      "transfer_account_id": null
     }
   ],
   "labels": [

@@ -8,11 +8,11 @@
     "cat-income": "income"
   },
   "groups": {
-    "groceries": "cat-groceries",
-    "restaurants": "cat-restaurants",
-    "transport": "cat-transport",
-    "taxes_fees": "cat-fees",
-    "income": "cat-income"
+    "food_drinks.groceries": "cat-groceries",
+    "food_drinks.restaurants": "cat-restaurants",
+    "transportation.long_distance": "cat-transport",
+    "financial_expenses.charges_fees": "cat-fees",
+    "income.wage_invoices": "cat-income"
   },
   "memory": { "mercato alfa milano": "cat-groceries", "bar epsilon": "cat-restaurants" },
   "cases": [

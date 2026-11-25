@@ -560,6 +560,10 @@ Due ingressi:
 
 ### 7.2 Elenco proposto
 
+> **Sostituito il 25/11/2026**: i default sono l'albero di Wallet, 11 gruppi e 70 categorie, senza Trasferimenti
+> (`categorize/tables/groups.json`; [`categories-and-rules.md`](../../categories-and-rules.md) §13). L'elenco sotto è
+> lo storico di N3.
+
 12 gruppi: 11 di spesa e 1 di entrata. I nomi si creano nella lingua dell'utente al momento della creazione; poi sono
 categorie normali. Elenco confermato da Mattia (decisione 5).
 

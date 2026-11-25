@@ -35,7 +35,7 @@ export interface Knowledge {
   /** The person's category for a default group, where they have one. */
   groupCategory: ReadonlyMap<GroupKey, string>;
   /** The categories a movement may be given, with their kind: an archived one is not here. */
-  categoryKind: ReadonlyMap<string, "income" | "expense" | "transfer">;
+  categoryKind: ReadonlyMap<string, "income" | "expense">;
   /** R6: the embedding level, in the worker only; `null` everywhere else and when it is off. */
   embedded?: EmbeddedKnowledge | null;
 }
@@ -218,13 +218,14 @@ export function decide(movement: CascadeMovement, knowledge: Knowledge): Decisio
 }
 
 /**
- * A person's category for each default group: the one created from the group (`marked`), else an
- * active category with the group's own name in either language. Without one, a table that points
- * at the group gives nothing for this person.
+ * A person's category for each key of the default tree: the one created from it (`marked`), else an
+ * active category with its name in either language, of its sign, and — for a sub-category — under
+ * the person's category of its group: "Mantenimento figli" of Income is not the one of Financial
+ * expenses. Without one, a table that points at the key gives nothing for this person.
  */
 export function groupCategories(
-  groups: readonly { key: GroupKey; type: string; en: string; it: string }[],
-  categories: readonly { id: string; name: string; type: string }[],
+  defaults: readonly { key: GroupKey; parent: GroupKey | null; type: string; en: string; it: string }[],
+  categories: readonly { id: string; name: string; type: string; parentId: string | null }[],
   marked: ReadonlyMap<string, GroupKey>,
 ): Map<GroupKey, string> {
   const found = new Map<GroupKey, string>();
@@ -233,14 +234,18 @@ export function groupCategories(
     if (key !== undefined && !found.has(key)) found.set(key, category.id);
   }
   const plain = (text: string) => text.trim().toLowerCase();
-  for (const group of groups) {
-    if (found.has(group.key)) continue;
+  // Groups come before their sub-categories in `defaults`, so a group is found before its children.
+  for (const one of defaults) {
+    if (found.has(one.key)) continue;
+    const parentId = one.parent === null ? null : found.get(one.parent);
+    if (parentId === undefined) continue;
     const match = categories.find(
       (category) =>
-        category.type === group.type &&
-        (plain(category.name) === plain(group.en) || plain(category.name) === plain(group.it)),
+        category.type === one.type &&
+        category.parentId === parentId &&
+        (plain(category.name) === plain(one.en) || plain(category.name) === plain(one.it)),
     );
-    if (match) found.set(group.key, match.id);
+    if (match) found.set(one.key, match.id);
   }
   return found;
 }

@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
-import { getAccount, listAccounts } from "../../accounts";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { getAccount } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
@@ -10,10 +10,7 @@ import {
   type TransactionPatch,
   type TransferLeg,
   type WindowRow,
-  normalizeIban,
-  type OwnIban,
   pairTransfers,
-  planIbanTransfers,
   planProviderMerge,
   planUpstreamRemovals,
   toNewTransaction,
@@ -33,6 +30,7 @@ import {
   writeLabels,
 } from "./guards";
 import { ProviderIds, deduped } from "./provider-ids";
+import { linkOwnTransfers, PAIRED_BY_HAND } from "./giroconti";
 
 /**
  * Applies a provider's movements to one account (spec §7.2, §9.1). Idempotent by construction:
@@ -190,7 +188,15 @@ export async function upsertFromProvider(
       transferGroupId: row.transferGroupId,
     });
   }
-  const assignments = pairTransfers(legs);
+  // A pair a person made stays theirs: the source's reference never moves one of its legs.
+  const byHand = new Set(
+    [...stored.values(), ...outsideRows.values()]
+      .filter((row) => row.locallyEdited.includes(PAIRED_BY_HAND))
+      .flatMap((row) => [row.id, row.transferGroupId ?? row.id]),
+  );
+  const assignments = pairTransfers(legs).filter(
+    (one) => !byHand.has(one.id) && !byHand.has(one.transferGroupId),
+  );
 
   // The window's verdict, decided on the snapshot taken before anything was written. The identity
   // handed to the rule is the local id on both sides: `transactions` holds no external id (§4.3),
@@ -269,59 +275,12 @@ export async function upsertFromProvider(
           ),
         );
     }
-    // A category of the source that counts under Transfers makes the movement a transfer (CR3).
     await retypeMovements(tx, ctx);
   });
+  // A reading is a write that can make a giroconto: the legs of this pass find their twins now.
+  await linkOwnTransfers(ctx);
 
   return outcome;
-}
-
-// Only a transfer or a row in a pair can change or weigh in `planIbanTransfers`: an income or an
-// expense outside any pair is neither a leg, nor a twin, nor a member (audit TRX-11).
-const PAIRING_CANDIDATE = or(eq(transactions.type, "transfer"), isNotNull(transactions.transferGroupId));
-
-/**
- * Links the two legs of the giroconti the provider left unpaired, by the IBAN in their details
- * (`planIbanTransfers`), and undoes a pairing whose row is no longer a transfer. Reads first, then
- * one short transaction for the changes; returns how many rows changed. Run after every sync pass
- * and whenever an account's IBAN is saved.
- */
-export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number> {
-  const own: OwnIban[] = [];
-  for (const account of await listAccounts(ctx, { includeArchived: true })) {
-    // The IBAN field of the account (rewrite plan N4, H46): no longer "IBAN or reference".
-    const iban = normalizeIban(account.iban);
-    if (iban !== null) own.push({ accountId: account.id, iban });
-  }
-  const rows = await getDb()
-    .select({
-      id: transactions.id,
-      accountId: transactions.accountId,
-      occurredAt: transactions.occurredAt,
-      amountCents: transactions.amountCents,
-      currency: transactions.currency,
-      type: transactions.type,
-      transferGroupId: transactions.transferGroupId,
-      payee: transactions.payee,
-      note: transactions.note,
-    })
-    .from(transactions)
-    .where(and(userScoped(ctx).owns(transactions), PAIRING_CANDIDATE))
-    .orderBy(asc(transactions.occurredAt), asc(transactions.id));
-  const assignments = planIbanTransfers(own, rows);
-  if (assignments.length === 0) return 0;
-
-  await getDb().transaction(async (tx) => {
-    for (const assignment of assignments) {
-      await tx
-        .update(transactions)
-        .set({ transferGroupId: assignment.transferGroupId })
-        .where(and(eq(transactions.id, assignment.id), userScoped(ctx).owns(transactions)));
-    }
-    // A leg that left its pair counts by its category again (CR3).
-    await retypeMovements(tx, ctx);
-  });
-  return assignments.length;
 }
 
 /**

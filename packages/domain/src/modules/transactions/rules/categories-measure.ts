@@ -56,7 +56,7 @@ interface MeasureLabel extends EmbeddedLabel {
 interface Own {
   named: readonly { id: string; name: string }[];
   groupCategory: ReadonlyMap<GroupKey, string>;
-  categoryKind: ReadonlyMap<string, "income" | "expense" | "transfer">;
+  categoryKind: ReadonlyMap<string, "income" | "expense">;
 }
 
 const FOLDS = 5;

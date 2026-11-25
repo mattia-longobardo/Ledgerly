@@ -11,6 +11,7 @@ import { today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { retypeMovements } from "./macro";
+import { linkOwnTransfers } from "./service/giroconti";
 import { isAfterToday, manualColumns, manualMovementSchema } from "./manual-rules";
 import { type Transaction, getTransaction } from "./queries";
 import { transactions } from "./schema";
@@ -175,7 +176,15 @@ export async function updateManualTransaction(
   const sendState = options.toSend ? (current.sendState ?? ("to_send" as const)) : null;
   await getDb()
     .update(transactions)
-    .set({ ...columns, sendState, ...(sendState === null ? { sendAskedOn: null } : {}) })
+    // The form gives a kind and a category: a giroconto it was stops being one, its partner waits.
+    .set({
+      ...columns,
+      sendState,
+      ...(sendState === null ? { sendAskedOn: null } : {}),
+      transferGroupId: null,
+      transferOutside: false,
+      transferAccountId: null,
+    })
     .where(
       and(
         eq(transactions.id, current.id),
@@ -184,6 +193,7 @@ export async function updateManualTransaction(
       ),
     );
   await retypeMovements(getDb(), ctx);
+  if (current.transferGroupId !== null) await linkOwnTransfers(ctx);
   return { transaction: await requireTransaction(ctx, current.id), previousAccountId: current.accountId };
 }
 
