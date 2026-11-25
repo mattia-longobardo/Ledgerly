@@ -3,6 +3,7 @@
 // on the list, on the plugin's page and on the other pages a plugin leaves something on (§4). The
 // users are scripts/seed-e2e/plugins.ts, one per column; `pluginsJourney` is the one that changes.
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { settledDialog } from "../_shared/a11y";
 import { type SESSIONS, sessionState } from "../_shared/env";
 import { hydrated } from "../_shared/helpers";
 
@@ -373,6 +374,8 @@ test.describe("the journey: out of «Needs cleanup», and a refusal with its cau
     await hydrated(trigger);
     await trigger.click();
     await page.getByRole("menuitem", { name: "Deactivate…" }).click();
+    // The dialog fades in for 0.2 s: read or shot before, it is half transparent (PERS-622).
+    await settledDialog(page);
     return page.getByRole("dialog", { name: `Deactivate ${NAMES[slug]}?` });
   }
 
@@ -407,6 +410,8 @@ test.describe("the journey: out of «Needs cleanup», and a refusal with its cau
     const dialog = await deactivateFromMenu(page, "enablebanking");
     await dialog.getByRole("button", { name: "Deactivate Enable Banking" }).click();
     const refusal = page.getByRole("dialog", { name: "Enable Banking cannot be deactivated now" });
+    await refusal.waitFor();
+    await settledDialog(page);
     await expect(refusal.getByRole("alert")).toContainText("A reading is in progress");
     await expect(refusal.getByRole("alert")).toContainText(
       /It started at \d{1,2}:\d{2}( [AP]M)?\. Nothing changed\./,
