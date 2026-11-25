@@ -457,7 +457,15 @@ export interface CategorySuggestions {
  * manual movement — from what is already known, with nothing learnt and nothing written. Automatic
  * or suggested, it is a suggestion here: the person sees it before they save.
  */
-export async function suggestFor(ctx: Who, movement: CascadeMovement): Promise<CategorySuggestions> {
+export async function suggestFor(
+  ctx: Who,
+  movement: CascadeMovement,
+): Promise<{ categoryId: string; reason: string } | null> {
+  return (await suggestionsFor(ctx, movement)).suggestion;
+}
+
+/** {@link suggestFor}, and the top three of the selector beside it (PERS-634). */
+export async function suggestionsFor(ctx: Who, movement: CascadeMovement): Promise<CategorySuggestions> {
   const knowledge = await storedKnowledge(ctx);
   const decision = decide(movement, knowledge);
   return {
@@ -477,5 +485,5 @@ export async function suggestionsForMovement(ctx: Who, id: string): Promise<Cate
     .from(transactions)
     .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
   if (!row || (row.type !== "income" && row.type !== "expense")) return null;
-  return suggestFor(ctx, { ...row, kind: row.type });
+  return suggestionsFor(ctx, { ...row, kind: row.type });
 }

@@ -2,7 +2,7 @@
 // (`manual.ts` joins accounts for the balance). The amount comes as a plain decimal, its size only.
 import type { Hono } from "hono";
 import { TRANSACTIONS } from "@ledgerly/api-contract";
-import { suggestFor } from "@ledgerly/domain/transactions";
+import { suggestionsFor } from "@ledgerly/domain/transactions";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { today } from "@ledgerly/domain/shared/dates";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
@@ -39,7 +39,7 @@ function serveSuggestion(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, manual.suggestManualCategory, async ({ ctx, body }) => {
     const size = sizeOf(body.amount);
     if (size === null) return { categoryId: null, top: [] };
-    const answer = await suggestFor(ctx, {
+    const answer = await suggestionsFor(ctx, {
       payee: body.payee,
       counterparty: null,
       rawText: null,
