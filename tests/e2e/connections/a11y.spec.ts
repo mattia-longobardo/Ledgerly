@@ -80,18 +80,73 @@ const PAGES: Screen[] = [
     session: "admin",
     open: go("/settings/plugins"),
   },
+  // H56 (PERS-615, PERS-619): the list and a page in each state of the plugins' section.
+  { name: "/settings/plugins (needs cleanup)", session: "pluginsCleanup", open: go("/settings/plugins") },
+  {
+    name: "/settings/plugins/[source] (needs cleanup)",
+    session: "pluginsCleanup",
+    open: go("/settings/plugins/wallet"),
+  },
+  { name: "/settings/plugins (never on)", session: "pluginsOff", open: go("/settings/plugins") },
+  {
+    name: "/settings/plugins/[source] (not active)",
+    session: "pluginsGone",
+    open: go("/settings/plugins/trek"),
+  },
+  {
+    name: "/settings/plugins/[source] (error)",
+    session: "pluginsErrors",
+    open: go("/settings/plugins/wallet"),
+  },
+  { name: "/settings/plugins (every health)", session: "pluginsLive", open: go("/settings/plugins") },
+  {
+    name: "/settings/plugins/[source] (not connected)",
+    session: "pluginsOn",
+    open: go("/settings/plugins/enablebanking"),
+  },
 ];
 
 const OVERLAYS: Screen[] = [
   {
-    // Release N7.3 (plugin-settings.md §3.3): "Turn off" with its counts, on the six banks.
+    // H56: «Deactivate» from the menu «⋯» of a row, with the counts of «Needs cleanup».
+    name: "the deactivate dialog of «Needs cleanup»",
+    session: "pluginsCleanup",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/plugins");
+      await settled(page);
+      await page.getByRole("button", { name: /^(More actions for|Altre azioni per) Wallet$/ }).click();
+      await page.getByRole("menuitem", { name: /^(Deactivate|Disattiva)…$/ }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // H56, PERS-615 §5: the refusal with its cause. The reading runs: nothing changes.
+    name: "the refusal of «Deactivate»",
+    session: "pluginsLive",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/plugins/enablebanking");
+      await settled(page);
+      await page.getByRole("button", { name: /^(Deactivate|Disattiva) Enable Banking$/ }).click();
+      await settledDialog(page);
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: /^(Deactivate|Disattiva) Enable Banking$/ })
+        .click();
+      await page.getByTestId("deactivate-refusal").waitFor();
+      await settledDialog(page);
+    },
+  },
+  {
+    // Release N7.3 (plugin-settings.md §3.3): «Deactivate» with its counts, on the six banks.
     name: "the turn-off dialog",
     session: "connections",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await page.goto("/settings/plugins/enablebanking");
       await settled(page);
-      await page.getByRole("button", { name: /^(Turn off|Disattiva) Enable Banking$/ }).click();
+      await page.getByRole("button", { name: /^(Deactivate|Disattiva) Enable Banking$/ }).click();
       await settledDialog(page);
     },
   },
