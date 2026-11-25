@@ -128,9 +128,8 @@ export async function chooseSourceCategory(
   const added = held.find((one) => one.id === row.addedCategoryId);
   if (!target) throw new SourceCategoryError("not_found");
   const matching = targetId !== row.addedCategoryId;
-  // A match is to a category in use, of the kind the source's own is, or of Transfers: its
-  // movements count as transfers then (categories-and-rules.md §2.4).
-  const kind = added === undefined || added.type === target.type || target.type === "transfer";
+  // A match is to a category in use, of the kind the source's own is (categories-and-rules.md §2.4).
+  const kind = added === undefined || added.type === target.type;
   if (matching && (target.archivedAt !== null || !kind)) {
     throw new SourceCategoryError("invalid");
   }

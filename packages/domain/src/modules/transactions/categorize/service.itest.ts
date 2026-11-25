@@ -10,9 +10,10 @@ import { categoryTotals, expensesView, getTransaction, listTransactions } from "
 import type { IncomingTransaction } from "../rules";
 import { categoryMemory, categoryModels, transactions } from "../schema";
 import { categorisableAccountIds, setCategory, upsertFromProvider } from "../service";
-import { createCategory } from "../taxonomy";
+import { createCategory, listCategories } from "../taxonomy";
 import { changeCategories, createDefaultGroups, reviewOf, similarTo, undoChange } from "./review";
 import { categorise, isPreparing, suggestFor } from "./service";
+import { DEFAULT_GROUPS } from "./tables";
 
 // The automatic categories on the test database (rewrite plan N3, "Test e gate"): which movements
 // the cascade reads, what it may write, what it learns from, and that one person's labels are
@@ -329,10 +330,28 @@ describe("categorise", () => {
 });
 
 describe("the default groups and the tables", () => {
-  it("are created once, for a person with no category, in their language", async () => {
+  it("are created once, for a person with no category, in their language, each with its sub-categories", async () => {
     const ctx = await newContext();
-    expect(await createDefaultGroups(ctx, ["groceries", "transport", "income"], "it")).toBe(3);
-    await expect(createDefaultGroups(ctx, ["home"], "it")).rejects.toMatchObject({ code: "invalid" });
+    expect(
+      await createDefaultGroups(
+        ctx,
+        DEFAULT_GROUPS.map((group) => group.key),
+        "it",
+      ),
+    ).toBe(81);
+    const tree = await listCategories(ctx);
+    expect(tree.filter((one) => one.parentId === null)).toHaveLength(11);
+    expect(tree.filter((one) => one.parentId !== null)).toHaveLength(70);
+    // No category of Transfers: a giroconto has none.
+    expect(new Set(tree.map((one) => one.type))).toEqual(new Set(["expense", "income"]));
+    const food = tree.find((one) => one.name === "Cibo e bevande")!;
+    expect(food.color).toBe("#ed4a49");
+    expect(tree.filter((one) => one.parentId === food.id).map((one) => one.color)).toEqual([
+      null,
+      null,
+      null,
+    ]);
+    await expect(createDefaultGroups(ctx, ["housing"], "it")).rejects.toMatchObject({ code: "invalid" });
     await expect(createDefaultGroups(await newContext(), ["nothing"], "en")).rejects.toMatchObject({
       code: "invalid",
     });
@@ -340,7 +359,7 @@ describe("the default groups and the tables", () => {
 
   it("let a table give a category to a person who never labelled anything", async () => {
     const ctx = await newContext();
-    await createDefaultGroups(ctx, ["groceries", "transport", "shopping"], "en");
+    await createDefaultGroups(ctx, ["food_drinks", "transportation", "shopping"], "en");
     const bank = await synced(ctx, BANK, "Zeta current");
     await upsertFromProvider(ctx, bank, [incoming("TRENITALIA SPA 5521", 10), incoming("AMZN Mktp IT", 11)], {
       provider: BANK,
@@ -371,7 +390,7 @@ describe("the default groups and the tables", () => {
 
 describe("the actions on several movements", () => {
   async function waiting(ctx: Ctx) {
-    await createDefaultGroups(ctx, ["groceries", "shopping", "other"], "en");
+    await createDefaultGroups(ctx, ["food_drinks", "shopping", "others"], "en");
     const bank = await synced(ctx, BANK, "Zeta current");
     await upsertFromProvider(
       ctx,

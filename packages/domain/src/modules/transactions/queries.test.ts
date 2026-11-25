@@ -75,6 +75,8 @@ function row(on: CivilDate, amountCents: Cents, id = on + amountCents): Transact
     note: null,
     labels: [],
     transferGroupId: null,
+    transferOutside: false,
+    transferAccountId: null,
     hiddenAt: null,
     removedUpstreamAt: null,
     locallyEdited: [],

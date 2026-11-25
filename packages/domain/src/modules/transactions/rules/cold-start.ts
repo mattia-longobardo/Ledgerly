@@ -6,12 +6,12 @@
 import { closestCategory, type Prototype } from "../categorize/cascade";
 import type { Trial } from "../categorize/classifier";
 import { cosine, type Embedder } from "./embedding";
-import { DEFAULT_GROUPS, type GroupKey } from "../categorize/tables";
+import { DEFAULT_CATEGORIES, type GroupKey } from "../categorize/tables";
 import { suggestionThresholdFor } from "../categorize/thresholds";
 
 /**
- * A vector for each category: its name and, for the category of a default group, the group's
- * names and examples in both languages — "Ristoranti e bar" reads closer to a pizzeria than a
+ * A vector for each category: its name and, for a category of the default tree, its names in both
+ * languages and a group's examples — "Ristoranti, fast food" reads closer to a pizzeria than a
  * name a person chose alone.
  */
 export function prototypesOf(
@@ -21,9 +21,9 @@ export function prototypesOf(
 ): Prototype[] {
   const groupOf = new Map([...groupCategory].map(([key, categoryId]) => [categoryId, key]));
   return categories.map((category) => {
-    const group = DEFAULT_GROUPS.find((one) => one.key === groupOf.get(category.id));
-    const words = group
-      ? [category.name, group.en, group.it, group.examples.en, group.examples.it]
+    const known = DEFAULT_CATEGORIES.find((one) => one.key === groupOf.get(category.id));
+    const words = known
+      ? [category.name, known.en, known.it, known.examples?.en ?? "", known.examples?.it ?? ""]
       : [category.name];
     return { categoryId: category.id, vector: embedder.embed(words.join(" ")) };
   });

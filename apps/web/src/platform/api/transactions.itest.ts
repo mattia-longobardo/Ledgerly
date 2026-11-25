@@ -480,7 +480,7 @@ describe("the sign, the series' shares, the groups' counts and the macros (clien
     );
     expect(view.facets.groups).toEqual([{ categoryId: house, count: 2 }]);
 
-    // 4. The macros a category may be chosen in: by the sign, and `transfer` only for a pair.
+    // 4. The macros a category may be chosen in: by the sign, and none on a giroconto.
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
     const { WALLET_PROVIDER } = await import("../../../../../test/fixtures/providers");
     const other = await newAccount(alice, "Revolut");
@@ -514,10 +514,10 @@ describe("the sign, the series' shares, the groups' counts and the macros (clien
     const legs = rows.filter((row) => row.transferGroupId !== null);
     expect(legs).toHaveLength(2);
     for (const [id, macros] of [
-      [spent.id, ["expense", "transfer"]],
-      [earned.id, ["income", "transfer"]],
-      [legs[0].id, ["transfer"]],
-      [legs[1].id, ["transfer"]],
+      [spent.id, ["expense"]],
+      [earned.id, ["income"]],
+      [legs[0].id, []],
+      [legs[1].id, []],
     ] as const) {
       const line = (await send(alice, "GET", `/transactions/${id}`)).body;
       expect(line.macros).toEqual(domain.macrosFor(rows.find((row) => row.id === id)!));

@@ -31,20 +31,22 @@ const CATEGORIES = [
   cat("food", "expense"),
   cat("work", "income"),
   cat("salary", "income", "work"),
-  cat("savings", "transfer"),
 ];
 
 describe("macroViews", () => {
-  it("draws the three macros in order, with a group's total its own movements and its categories'", () => {
-    const [income, expense, transfer] = macroViews(CATEGORIES, [
+  it("draws the two macros in order, with a group's total its own movements and its categories'", () => {
+    const views = macroViews(CATEGORIES, [
       row("rent", "expense", -80_000n),
       row("bills", "expense", -15_000n, 2),
       row("home", "expense", -5_000n),
       row("food", "expense", -42_000n, 7),
       row("salary", "income", 320_000n),
       row(null, "expense", -6_000n, 3),
+      // A giroconto counts in no macro: it has no category.
+      row(null, "transfer", -90_000n, 2),
     ]);
-    expect([income.macro, expense.macro, transfer.macro]).toEqual(["income", "expense", "transfer"]);
+    const [income, expense] = views;
+    expect(views.map((one) => one.macro)).toEqual(["income", "expense"]);
     // The whole macro is every movement of its type, the uncategorised ones included.
     expect(expense.totalCents).toBe(-148_000n);
     expect(expense.count).toBe(14);
@@ -81,19 +83,5 @@ describe("macroViews", () => {
     expect(income.groups.map((group) => group.category.id)).toEqual(["home", "work"]);
     expect(income.groups[0].children.map((child) => child.category.id)).toEqual(["rent"]);
     expect(expense.totalCents).toBe(-80_000n);
-  });
-
-  it("lists Transfers flat, without shares, with in and out apart and the giroconti without category", () => {
-    const [, , transfer] = macroViews(CATEGORIES, [
-      row("savings", "transfer", -30_000n),
-      row("savings", "transfer", 5_000n),
-      row("food", "transfer", -2_000n),
-      row(null, "transfer", -90_000n, 2),
-    ]);
-    expect(transfer.groups.map((line) => line.category.id)).toEqual(["savings", "food"]);
-    expect(transfer.groups[0]).toMatchObject({ totalCents: -25_000n, inCents: 5_000n, outCents: -30_000n });
-    expect(transfer.groups.every((line) => line.share === 0 && line.children.length === 0)).toBe(true);
-    expect(transfer.rest?.outCents).toBe(-90_000n);
-    expect(transfer.outCents).toBe(-122_000n);
   });
 });

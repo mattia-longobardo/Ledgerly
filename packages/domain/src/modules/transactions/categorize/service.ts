@@ -24,7 +24,7 @@ import { type EmbeddedLabel, learnEmbedded, type StoredEmbedded } from "../rules
 import type { Embedder } from "../rules/embedding";
 import { type Measure, measureLabels } from "../rules/categories-measure";
 import { type Confirmation, strictMemory } from "./memory";
-import { DEFAULT_GROUPS } from "./tables";
+import { DEFAULT_CATEGORIES } from "./tables";
 import { applyRulesToNew } from "./user-rules-service";
 import { memoryKey } from "./text";
 import { type Thresholds, thresholdsFor } from "./thresholds";
@@ -127,7 +127,12 @@ async function categoriesOf(
 ): Promise<Pick<Knowledge, "groupCategory" | "categoryKind"> & { named: { id: string; name: string }[] }> {
   const [active, marks] = await Promise.all([
     getDb()
-      .select({ id: categories.id, name: categories.name, type: categories.type })
+      .select({
+        id: categories.id,
+        name: categories.name,
+        type: categories.type,
+        parentId: categories.parentId,
+      })
       .from(categories)
       .where(and(userScoped(ctx).owns(categories), isNull(categories.archivedAt)))
       .orderBy(categories.name, categories.id),
@@ -141,7 +146,7 @@ async function categoriesOf(
     named: active,
     categoryKind: new Map(active.map((category) => [category.id, category.type])),
     groupCategory: groupCategories(
-      DEFAULT_GROUPS,
+      DEFAULT_CATEGORIES,
       active,
       new Map(marks.map((mark) => [mark.categoryId, mark.groupKey])),
     ),

@@ -3,7 +3,6 @@ import {
   macrosFor,
   type TypedMovement,
   typeByMacro,
-  typeMarkerByMacro,
   autoCategoryColor,
   CATEGORY_COLORS,
   categoryColor,
@@ -18,8 +17,9 @@ import {
   pairTransfers,
   payeeKeyOf,
   normalizeIban,
-  type IbanRuleRow,
-  planIbanTransfers,
+  type OwnTransferRow,
+  planOwnTransfers,
+  proposalKey,
   planProviderMerge,
   planUpstreamRemovals,
   planUserEdit,
@@ -711,74 +711,107 @@ describe("normalizeIban", () => {
   });
 });
 
-describe("planIbanTransfers", () => {
+describe("planOwnTransfers", () => {
   const own = [
     { accountId: "ing", iban: IBAN_A },
     { accountId: "rev", iban: IBAN_B },
   ];
-  const row = (over: Partial<IbanRuleRow> & Pick<IbanRuleRow, "id" | "accountId">): IbanRuleRow => ({
-    occurredAt: new Date("2026-03-05T10:00:00Z"),
+  const DAY = new Date("2026-03-05T11:00:00Z");
+  const row = (over: Partial<OwnTransferRow> & Pick<OwnTransferRow, "id" | "accountId">): OwnTransferRow => ({
+    occurredAt: DAY,
     amountCents: -50_000n,
     currency: "EUR",
     type: "transfer",
+    origin: "provider",
     transferGroupId: null,
+    transferOutside: false,
+    transferAccountId: null,
     payee: null,
     note: null,
+    rawText: null,
+    bankTransactionCode: null,
+    categoryOrigin: null,
+    locallyEdited: [],
     ...over,
   });
+  const nothing = { groups: [], transfers: [], proposals: [] };
 
   it("pairs a transfer naming another own account's IBAN with the opposite transfer there", () => {
     const rows = [
       row({ id: "t2", accountId: "ing", note: `Bonifico a ${IBAN_B.replace(/(.{4})/g, "$1 ")}` }),
       row({ id: "t1", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-06T08:00:00Z") }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([
+    expect(planOwnTransfers(own, rows).groups).toEqual([
       { id: "t1", transferGroupId: "t1" },
       { id: "t2", transferGroupId: "t1" },
     ]);
   });
 
-  it("never makes a giroconto of what the provider counts as spending or income", () => {
+  it("makes a giroconto of an income or a spending that names another account's IBAN (8A)", () => {
     const rows = [
       row({ id: "t1", accountId: "ing", note: IBAN_B, type: "expense" }),
       row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "income" }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([]);
+    expect(planOwnTransfers(own, rows).groups).toEqual([
+      { id: "t1", transferGroupId: "t1" },
+      { id: "t2", transferGroupId: "t1" },
+    ]);
+    // Without its twin it is a giroconto that waits in the account its IBAN names.
+    expect(planOwnTransfers(own, [rows[0]])).toEqual({
+      ...nothing,
+      transfers: [{ id: "t1", transferAccountId: "rev" }],
+    });
   });
 
-  it("does not pair across more than the clearing days, nor a different amount, nor a lone leg", () => {
+  it("leaves a movement whose type or category a person or a source chose", () => {
     const rows = [
-      row({ id: "t1", accountId: "ing", note: IBAN_B }),
+      row({ id: "t1", accountId: "ing", note: IBAN_B, type: "expense", locallyEdited: ["type"] }),
+      row({ id: "t2", accountId: "ing", note: IBAN_B, type: "expense", categoryOrigin: "user" }),
+      row({ id: "t3", accountId: "ing", note: IBAN_B, type: "expense", categoryOrigin: "provider" }),
+      row({ id: "t4", accountId: "ing", note: IBAN_B, type: "expense", origin: "manual" }),
+    ];
+    expect(planOwnTransfers(own, rows)).toEqual(nothing);
+  });
+
+  it("does not pair by IBAN across more than the clearing days, nor a different amount", () => {
+    const rows = [
+      row({ id: "t1", accountId: "ing", note: IBAN_B, transferAccountId: "rev" }),
       row({ id: "t2", accountId: "rev", amountCents: 50_000n, occurredAt: new Date("2026-03-20T10:00:00Z") }),
       row({ id: "t3", accountId: "rev", amountCents: 49_999n }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([]);
+    expect(planOwnTransfers(own, rows)).toEqual(nothing);
   });
 
   it("ignores the account's own IBAN", () => {
     const rows = [
-      row({ id: "t1", accountId: "ing", note: IBAN_A }),
-      row({ id: "t2", accountId: "ing", amountCents: 50_000n }),
+      row({ id: "t1", accountId: "ing", note: IBAN_A, type: "expense" }),
+      row({ id: "t2", accountId: "ing", amountCents: 50_000n, type: "income" }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([]);
+    expect(planOwnTransfers(own, rows)).toEqual(nothing);
   });
 
-  it("never takes a pair apart, and a second run changes nothing", () => {
+  it("never takes a pair apart — one made by hand above all — and a second run changes nothing", () => {
     const rows = [
-      row({ id: "t1", accountId: "ing", note: IBAN_B, transferGroupId: "t1" }),
-      row({ id: "t2", accountId: "rev", amountCents: 50_000n, transferGroupId: "t1" }),
+      row({
+        id: "t1",
+        accountId: "ing",
+        note: IBAN_B,
+        transferGroupId: "t1",
+        locallyEdited: ["transferGroupId"],
+      }),
+      row({ id: "t2", accountId: "rev", amountCents: 49_000n, transferGroupId: "t1" }),
       row({ id: "t3", accountId: "rev", amountCents: 50_000n }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([]);
+    expect(planOwnTransfers(own, rows)).toEqual(nothing);
   });
 
-  it("takes out of its pair a row the provider re-filed as income, and the group of one it leaves", () => {
+  it("takes out of its pair a row that is no longer a transfer, and the group of one it leaves", () => {
     const rows = [
-      row({ id: "t1", accountId: "ing", note: IBAN_B, transferGroupId: "t1" }),
-      row({ id: "t2", accountId: "rev", amountCents: 50_000n, type: "income", transferGroupId: "t1" }),
+      row({ id: "t1", accountId: "ing", transferGroupId: "t1" }),
+      row({ id: "t2", accountId: "rev", amountCents: 49_000n, type: "income", transferGroupId: "t1" }),
       row({ id: "t5", accountId: "ing", amountCents: -7n, transferGroupId: "t5" }),
     ];
-    expect(planIbanTransfers(own, rows)).toEqual([
+    expect(planOwnTransfers([], rows).groups).toEqual([
       { id: "t1", transferGroupId: null },
       { id: "t2", transferGroupId: null },
       { id: "t5", transferGroupId: null },
@@ -791,9 +824,138 @@ describe("planIbanTransfers", () => {
       row({ id: "t2", accountId: "rev", amountCents: 50_000n }),
       row({ id: "t3", accountId: "rev", amountCents: 50_000n, note: `da ${IBAN_A}` }),
     ];
-    const plan = planIbanTransfers(own, rows);
-    expect(plan).toContainEqual({ id: "t3", transferGroupId: "t1" });
-    expect(plan.some((one) => one.id === "t2")).toBe(false);
+    const plan = planOwnTransfers(own, rows);
+    expect(plan.groups).toContainEqual({ id: "t3", transferGroupId: "t1" });
+    expect(plan.groups.some((one) => one.id === "t2")).toBe(false);
+  });
+
+  it("pairs the two legs of the screenshot by IBAN and leaves the third to choose", () => {
+    // Three movements of the same amount on the same day, between two accounts: a spending of the
+    // second account, an income of the first naming the second's IBAN, and an income of the second
+    // from a pocket that is not linked. None was a giroconto yet.
+    const rows = [
+      row({ id: "a-out", accountId: "rev", type: "expense", amountCents: -25_100n }),
+      row({ id: "b-in", accountId: "ing", type: "income", amountCents: 25_100n, note: `Da ${IBAN_B}` }),
+      row({ id: "c-in", accountId: "rev", type: "income", amountCents: 25_100n }),
+    ];
+    const plan = planOwnTransfers(own, rows);
+    expect(plan.groups).toEqual([
+      { id: "a-out", transferGroupId: "a-out" },
+      { id: "b-in", transferGroupId: "a-out" },
+    ]);
+    expect(plan.transfers).toEqual([]);
+    expect(plan.proposals).toEqual([]);
+    // As giroconti already (Savings): the same pair, and the third leg is left alone.
+    const transfers = rows.map((one) => ({ ...one, type: "transfer" as const }));
+    expect(planOwnTransfers(own, transfers).groups).toEqual(plan.groups);
+  });
+
+  describe("by amount and day (rule 3)", () => {
+    const at = (day: number) => new Date(Date.UTC(2026, 2, day, 11));
+
+    it("pairs the only candidate within three days when one leg is already a giroconto", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing", occurredAt: at(5) }),
+        row({ id: "i1", accountId: "rev", type: "income", amountCents: 50_000n, occurredAt: at(7) }),
+      ];
+      expect(planOwnTransfers([], rows).groups).toEqual([
+        { id: "i1", transferGroupId: "i1" },
+        { id: "o1", transferGroupId: "i1" },
+      ]);
+    });
+
+    it("needs a signal: two plain movements of the same amount are not a giroconto", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing", type: "expense" }),
+        row({ id: "i1", accountId: "rev", type: "income", amountCents: 50_000n }),
+      ];
+      expect(planOwnTransfers([], rows)).toEqual(nothing);
+      const coded = [{ ...rows[0], bankTransactionCode: "PMNT-ICDT-ESCT" }, rows[1]];
+      expect(planOwnTransfers([], coded).groups).toHaveLength(2);
+    });
+
+    it("never pairs beyond three days, on one account, or across currencies", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing", occurredAt: at(1) }),
+        row({ id: "i1", accountId: "rev", amountCents: 50_000n, occurredAt: at(5) }),
+        row({ id: "i2", accountId: "ing", amountCents: 50_000n, occurredAt: at(1) }),
+        row({ id: "i3", accountId: "rev", amountCents: 50_000n, currency: "USD", occurredAt: at(1) }),
+      ];
+      expect(planOwnTransfers([], rows)).toEqual(nothing);
+    });
+
+    it("proposes a tie and never decides it: the same amount twice at the same distance", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing" }),
+        row({ id: "i1", accountId: "rev", amountCents: 50_000n }),
+        row({ id: "i2", accountId: "rev", amountCents: 50_000n }),
+      ];
+      expect(planOwnTransfers([], rows)).toEqual({
+        ...nothing,
+        proposals: [
+          { outId: "o1", inId: "i1" },
+          { outId: "o1", inId: "i2" },
+        ],
+      });
+      // Seen from the other side too: two legs out for one leg in.
+      const twoOut = [
+        row({ id: "o1", accountId: "ing" }),
+        row({ id: "o2", accountId: "ing" }),
+        row({ id: "i1", accountId: "rev", amountCents: 50_000n }),
+      ];
+      expect(planOwnTransfers([], twoOut).proposals).toEqual([
+        { outId: "o1", inId: "i1" },
+        { outId: "o2", inId: "i1" },
+      ]);
+    });
+
+    it("lets the nearest day win, then pairs the rest", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing", occurredAt: at(4) }),
+        row({ id: "o2", accountId: "ing", occurredAt: at(5) }),
+        row({ id: "i1", accountId: "rev", amountCents: 50_000n, occurredAt: at(5) }),
+        row({ id: "i2", accountId: "rev", amountCents: 50_000n, occurredAt: at(3) }),
+      ];
+      const plan = planOwnTransfers([], rows);
+      expect(plan.groups).toContainEqual({ id: "o2", transferGroupId: "i1" });
+      expect(plan.groups).toContainEqual({ id: "o1", transferGroupId: "i2" });
+      expect(plan.proposals).toEqual([]);
+    });
+
+    it("never pairs one spending with several incomes (1-to-N), whatever their sum", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing", amountCents: -30_000n }),
+        row({ id: "i1", accountId: "rev", amountCents: 10_000n }),
+        row({ id: "i2", accountId: "rev", amountCents: 20_000n }),
+      ];
+      expect(planOwnTransfers([], rows)).toEqual(nothing);
+    });
+
+    it("never proposes a pair the person rejected, and follows the account they named", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing" }),
+        row({ id: "i1", accountId: "rev", amountCents: 50_000n }),
+        row({ id: "i2", accountId: "cash", amountCents: 50_000n }),
+      ];
+      const plan = planOwnTransfers([], rows, new Set([proposalKey("o1", "i1")]));
+      expect(plan.groups).toEqual([
+        { id: "i2", transferGroupId: "i2" },
+        { id: "o1", transferGroupId: "i2" },
+      ]);
+      const named = [{ ...rows[0], transferAccountId: "rev" }, rows[1], rows[2]];
+      expect(planOwnTransfers([], named).groups).toEqual([
+        { id: "i1", transferGroupId: "i1" },
+        { id: "o1", transferGroupId: "i1" },
+      ]);
+    });
+
+    it("leaves a leg to an account outside, and a hand-made pair", () => {
+      const rows = [
+        row({ id: "o1", accountId: "ing", transferOutside: true }),
+        row({ id: "i1", accountId: "rev", amountCents: 50_000n }),
+      ];
+      expect(planOwnTransfers([], rows)).toEqual(nothing);
+    });
   });
 });
 
@@ -844,7 +1006,7 @@ describe("categoryColor", () => {
   });
 });
 
-/* The macro decides how a movement counts (categories-and-rules.md §3.2, CR3) */
+/* What a movement counts as (categories-and-rules.md §3.2; giroconti of 2026-11-25) */
 
 describe("typeByMacro", () => {
   const movement = (over: Partial<TypedMovement> = {}): TypedMovement => ({
@@ -852,60 +1014,41 @@ describe("typeByMacro", () => {
     amountCents: -1_000n,
     origin: "provider",
     transferGroupId: null,
-    categoryType: "expense",
+    transferOutside: false,
     locallyEdited: [],
     ...over,
   });
 
-  it("keeps the type of a leg of a pair, whatever its category", () => {
-    expect(typeByMacro(movement({ type: "transfer", transferGroupId: "g", categoryType: "expense" }))).toBe(
-      "transfer",
-    );
-    expect(
-      typeMarkerByMacro(
-        movement({ transferGroupId: "g", categoryType: "transfer", locallyEdited: ["note"] }),
-      ),
-    ).toEqual(["note"]);
-  });
-
-  it("makes a transfer of a movement with a category of Transfers, with the type marker", () => {
-    const row = movement({ categoryType: "transfer", locallyEdited: ["categoryId"] });
-    expect(typeByMacro(row)).toBe("transfer");
-    expect(typeMarkerByMacro(row)).toEqual(["categoryId", "type"]);
-    expect(typeByMacro(movement({ amountCents: 500n, type: "income", categoryType: "transfer" }))).toBe(
+  it("makes a giroconto of a leg of a pair and of a leg to an account outside", () => {
+    expect(typeByMacro(movement({ transferGroupId: "g" }))).toBe("transfer");
+    expect(typeByMacro(movement({ amountCents: 500n, type: "income", transferOutside: true }))).toBe(
       "transfer",
     );
   });
 
-  it("lets the sign decide under Income, Expenses or no category (QC2)", () => {
-    expect(typeByMacro(movement({ amountCents: 500n, type: "expense", categoryType: "expense" }))).toBe(
-      "income",
-    );
-    expect(typeByMacro(movement({ amountCents: -500n, type: "income", categoryType: null }))).toBe("expense");
-    // A transfer this rule wrote goes back to the sign, and its marker goes.
-    const back = movement({
-      type: "transfer",
-      categoryType: "expense",
-      locallyEdited: ["categoryId", "type"],
-    });
-    expect(typeByMacro(back)).toBe("expense");
-    expect(typeMarkerByMacro(back)).toEqual(["categoryId"]);
+  it("keeps a type decided here: a giroconto to choose for, or one the person said is not", () => {
+    expect(typeByMacro(movement({ type: "transfer", locallyEdited: ["type"] }))).toBe("transfer");
+    expect(typeByMacro(movement({ type: "expense", locallyEdited: ["type"] }))).toBe("expense");
   });
 
-  it("keeps a source's own transfer (Wallet) and a zero's type", () => {
-    expect(typeByMacro(movement({ type: "transfer", categoryType: "expense" }))).toBe("transfer");
-    expect(typeByMacro(movement({ type: "transfer", categoryType: null, origin: "manual" }))).toBe("expense");
+  it("lets the sign decide otherwise", () => {
+    expect(typeByMacro(movement({ amountCents: 500n, type: "expense" }))).toBe("income");
+    expect(typeByMacro(movement({ amountCents: -500n, type: "income" }))).toBe("expense");
+  });
+
+  it("keeps a source's own transfer and a zero's type", () => {
+    expect(typeByMacro(movement({ type: "transfer" }))).toBe("transfer");
+    expect(typeByMacro(movement({ type: "transfer", origin: "manual" }))).toBe("expense");
     expect(typeByMacro(movement({ amountCents: 0n, type: "expense" }))).toBe("expense");
-    expect(typeByMacro(movement({ amountCents: 0n, type: "transfer", locallyEdited: ["type"] }))).toBe(
-      "income",
-    );
+    expect(typeByMacro(movement({ amountCents: 0n, type: "transfer", origin: "manual" }))).toBe("income");
   });
 });
 
 describe("macrosFor", () => {
-  it("offers Transfers only on a leg of a pair, and the sign's macro with Transfers elsewhere", () => {
-    expect(macrosFor({ amountCents: -1n, transferGroupId: "g" })).toEqual(["transfer"]);
-    expect(macrosFor({ amountCents: -1n, transferGroupId: null })).toEqual(["expense", "transfer"]);
-    expect(macrosFor({ amountCents: 1n, transferGroupId: null })).toEqual(["income", "transfer"]);
+  it("offers no category on a giroconto, and the sign's macro elsewhere", () => {
+    expect(macrosFor({ type: "transfer", amountCents: -1n, transferGroupId: "g" })).toEqual([]);
+    expect(macrosFor({ type: "transfer", amountCents: -1n, transferGroupId: null })).toEqual([]);
+    expect(macrosFor({ type: "expense", amountCents: -1n, transferGroupId: null })).toEqual(["expense"]);
+    expect(macrosFor({ type: "income", amountCents: 1n, transferGroupId: null })).toEqual(["income"]);
   });
 });

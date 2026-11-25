@@ -250,12 +250,12 @@ export const createDefaultGroups = defineRoute({
   scope: "write",
   capability: "transactions",
   summary:
-    "The default groups the person chose, in their language, then a pass of the cascade after the answer; " +
-    "answers how many were made.",
+    "The default groups the person chose, each with all its sub-categories, in their language, then a " +
+    "pass of the cascade after the answer; answers how many categories were made.",
   actions: [],
   body: z.object({ keys: z.array(z.string().max(40)).min(1).max(20) }),
   response: changed,
   status: 201,
   errors: TRANSACTION_ERRORS,
-  example: { body: { keys: ["groceries"] }, response: { count: 1 } },
+  example: { body: { keys: ["food_drinks"] }, response: { count: 4 } },
 });

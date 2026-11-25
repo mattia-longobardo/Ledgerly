@@ -50,6 +50,8 @@ export async function updateTransaction(
   if (patch.labelIds !== undefined) edit.labelIds = patch.labelIds.map(parseId);
 
   if (edit.categoryId !== undefined) await requireOwnCategory(ctx, edit.categoryId);
+  // A giroconto has no category: it stops being one first (`chooseTransferSide`, "none").
+  if (edit.categoryId != null && current.type === "transfer") throw new TransactionError("invalid");
   if (edit.labelIds !== undefined) await requireOwnLabels(ctx, edit.labelIds);
 
   const plan = planUserEdit(current, edit);
@@ -80,7 +82,6 @@ export async function releaseLocalEdits(
     .update(transactions)
     .set({ locallyEdited: kept })
     .where(and(eq(transactions.id, current.id), userScoped(ctx).owns(transactions)));
-  // The `type` marker of a category of Transfers is the rule's, not the person's: it comes back.
   await retypeMovements(getDb(), ctx);
 }
 
@@ -101,6 +102,8 @@ export async function setCategory(
 
   const rows = await transactionsByIds(ctx, wanted);
   const plans = [...rows.values()]
+    // A giroconto in the selection keeps no category: it is left as it is.
+    .filter((row) => chosen === null || row.type !== "transfer")
     .map((row) => ({ id: row.id, plan: planUserEdit(row, { categoryId: chosen }) }))
     .filter((one) => one.plan.changed);
   if (plans.length === 0) return 0;

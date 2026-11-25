@@ -8833,8 +8833,7 @@
                             "type": "string",
                             "enum": [
                               "income",
-                              "expense",
-                              "transfer"
+                              "expense"
                             ]
                           },
                           "color": {
@@ -8985,8 +8984,7 @@
                     "type": "string",
                     "enum": [
                       "income",
-                      "expense",
-                      "transfer"
+                      "expense"
                     ]
                   },
                   "color": {
@@ -9044,8 +9042,7 @@
                       "type": "string",
                       "enum": [
                         "income",
-                        "expense",
-                        "transfer"
+                        "expense"
                       ]
                     },
                     "color": {
@@ -9417,8 +9414,7 @@
                     "type": "string",
                     "enum": [
                       "income",
-                      "expense",
-                      "transfer"
+                      "expense"
                     ]
                   },
                   "color": {
@@ -9476,8 +9472,7 @@
                       "type": "string",
                       "enum": [
                         "income",
-                        "expense",
-                        "transfer"
+                        "expense"
                       ]
                     },
                     "color": {
@@ -9762,8 +9757,7 @@
                       "type": "string",
                       "enum": [
                         "income",
-                        "expense",
-                        "transfer"
+                        "expense"
                       ]
                     },
                     "count": {
@@ -9911,7 +9905,7 @@
       },
       "post": {
         "operationId": "move_to_macro",
-        "summary": "Moves a group, or a category of Transfers, to another macro. The numbers change; `undo` takes it back.",
+        "summary": "Moves a group to the other macro (Income or Expenses). The numbers change; `undo` takes it back.",
         "tags": [
           "categories"
         ],
@@ -9938,8 +9932,7 @@
                     "type": "string",
                     "enum": [
                       "income",
-                      "expense",
-                      "transfer"
+                      "expense"
                     ]
                   },
                   "parentId": {
@@ -10525,8 +10518,7 @@
                             "type": "string",
                             "enum": [
                               "income",
-                              "expense",
-                              "transfer"
+                              "expense"
                             ]
                           },
                           "count": {
@@ -10575,8 +10567,7 @@
                                   "type": "string",
                                   "enum": [
                                     "income",
-                                    "expense",
-                                    "transfer"
+                                    "expense"
                                   ]
                                 },
                                 "color": {
@@ -10736,8 +10727,7 @@
                                         "type": "string",
                                         "enum": [
                                           "income",
-                                          "expense",
-                                          "transfer"
+                                          "expense"
                                         ]
                                       },
                                       "color": {
@@ -10994,7 +10984,7 @@
     "/categories/defaults": {
       "post": {
         "operationId": "create_default_groups",
-        "summary": "The default groups the person chose, in their language, then a pass of the cascade after the answer; answers how many were made.",
+        "summary": "The default groups the person chose, each with all its sub-categories, in their language, then a pass of the cascade after the answer; answers how many categories were made.",
         "tags": [
           "transactions"
         ],
@@ -58228,16 +58218,14 @@
                               "type": "string",
                               "enum": [
                                 "income",
-                                "expense",
-                                "transfer"
+                                "expense"
                               ]
                             },
                             "to": {
                               "type": "string",
                               "enum": [
                                 "income",
-                                "expense",
-                                "transfer"
+                                "expense"
                               ]
                             }
                           },
@@ -65873,6 +65861,21 @@
                         }
                       ]
                     },
+                    "transferOutside": {
+                      "type": "boolean"
+                    },
+                    "transferAccountId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "origin": {
                       "type": "string",
                       "enum": [
@@ -65930,8 +65933,7 @@
                         "type": "string",
                         "enum": [
                           "income",
-                          "expense",
-                          "transfer"
+                          "expense"
                         ]
                       }
                     }
@@ -65960,6 +65962,8 @@
                     "suggestedCategoryId",
                     "labelIds",
                     "transferGroupId",
+                    "transferOutside",
+                    "transferAccountId",
                     "origin",
                     "sendState",
                     "sendSource",
@@ -66472,6 +66476,161 @@
           },
           "503": {
             "description": "unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/transactions/{id}/transfer": {
+      "put": {
+        "operationId": "set_transfer_side",
+        "summary": "The other side of a movement, chosen by the person: `account` makes it a giroconto with one of their accounts (paired at once when the other leg there is unique, else it waits for it), `outside` a giroconto with an account outside Ledgerly (out of income, spending and budgets), `none` an income or a spending again, by its sign. A leg of a pair leaves it; the other leg waits for the person. A giroconto has no category.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "account"
+                      },
+                      "accountId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "accountId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "outside"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "none"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -69860,6 +70019,407 @@
         "x-scope": "read"
       }
     },
+    "/transactions/transfer-pairs": {
+      "post": {
+        "operationId": "pair_transfer",
+        "summary": "Pairs two movements of two of the person's accounts, money out and money in, as one giroconto. The amounts may differ (two currencies). A pair made by hand is never undone by the automatic pairing; each movement leaves the pair it was in.",
+        "tags": [
+          "transactions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    ],
+                    "items": false,
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/transactions/transfer-proposals": {
+      "get": {
+        "operationId": "list_transfer_proposals",
+        "summary": "The giroconti found by amount and day that are not sure enough to be paired: the same amount on several legs at the same distance. The person confirms or rejects each; nothing is paired until then. The oldest money out first.",
+        "tags": [
+          "transactions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "proposals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "out": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "accountId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "on": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "payee": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "accountId",
+                              "on",
+                              "amount",
+                              "currency",
+                              "payee"
+                            ]
+                          },
+                          "in": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "accountId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "on": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "payee": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "accountId",
+                              "on",
+                              "amount",
+                              "currency",
+                              "payee"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "out",
+                          "in"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "proposals"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/transactions/transfer-proposals/{id}": {
+      "post": {
+        "operationId": "answer_transfer_proposal",
+        "summary": "The person's answer to a proposed giroconto: `accept` pairs the two as by hand and drops the other proposals of the same movements; a refusal is kept, so the pair is never proposed again.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accept": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "accept"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
     "/transactions/view": {
       "get": {
         "operationId": "get_transactions_view",
@@ -70207,6 +70767,21 @@
                               }
                             ]
                           },
+                          "transferOutside": {
+                            "type": "boolean"
+                          },
+                          "transferAccountId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "origin": {
                             "type": "string",
                             "enum": [
@@ -70264,8 +70839,7 @@
                               "type": "string",
                               "enum": [
                                 "income",
-                                "expense",
-                                "transfer"
+                                "expense"
                               ]
                             }
                           }
@@ -70294,6 +70868,8 @@
                           "suggestedCategoryId",
                           "labelIds",
                           "transferGroupId",
+                          "transferOutside",
+                          "transferAccountId",
                           "origin",
                           "sendState",
                           "sendSource",

@@ -19,6 +19,7 @@ import { getDb } from "@ledgerly/domain/platform/db";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { chargesAmong } from "@ledgerly/domain/subscriptions";
 import {
+  CATEGORY_TYPES,
   type CategoryType,
   chooseSourceCategory,
   getCategory,
@@ -160,7 +161,7 @@ export interface MacroMoveView {
   amountCents: bigint;
   firstYear: number | null;
   linked: { subscriptions: number; pockets: number; interests: number };
-  /** Whether a budget of the category stops from this month (a move to Transfers). */
+  /** Whether a budget of the category stops from this month (a move out of Expenses). */
   stopsBudget: boolean;
   /** The names of the sources whose categories count under it: their movements move too. */
   sources: string[];
@@ -205,19 +206,19 @@ export interface MacroMoveUndo {
   limits: LimitsSnapshot | null;
 }
 
-const goesToTransfers = (place: unknown) =>
-  z.object({ type: z.literal("transfer") }).safeParse(place).success;
+/** A budget is of a spending category: a move out of Expenses stops it (QC8). */
+const leavesExpenses = (place: unknown) => z.object({ type: z.literal("income") }).safeParse(place).success;
 
 /**
- * Moves a group, or a category of Transfers, to another macro. A move to Transfers stops its
- * budgets from this month (QC8). Returns what "Undo" needs.
+ * Moves a group to the other macro. A move out of Expenses stops its budgets from this month (QC8).
+ * Returns what "Undo" needs.
  */
 export async function moveToMacro(ctx: Who, id: string, place: unknown): Promise<MacroMoveUndo> {
   const month = monthKey(today(ctx.timeZone));
   const facts = await macroMoveFacts(ctx, id);
   return getDb().transaction(async (transaction) => {
     let limits: LimitsSnapshot | null = null;
-    if (goesToTransfers(place)) {
+    if (leavesExpenses(place)) {
       const before = await limitsSnapshot(ctx, facts.ids, month, transaction);
       if ((await stopLimitsOf(ctx, facts.ids, month, transaction)) > 0 || before.rows.length > 0)
         limits = before;
@@ -229,7 +230,7 @@ export async function moveToMacro(ctx: Who, id: string, place: unknown): Promise
 
 const macroUndoSchema = z.object({
   id: z.uuid(),
-  place: z.object({ type: z.enum(["income", "expense", "transfer"]), parentId: z.uuid().nullable() }),
+  place: z.object({ type: z.enum(CATEGORY_TYPES), parentId: z.uuid().nullable() }),
   limits: limitsSchema({ categories: 500, rows: 500 }).nullable(),
 });
 

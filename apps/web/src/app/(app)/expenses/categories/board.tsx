@@ -29,7 +29,7 @@ import {
   toggleGroup,
   useOpenGroups,
 } from "./board-model";
-import { ChildRow, GroupHeading, type RowContext, TransferFigures, TransferRow } from "./board-rows";
+import { ChildRow, GroupHeading, type RowContext } from "./board-rows";
 import { useBoardWrites } from "./board-writes";
 import { MacroMoveDialog } from "./macro-dialog";
 
@@ -57,16 +57,9 @@ function MacroCards({
           <Card className={cn("flex h-full flex-col gap-1", one.macro === macro && "border-accent")}>
             <span className="flex items-baseline justify-between gap-2">
               <span className="font-semibold">{text(`macro.${one.macro}`)}</span>
-              <span className="text-lg font-semibold tabular-nums">
-                {one.macro === "transfer" ? one.outTotal : one.total}
-              </span>
+              <span className="text-lg font-semibold tabular-nums">{one.total}</span>
             </span>
             <span className="text-sm text-muted">{text("count", { count: one.count })}</span>
-            {one.macro === "transfer" && (
-              <span className="text-sm text-muted">
-                {text("transferSplit", { in: one.inTotal, out: one.outTotal })}
-              </span>
-            )}
           </Card>
         </button>
       ))}
@@ -125,23 +118,16 @@ function GroupItem({
   );
 }
 
-/** «To categorize» of a macro, or the movements between accounts under Transfers. */
+/** «To categorize» of a macro. */
 function RestRow({ view }: { view: BoardMacro }) {
   const text = useTranslations("expenses.categories");
   if (!view.rest) return null;
-  const transfer = view.macro === "transfer";
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-      <span className="min-w-0 flex-1 text-muted">
-        {transfer ? text("betweenAccounts") : text("toCategorize", { count: view.rest.count })}
-      </span>
-      {transfer ? (
-        <TransferFigures outTotal={view.rest.outTotal} inTotal={view.rest.inTotal} muted={false} />
-      ) : (
-        <span className="w-28 text-right tabular-nums">{view.rest.total}</span>
-      )}
+      <span className="min-w-0 flex-1 text-muted">{text("toCategorize", { count: view.rest.count })}</span>
+      <span className="w-28 text-right tabular-nums">{view.rest.total}</span>
       <ButtonLink size="sm" href={view.rest.href}>
-        {transfer ? text("open") : text("review")}
+        {text("review")}
       </ButtonLink>
     </li>
   );
@@ -160,7 +146,6 @@ function MacroSection({
   board: RowContext;
 }) {
   const text = useTranslations("expenses.categories");
-  const transfer = view.macro === "transfer";
   return (
     <section aria-labelledby={`${board.ids}-macro`} className="flex flex-col">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
@@ -168,28 +153,15 @@ function MacroSection({
           {text(`macro.${view.macro}`)}
         </h2>
         <span data-testid="macro-total" className="font-semibold tabular-nums max-md:text-xl">
-          {transfer ? text("transferSplit", { in: view.inTotal, out: view.outTotal }) : view.total}
+          {view.total}
         </span>
       </div>
       <ul className="flex flex-col">
-        {view.groups
-          .filter(visible)
-          .map((group) =>
-            transfer ? (
-              <TransferRow key={group.id} line={group} board={board} />
-            ) : (
-              <GroupItem key={group.id} group={group} open={open} visible={visible} board={board} />
-            ),
-          )}
+        {view.groups.filter(visible).map((group) => (
+          <GroupItem key={group.id} group={group} open={open} visible={visible} board={board} />
+        ))}
         <RestRow view={view} />
       </ul>
-      {transfer && (
-        <div className="pt-2">
-          <LinkButton onClick={() => board.setDialog({ kind: "add", group: null, macro: "transfer" })}>
-            {text("addTransferCategory")}
-          </LinkButton>
-        </div>
-      )}
     </section>
   );
 }
@@ -231,7 +203,7 @@ function Toolbar({
         options={MACROS.map((key) => ({ value: key, label: text(`macro.${key}`) }))}
       />
       <div className="flex flex-wrap items-center gap-3">
-        {!empty && view.macro !== "transfer" && (
+        {!empty && (
           <Button size="sm" onClick={() => setAll(!allOpen)}>
             {allOpen ? text("collapseAll") : text("expandAll")}
           </Button>
@@ -358,7 +330,7 @@ export function CategoriesBoard({
   const view = macros.find((one) => one.macro === macro) ?? macros[0];
   const groupsOf = (type: Macro) =>
     lines.filter((line) => line.parentId === null && line.type === type && !line.archived);
-  const rows = rowContextOf(ids, state, lines, view.macro === "transfer");
+  const rows = rowContextOf(ids, state, lines, false);
   const dialogs: DialogContext = {
     ...state,
     ids,

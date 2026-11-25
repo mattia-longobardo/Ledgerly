@@ -106,7 +106,6 @@ function CategoryView({
   const options = pickerOptions(all, colorOf, {
     income: text("categories.macro.income"),
     expense: text("categories.macro.expense"),
-    transfer: text("categories.macro.transfer"),
   });
   const page: CategoryPage = {
     category,
