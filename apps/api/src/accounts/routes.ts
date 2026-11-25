@@ -37,6 +37,7 @@ import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { accountRefusal, refusing } from "./cases";
 import { serveViews } from "./views";
+import { sourcesOf } from "./sources";
 import { accountDetail, accountRow, balanceEntry, delta, money, moneyOf, snapshot } from "./dto";
 
 const { accounts, balances, links, removal, switch: switching, summary, views } = ACCOUNTS;
@@ -112,9 +113,24 @@ function settled<T>(outcome: Outcome<T>): T {
 
 const cents = (amount: string): Cents => parseCents(amount);
 
+/** The accounts as `GET /accounts` lists them: the latest reading of each, and its source (H56). */
+async function accountRows(ctx: Ctx, includeArchived: boolean) {
+  const rows = await listAccounts(ctx, { includeArchived });
+  const [latest, source] = await Promise.all([
+    readingsAt(
+      ctx,
+      rows.map((account) => account.id),
+      today(ctx.timeZone),
+    ),
+    sourcesOf(ctx, rows),
+  ]);
+  return rows.map((account) => accountRow(account, latest.get(account.id) ?? null, source(account)));
+}
+
 /** The account as `GET /accounts/{id}` answers it: with the fund whose value it holds (R5b). */
 async function detailOf(ctx: Ctx, account: Account) {
-  return accountDetail(account, (await fundsByAccount(ctx)).get(account.id)?.id ?? null);
+  const fundId = (await fundsByAccount(ctx)).get(account.id)?.id ?? null;
+  return accountDetail(account, fundId, (await sourcesOf(ctx, [account]))(account));
 }
 
 async function requireOwn(ctx: Ctx, id: string) {
@@ -130,15 +146,9 @@ function historyLimit(raw: string | undefined): number {
 }
 
 function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, accounts.listAccounts, async ({ ctx, query }) => {
-    const rows = await listAccounts(ctx, { includeArchived: query.archived === "true" });
-    const latest = await readingsAt(
-      ctx,
-      rows.map((account) => account.id),
-      today(ctx.timeZone),
-    );
-    return { accounts: rows.map((account) => accountRow(account, latest.get(account.id) ?? null)) };
-  });
+  serve(app, guard, accounts.listAccounts, async ({ ctx, query }) => ({
+    accounts: await accountRows(ctx, query.archived === "true"),
+  }));
   serve(app, guard, accounts.getAccount, async ({ ctx, params }) =>
     detailOf(ctx, await requireOwn(ctx, params.id)),
   );

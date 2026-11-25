@@ -81,14 +81,14 @@ export interface ConnectionCases {
   deactivation(
     ctx: Ctx,
     slug: string,
-  ): Promise<
-    | {
-        ok: true;
-        counts: { accounts: number; categories: number; rules: number; unsent: number; pendingDays: number };
-      }
-    | { ok: false }
-  >;
-  turnOff(ctx: Ctx, slug: string, headers: Headers): Promise<{ ok: true; accounts: number } | { ok: false }>;
+  ): Promise<{ ok: true; counts: z.input<typeof banks.getSourceDeactivation.response> } | { ok: false }>;
+  /** H56: the refusal says why (`not_active`, `reading_in_progress` with `startedAt`, `plugin_down`, …). */
+  turnOff(
+    ctx: Ctx,
+    slug: string,
+    headers: Headers,
+    options: { force?: boolean; stopReading?: boolean },
+  ): Promise<{ ok: true; accounts: number } | { ok: false; error: string; startedAt?: Date }>;
   bringBack(
     ctx: Ctx,
     slug: string,
@@ -269,10 +269,13 @@ function serveBanksAndSources(app: Hono<ApiEnv>, guard: Guard, cases: Connection
     if (!answer.ok) throw new ApiRefusal("not_found");
     return answer.counts;
   });
-  serve(app, guard, banks.deactivateSource, async ({ ctx, params, headers }) => {
-    const answer = await cases.turnOff(ctx, params.slug, headers);
-    if (!answer.ok) throw new ApiRefusal("conflict", "not_turned_off");
-    return { accounts: answer.accounts };
+  serve(app, guard, banks.deactivateSource, async ({ ctx, params, body, headers }) => {
+    const answer = await cases.turnOff(ctx, params.slug, headers, body ?? {});
+    if (answer.ok) return { accounts: answer.accounts };
+    if (answer.error === "not_found") throw new ApiRefusal("not_found");
+    // H56: the causes the client says; anything else is «nothing changed», as before.
+    const reason = TURN_OFF_REFUSALS.find((one) => one === answer.error) ?? "not_turned_off";
+    throw new ApiRefusal("conflict", reason, undefined, { startedAt: answer.startedAt?.toISOString() });
   });
   serve(app, guard, banks.resumeSourceAccount, async ({ ctx, params, headers }) => {
     const answer = await cases.bringBack(ctx, params.slug, params.externalId, headers);
@@ -280,6 +283,9 @@ function serveBanksAndSources(app: Hono<ApiEnv>, guard: Guard, cases: Connection
     return { reconnect: answer.reconnect };
   });
 }
+
+/** The causes of a refusal of «Turn off» the client says (H56). */
+const TURN_OFF_REFUSALS = ["not_active", "reading_in_progress", "plugin_down"] as const;
 
 /** A refusal of the plugin host as the contract names it. */
 async function pluginAction(work: () => Promise<void>): Promise<void> {

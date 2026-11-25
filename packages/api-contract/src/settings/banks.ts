@@ -89,7 +89,9 @@ export const getSourceDeactivation = defineRoute({
   path: "/sources/{slug}/deactivation",
   scope: "read",
   capability: "connections",
-  summary: "What turning a source off changes, before it is turned off.",
+  summary:
+    "What turning a source off changes, before it is turned off: also for a plugin that is off and " +
+    "still has data here (`needs_cleanup` of `GET /plugins`, H56).",
   actions: [],
   params: bySource,
   response: z.object({
@@ -98,11 +100,23 @@ export const getSourceDeactivation = defineRoute({
     rules: z.number().int(),
     unsent: z.number().int(),
     pendingDays: z.number().int(),
+    /** The movements on those accounts: they stay, kept by hand (H56). */
+    movements: z.number().int(),
+    /** The person has credentials saved for the plugin: the dialog says they go (H56). */
+    credentials: z.boolean(),
   }),
   errors: ["not_found"],
   example: {
     params: { slug: "enablebanking" },
-    response: { accounts: 2, categories: 5, rules: 1, unsent: 0, pendingDays: 0 },
+    response: {
+      accounts: 2,
+      categories: 5,
+      rules: 1,
+      unsent: 0,
+      pendingDays: 0,
+      movements: 120,
+      credentials: true,
+    },
   },
 });
 
@@ -112,12 +126,27 @@ export const deactivateSource = defineRoute({
   path: "/sources/{slug}/deactivate",
   scope: "write",
   capability: "connections",
-  summary: "Turns a source off after a last reading: its accounts are kept by hand from now.",
+  summary:
+    "Turns a source off after a last reading: its accounts are kept by hand from now. A plugin that is " +
+    "off is turned off too while it still has data here (`needs_cleanup`, H56). `409` `reason`: " +
+    "`not_active` (off, nothing to convert), `reading_in_progress` (with `startedAt`; a reading older " +
+    "than 15 minutes stops with `stopReading`), `plugin_down` (the accesses cannot be closed at the " +
+    "provider: `force` turns it off all the same), `not_turned_off` (anything else: nothing changed).",
   actions: [],
   params: bySource,
+  /** Optional: no body is the turn-off as before. */
+  body: z
+    .object({
+      /** Turn off even when the plugin does not answer: the person closes the access at the provider. */
+      force: z.boolean().optional(),
+      /** Stop a reading that started more than 15 minutes ago, then turn off (H56, D3 = A). */
+      stopReading: z.boolean().optional(),
+    })
+    .strict()
+    .optional(),
   response: z.object({ accounts: z.number().int() }),
   errors: ["not_found", "conflict"],
-  example: { params: { slug: "enablebanking" }, response: { accounts: 2 } },
+  example: { params: { slug: "enablebanking" }, body: {}, response: { accounts: 2 } },
 });
 
 export const resumeSourceAccount = defineRoute({
@@ -146,7 +175,9 @@ export const setPluginActive = defineRoute({
   path: "/plugins/{pluginId}",
   scope: "write",
   capability: "connections",
-  summary: "Turns a plugin on or off for the person.",
+  summary:
+    "Turns a plugin on or off for the person. `404`: the instance has no such plugin, the refusal " +
+    "`not_available` of «Activate» (H56).",
   actions: [],
   params: byPlugin,
   body: z.object({ active: z.boolean() }).strict(),

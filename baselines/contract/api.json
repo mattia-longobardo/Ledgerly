@@ -13,7 +13,10 @@
      "inNetWorth": true,
      "countsAsLiquid": true,
      "balance": "11302.40",
-     "lastSyncedAt": null
+     "lastSyncedAt": null,
+     "sourceState": null,
+     "formerSource": null,
+     "stoppedSince": null
     },
     {
      "id": "<id-2>",
@@ -25,7 +28,10 @@
      "inNetWorth": true,
      "countsAsLiquid": true,
      "balance": "12000.00",
-     "lastSyncedAt": null
+     "lastSyncedAt": null,
+     "sourceState": null,
+     "formerSource": null,
+     "stoppedSince": null
     },
     {
      "id": "<id-3>",
@@ -37,7 +43,10 @@
      "inNetWorth": true,
      "countsAsLiquid": false,
      "balance": "12650.00",
-     "lastSyncedAt": null
+     "lastSyncedAt": null,
+     "sourceState": null,
+     "formerSource": null,
+     "stoppedSince": null
     },
     {
      "id": "<id-4>",
@@ -49,7 +58,10 @@
      "inNetWorth": true,
      "countsAsLiquid": false,
      "balance": "7719.00",
-     "lastSyncedAt": null
+     "lastSyncedAt": null,
+     "sourceState": null,
+     "formerSource": null,
+     "stoppedSince": null
     }
    ]
   }

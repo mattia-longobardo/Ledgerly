@@ -1284,6 +1284,7 @@
         "pending": "You gave access, but you have not chosen the accounts yet.",
         "pausedSchedule": "Automatic update is off.",
         "pausedProvider": "{provider} is not active.",
+        "failed": "The last reading did not work. Ledgerly does not try again by itself.",
         "readOnly": "The days written here do not reach {provider}. It needs a key that can write."
       },
       "when": {

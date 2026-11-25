@@ -190,6 +190,34 @@ export const listPlugins = defineRoute({
          * (the `kind` of `GET /connections/runs`).
          */
         kinds: z.array(z.enum(["accounts", "transactions", "leave", "documents", "holdings", "flows"])),
+        /**
+         * The state of the plugin for the person (H56): off with nothing left (`not_active`), on with
+         * nothing yet (`not_connected`), on with a connection (`connected`), on with the accounts its
+         * «Disconnect» kept (`disconnected`), off with data that still depend on it (`needs_cleanup`:
+         * «Activate» or «Deactivate» are its two ways out). `state` stays as it was.
+         */
+        pluginState: z.enum(["not_active", "not_connected", "connected", "disconnected", "needs_cleanup"]),
+        /**
+         * The worst health of the plugin's connections, from the worst: `action_needed`, `error`,
+         * `late`, `reading`, `on_demand`, `up_to_date`. Null without a connection of a plugin on.
+         */
+        health: z.enum(["action_needed", "error", "late", "reading", "on_demand", "up_to_date"]).nullable(),
+        /** When the person last turned the plugin off; null when never. */
+        deactivatedAt: instant().nullable(),
+        /** What still depends on the plugin here: what «Deactivate» converts (H55). */
+        leftovers: z.object({
+          accounts: z.number().int(),
+          categories: z.number().int(),
+          /** The movements waiting to be sent to the source. */
+          pendingTx: z.number().int(),
+          /** The days off waiting to be sent to the calendar. */
+          pendingDays: z.number().int(),
+        }),
+        /** What the plugin reads (the same values as `kinds`) and what it writes to its provider. */
+        capabilities: z.object({
+          reads: z.array(z.enum(["accounts", "transactions", "leave", "documents", "holdings", "flows"])),
+          writes: z.array(z.enum(["transactions", "leave"])),
+        }),
         /** The fields of the credential of a connection, in the person's language: never a value. */
         fields: z.array(
           z.object({
@@ -219,6 +247,11 @@ export const listPlugins = defineRoute({
           countries: ["DE", "IT"],
           kind: "bank",
           kinds: ["accounts", "transactions"],
+          pluginState: "connected",
+          health: "up_to_date",
+          deactivatedAt: null,
+          leftovers: { accounts: 2, categories: 0, pendingTx: 0, pendingDays: 0 },
+          capabilities: { reads: ["accounts", "transactions"], writes: [] },
           fields: [],
         },
       ],

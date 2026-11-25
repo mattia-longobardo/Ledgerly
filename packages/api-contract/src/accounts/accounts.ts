@@ -14,6 +14,8 @@ import {
   accountRow,
   byAccount,
   REMINDERS,
+  SOURCE_FIELDS_EXAMPLE,
+  sourceFields,
   TRENDS,
 } from "./shared";
 
@@ -46,6 +48,7 @@ const accountDetail = z.object({
   archivedAt: instant().nullable(),
   /** The pension fund whose value the account holds (R5b): its page opens with one read. */
   fundId: id().nullable(),
+  ...sourceFields,
 });
 
 const ACCOUNT_DETAIL_EXAMPLE = {
@@ -73,6 +76,7 @@ const ACCOUNT_DETAIL_EXAMPLE = {
   lastSyncedAt: null,
   archivedAt: null,
   fundId: null,
+  ...SOURCE_FIELDS_EXAMPLE,
 };
 
 const name = z.string().trim().min(1).max(80);

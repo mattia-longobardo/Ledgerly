@@ -14,6 +14,7 @@ import {
   listConnections,
   pluginProvider,
 } from "@ledgerly/domain/platform/integrations";
+import { isPluginActive } from "@ledgerly/domain/platform/plugins";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
 import { closePendingDeletes } from "@ledgerly/domain/timeoff";
 import {
@@ -21,9 +22,7 @@ import {
   type CardError,
   type CardResult,
   cardOf,
-  PluginActionError,
   type PluginCard,
-  setPluginActive,
 } from "@ledgerly/plugin-host";
 import { tasks } from "@/platform/jobs/queue";
 
@@ -38,21 +37,7 @@ async function connectionOf(ctx: Ctx, provider: string): Promise<Connection | nu
 }
 
 /**
- * A plugin's source is turned on for the person who connects it (H25; H30 for those already connected
- * at R5c): its readings ask for that. False when the instance has no such plugin.
- */
-async function turnOn(ctx: Ctx, provider: string): Promise<boolean> {
-  try {
-    await setPluginActive(ctx, { pluginId: provider.slice(pluginProvider("").length), active: true });
-    return true;
-  } catch (error) {
-    if (error instanceof PluginActionError) return false;
-    throw error;
-  }
-}
-
-/**
- * Stores the credential, the first one or a replacement, without asking the provider: a provider that is
+ * Stores the credential, the first one or a replacement, of a plugin the person has on, without asking the provider: a provider that is
  * down must not stop a correct credential being kept, and «Test connection» is the button that asks.
  * The accounts kept by hand come back to the source before it can be read, so no reading makes them twice.
  */
@@ -60,13 +45,18 @@ export async function connectCore(
   ctx: Ctx,
   provider: string,
   input: Readonly<Record<string, string>>,
-): Promise<{ ok: true; id: string; back: number } | { ok: false; error: CardError; input: boolean }> {
+): Promise<
+  { ok: true; id: string; back: number } | { ok: false; error: CardError | "not_active"; input: boolean }
+> {
   const card = await coreCardOf(provider);
   // Nobody's card: a bank's plugin or a service of Investments connects another way.
   if (!card) return { ...NOT_CONNECTED, input: false };
   const checked = card.credentials(input);
   if (!checked.ok) return { ...checked, input: true };
-  if (!(await turnOn(ctx, provider))) return { ok: false, error: "unreachable", input: false };
+  // «Connect» never turns a plugin on (H56): «Activate» is a step of its own.
+  if (!(await isPluginActive(ctx, provider.slice(pluginProvider("").length)))) {
+    return { ok: false, error: "not_active", input: false };
+  }
   const back = await restoreSourceAccounts(ctx, provider);
   try {
     const saved = await card.save(ctx, checked.credentials);

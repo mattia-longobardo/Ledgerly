@@ -108,7 +108,10 @@ const connection = z.object({
       "keyInvalid",
       "pending",
       "pausedSchedule",
+      /** A connection of a plugin turned off: the plugin is `needs_cleanup` in `GET /plugins` (H56). */
       "pausedProvider",
+      /** The last reading failed and no schedule tries again (H56: before `pausedSchedule`). */
+      "failed",
       "readOnly",
     ]),
     action: z.enum(["update", "renew", "replaceKey", "chooseAccounts", "resume", "enable"]).nullable(),
@@ -189,7 +192,8 @@ export const connect = defineRoute({
   capability: "connections",
   summary:
     "Connects a provider of the core that takes credentials, or replaces them. A refusal of the credentials " +
-    "is `invalid` with the card's code in `reason` (`empty`, `rejected`, `provider`).",
+    "is `invalid` with the card's code in `reason` (`empty`, `rejected`, `provider`). A plugin the " +
+    "person has not turned on is `409` `not_active`: «Connect» never turns it on (H56).",
   // The Server Actions of the cards of the core are named in `tools/contract.test.ts`: this file names no provider (M12).
   actions: [],
   body: z.object({ provider: z.string().min(1), credentials: z.record(z.string(), z.string()) }).strict(),

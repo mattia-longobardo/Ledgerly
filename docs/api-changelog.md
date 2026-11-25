@@ -40,6 +40,34 @@ deprecated (`apiLevel` and `minClientLevel` 2).
   before.
 - Nothing else changes on the wire: the keys deprecated by R5g leave in R5f.2.
 
+## Unreleased · The plugins' new section, its server part (H56)
+
+- `GET /plugins`: `pluginState`, the state of the plugin for the person (`not_active`, `not_connected`,
+  `connected`, `disconnected`, `needs_cleanup`); `health`, the worst of its connections' (`action_needed`,
+  `error`, `late`, `reading`, `on_demand`, `up_to_date`; null without a connection of a plugin on);
+  `deactivatedAt`; `leftovers {accounts, categories, pendingTx, pendingDays}`, what still depends on the
+  plugin; `capabilities {reads, writes}`. `state` and `pausedSince` stay as they were.
+- `GET /sources/{slug}/deactivation`: also for a plugin that is off with data here (`needs_cleanup`);
+  `movements` (on the accounts converted) and `credentials` (whether credentials are saved).
+- `POST /sources/{slug}/deactivate`: also for a plugin that is off with data here, the way out of
+  `needs_cleanup`. Optional body `{force, stopReading}`. The `409` names its cause in `reason`:
+  `not_active` (off, nothing to convert), `reading_in_progress` with `startedAt` (a reading older than
+  15 minutes stops with `stopReading: true`), `plugin_down` (the plugin does not answer: `force: true`
+  turns it off all the same). `not_turned_off` stays for anything else.
+- Error body: `startedAt`, for `reading_in_progress`.
+- `PATCH /plugins/{pluginId}`: `404` is the instance without such a plugin, the client's `not_available`.
+- `POST /connections`: a plugin the person has not turned on is `409` `not_active`. «Connect» no longer
+  turns a plugin on: «Activate» (`PATCH /plugins/{pluginId}`) comes first.
+- `GET /connections`: `status.text` adds `failed` (the last reading failed and no schedule tries again:
+  `value` `late`, `action` `update`; before, `pausedSchedule`). A connection of a plugin turned off stays
+  `pausedProvider`: its plugin is `needs_cleanup` in `GET /plugins`.
+- `GET /connections`: a connection of a plugin read by the core (a source, a calendar) whose plugin is off is
+  `providerActive: false`, `status` `pausedProvider`, and offers no capability, as a bank's already did.
+- `GET /accounts`, `GET /accounts/{id}`: `sourceState` (`live`, `stopped`, `former`; null for an account
+  that never had a source), `formerSource` and `stoppedSince` (since when a `stopped` account is not read;
+  until when a `former` one came from its source).
+- `GET /net-worth`: each row of `accounts` adds the same `sourceState`, `formerSource` and `stoppedSince`.
+
 ## Unreleased · What a plugin reads (PERS-601)
 
 - `GET /plugins`: `kinds`, what each plugin reads, from its manifest's capabilities: the kinds of the runs

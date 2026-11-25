@@ -692,16 +692,35 @@ export async function disconnectBank(
 
 /* "Turn off" a plugin (plugin-settings.md §3, decision H55) */
 
+/** Whether the plugin answers now: its manifest, read with the short wait of the manifests. */
+async function answers(plugin: InstancePlugin, deps: Deps): Promise<boolean> {
+  try {
+    await callPlugin(plugin.config, PLUGIN_PATHS.manifest, manifestSchema, {
+      timeoutMs: MANIFEST_TIMEOUT_MS,
+      fetchFn: deps.fetchFn,
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof PluginCallError) return false;
+    throw error;
+  }
+}
+
 /**
  * The closing of every bank access of the person, read now and run later (§3.2, step 3): the
  * credentials and the accesses are read before the conversion deletes them, and closed after it,
  * when nothing can undo the conversion any more. A provider that does not answer is not waited
  * for: an access ends by itself. Nothing to close for a plugin the instance no longer has.
+ *
+ * With accesses to close, the plugin is asked first whether it answers (H56): one that does not is
+ * `plugin_down`, as the person has to close them on the provider's site, unless `force` says the
+ * person turns it off all the same.
  */
 export async function prepareAccessClosing(
   ctx: Pick<Ctx, "userId">,
   pluginId: string,
   deps: Deps = {},
+  options: { force?: boolean } = {},
 ): Promise<() => Promise<void>> {
   const plugin = await findInstancePlugin(pluginId);
   const credentials = await readUserCredentials(ctx, pluginId);
@@ -710,6 +729,9 @@ export async function prepareAccessClosing(
   for (const connection of await listPluginConnections(ctx, pluginId)) {
     const { sessionId } = readBag(await readCredentials(ctx, connection.id));
     if (sessionId !== "") sessions.push(sessionId);
+  }
+  if (sessions.length > 0 && options.force !== true && !(await answers(plugin, deps))) {
+    throw new PluginActionError("plugin_down");
   }
   return async () => {
     for (const sessionId of sessions) await revokeQuietly(plugin, credentials, sessionId, deps);

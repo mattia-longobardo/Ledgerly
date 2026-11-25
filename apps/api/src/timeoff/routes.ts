@@ -46,7 +46,7 @@ async function refusing<T>(work: () => Promise<T>): Promise<T> {
     if (error instanceof TimeOffError) {
       if (error.code === "not_found") throw new ApiRefusal("not_found");
       if (error.code === "not_bookable")
-        throw new ApiRefusal("conflict", error.code, undefined, error.refused);
+        throw new ApiRefusal("conflict", error.code, undefined, { refused: error.refused });
       if (error.code === "conflict" || error.code === "in_use") throw new ApiRefusal("conflict", error.code);
       throw new ApiRefusal("invalid", error.code);
     }

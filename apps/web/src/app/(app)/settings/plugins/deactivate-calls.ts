@@ -26,7 +26,7 @@ export async function deactivateSourceAction(
   slug: string,
 ): Promise<{ ok: true; accounts: number } | { ok: false }> {
   try {
-    const { accounts } = await call(banks.deactivateSource, { params: { slug } });
+    const { accounts } = await call(banks.deactivateSource, { params: { slug }, body: {} });
     invalidate(connections.listConnections);
     return { ok: true, accounts };
   } catch (error) {

@@ -7,6 +7,7 @@ import {
   daysToExpiry,
   expiryWarning,
   failureStreak,
+  healthOf,
   historyOf,
   isRunningNow,
   relativeNext,
@@ -18,6 +19,7 @@ import {
   SYNC_ERROR_CODES,
   syncStatus,
   warningFor,
+  worstHealth,
 } from "./status";
 
 const NOW = new Date("2026-11-15T12:00:00.000Z");
@@ -72,6 +74,27 @@ describe("the state of a connection (ux §2.2)", () => {
     ],
     ["accounts not chosen yet", { accountsChosen: false }, "action", "pending", "chooseAccounts"],
     ["no schedule", { scheduled: false, nextSyncAt: null }, "paused", "pausedSchedule", "resume"],
+    // H56: the error comes before «no schedule».
+    [
+      "a failure with no schedule",
+      {
+        scheduled: false,
+        nextSyncAt: null,
+        consecutiveFailures: 1,
+        state: "error",
+        errorCode: "provider_down",
+      },
+      "late",
+      "failed",
+      "update",
+    ],
+    [
+      "a provider that asked to wait, with no schedule",
+      { scheduled: false, nextSyncAt: null, state: "error", errorCode: "rate_limited" },
+      "paused",
+      "pausedSchedule",
+      "resume",
+    ],
     [
       "a provider that asked to wait",
       { errorCode: "rate_limited", state: "error" },
@@ -139,7 +162,10 @@ describe("the state of a connection (ux §2.2)", () => {
                                 !accountsChosen
                               ? "action"
                               : !scheduled
-                                ? "paused"
+                                ? errorCode !== "rate_limited" &&
+                                  (consecutiveFailures >= 1 || state === "error")
+                                  ? "late"
+                                  : "paused"
                                 : errorCode === "rate_limited" ||
                                     lastOkAt === null ||
                                     consecutiveFailures >= 1 ||
@@ -533,5 +559,42 @@ describe("the words of the normal view (ux §1.2)", () => {
     for (const code of SYNC_ERROR_CODES) {
       expect(texts(normal, "").filter(([, text]) => text.includes(code))).toEqual([]);
     }
+  });
+});
+
+describe("the health of a connection (H56)", () => {
+  const health = (patch: Partial<StatusFacts>) => {
+    const facts = { ...HEALTHY, ...patch };
+    return healthOf(syncStatus(facts, NOW), facts);
+  };
+
+  it.each<[string, Partial<StatusFacts>, string | null]>([
+    ["up to date", {}, "up_to_date"],
+    ["a reading in progress", { running: true }, "reading"],
+    ["no schedule", { scheduled: false, nextSyncAt: null }, "on_demand"],
+    ["a failure with no schedule", { scheduled: false, consecutiveFailures: 1, state: "error" }, "error"],
+    [
+      "a failure with a schedule",
+      { consecutiveFailures: 1, state: "error", errorCode: "provider_down" },
+      "error",
+    ],
+    ["a provider that asked to wait", { errorCode: "rate_limited", state: "error" }, "late"],
+    ["a reading that did not come", { nextSyncAt: ago(16) }, "late"],
+    ["an access past its end", { expiresAt: ago(1) }, "action_needed"],
+    ["a plugin turned off", { providerActive: false }, null],
+  ])("%s", (_name, patch, expected) => {
+    expect(health(patch)).toBe(expected);
+  });
+
+  it("is the worst of the connections' for a plugin, null without any", () => {
+    expect(worstHealth(["up_to_date", "late", "reading"])).toBe("late");
+    expect(worstHealth(["on_demand", "error", "action_needed"])).toBe("action_needed");
+    expect(worstHealth([null, "up_to_date"])).toBe("up_to_date");
+    expect(worstHealth([])).toBeNull();
+  });
+
+  it("sends no warning for a failure with no schedule: the person started it", () => {
+    const facts = { ...HEALTHY, scheduled: false, consecutiveFailures: 5, state: "error" as const };
+    expect(warningFor(syncStatus(facts, NOW), facts, NOW)).toBeNull();
   });
 });

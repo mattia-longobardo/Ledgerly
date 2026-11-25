@@ -32,6 +32,7 @@ export {
   findConnection,
   finishRun,
   forgetSource,
+  formerSourcesOf,
   lastMovementChangeAt,
   listConnections,
   listRuns,
@@ -42,7 +43,7 @@ export {
   recentRuns,
   recordRun,
   rescheduleConnections,
-  runningReadings,
+  runningSince,
   saveConnection,
   saveIbanConflicts,
   savePluginConnection,
@@ -53,13 +54,16 @@ export {
   skipSourceAccount,
   skippedAccounts,
   sourceSkippedIds,
+  stopReadings,
 } from "./service";
 export type { Connection, DueConnection, RecentRun } from "./service";
 export {
+  HEALTH_VALUES,
   clock,
   codeKey,
   daysToExpiry,
   expiryWarning,
+  healthOf,
   historyOf,
   isRunningNow,
   isSyncErrorCode,
@@ -67,5 +71,6 @@ export {
   relativePast,
   syncStatus,
   warningFor,
+  worstHealth,
 } from "./status";
-export type { StatusFacts, SyncStatus } from "./status";
+export type { HealthValue, StatusFacts, SyncStatus } from "./status";

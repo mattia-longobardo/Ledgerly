@@ -9,6 +9,7 @@ import { transactionCases } from "@/app/(app)/expenses/api-cases";
 import { investmentCases } from "@/app/(app)/investments/api-cases";
 import { bankChoice, bankOutcome } from "@/app/(app)/banks/connect/steps";
 import { connectionCases } from "@/app/(app)/settings/plugins/api-cases";
+import { pluginStanding } from "@/app/(app)/settings/plugins/plugin-standing";
 import { sourceRead } from "@/app/(app)/settings/plugins/source-read";
 import { serverCases } from "@/app/(app)/settings/server/api-cases";
 import { api } from "@/platform/api/app";
@@ -25,7 +26,7 @@ export const adapters = {
   accounts: accountCases,
   transactions: transactionCases,
   investments: investmentCases,
-  sources: { choice: bankChoice, outcome: bankOutcome, source: sourceRead },
+  sources: { choice: bankChoice, outcome: bankOutcome, source: sourceRead, standing: pluginStanding },
 };
 
 api.route("/", apiRoutes(adapters));
