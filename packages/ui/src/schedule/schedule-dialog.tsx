@@ -21,8 +21,11 @@ import { Modes, type Patch, SimpleDays } from "./modes";
 import { PreviewPanel, type PreviewSchedule, usePreview } from "./preview";
 import type { ScheduleProblem, SyncSchedule } from "./types";
 
-/** Saves a schedule: the container says how (`{ ok: false }` is a schedule the server refused). */
-export type SaveSchedule = (schedule: SyncSchedule) => Promise<{ ok: boolean }>;
+/**
+ * Saves a schedule: the container says how (`{ ok: false }` is a schedule the server refused,
+ * `tooMany` when it has more passes in a day than the connection allows).
+ */
+export type SaveSchedule = (schedule: SyncSchedule) => Promise<{ ok: boolean; tooMany?: boolean }>;
 
 /** A rule the server refused (`invalidRule`) is marked as the fields of its kind. */
 function withServerErrors(drafts: Draft[], errors: (RuleError | null)[], problems: ScheduleProblem[]) {
@@ -97,7 +100,7 @@ function Recommended({
 }
 
 /** Saves the schedule chosen, and says when the server refuses it. */
-function useSaving(save: SaveSchedule, onClose: () => void) {
+function useSaving(save: SaveSchedule, maxPerDay: number | undefined, onClose: () => void) {
   const text = useTranslations("settings.integrations.scheduleControl");
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -105,7 +108,10 @@ function useSaving(save: SaveSchedule, onClose: () => void) {
     if (!chosen) return;
     startTransition(async () => {
       const result = await save(chosen);
-      if (!result.ok) return setServerError(text("invalid"));
+      if (!result.ok) {
+        const tooMany = result.tooMany && maxPerDay !== undefined;
+        return setServerError(tooMany ? text("errors.tooManySaved", { max: maxPerDay }) : text("invalid"));
+      }
       setServerError(null);
       onClose();
       notify(text("saved"));
@@ -154,36 +160,41 @@ function Buttons({
 function Fields({
   edit,
   locale,
+  maxPerDay,
   recommended,
-  serverError,
-  pending,
-  onRecommended,
+  saving,
 }: {
   edit: ReturnType<typeof useScheduleEdit>;
   locale: string;
+  maxPerDay: number | undefined;
   recommended: SyncSchedule;
-  serverError: string | null;
-  pending: boolean;
-  onRecommended: () => void;
+  saving: ReturnType<typeof useSaving>;
 }) {
   const patch: Patch = (change) => edit.setState(change);
   const simple = edit.state.mode === "repeat" || edit.state.mode === "times";
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {serverError && (
+      {saving.serverError && (
         <p role="alert" className="text-sm text-neg">
-          {serverError}
+          {saving.serverError}
         </p>
       )}
-      <Modes state={edit.state} errors={edit.errors} problems={edit.problems} locale={locale} patch={patch} />
+      <Modes
+        state={edit.state}
+        errors={edit.errors}
+        problems={edit.problems}
+        locale={locale}
+        maxPerDay={maxPerDay}
+        patch={patch}
+      />
       {simple && <SimpleDays state={edit.state} error={edit.errors[0]} locale={locale} patch={patch} />}
       <Recommended
         recommended={recommended}
         locale={locale}
-        disabled={pending}
+        disabled={saving.pending}
         onUse={() => {
           edit.setState(simpleFrom(recommended));
-          onRecommended();
+          saving.setServerError(null);
         }}
       />
     </div>
@@ -196,6 +207,7 @@ export function ScheduleDialog({
   recommended,
   timeZone,
   locale,
+  maxPerDay,
   save,
   preview,
   onClose,
@@ -205,13 +217,14 @@ export function ScheduleDialog({
   recommended: SyncSchedule;
   timeZone: string;
   locale: string;
+  maxPerDay?: number;
   save: SaveSchedule;
   preview: PreviewSchedule;
   onClose: () => void;
 }) {
   const text = useTranslations("settings.integrations.scheduleControl");
   const edit = useScheduleEdit(schedule, preview);
-  const saving = useSaving(save, onClose);
+  const saving = useSaving(save, maxPerDay, onClose);
   return (
     <Modal
       open
@@ -229,14 +242,7 @@ export function ScheduleDialog({
       }
     >
       <div className="grid min-w-0 grid-cols-1 items-start gap-4 sm:grid-cols-[minmax(0,1fr)_180px]">
-        <Fields
-          edit={edit}
-          locale={locale}
-          recommended={recommended}
-          serverError={saving.serverError}
-          pending={saving.pending}
-          onRecommended={() => saving.setServerError(null)}
-        />
+        <Fields edit={edit} locale={locale} maxPerDay={maxPerDay} recommended={recommended} saving={saving} />
         <PreviewSection
           manual={edit.drafts.length === 0}
           valid={edit.valid}

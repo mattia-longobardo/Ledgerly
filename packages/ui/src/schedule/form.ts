@@ -67,6 +67,20 @@ export function isWindowed(from: string, until: string): boolean {
 
 export { WHOLE_DAY };
 
+/**
+ * How many passes a repeating rule makes in one day, from `from` to `until` both included (the
+ * server's count). A window not typed in full yet counts as the whole day.
+ */
+export function passesInDay(everyMinutes: number, from: string, until: string): number {
+  const minutes = (time: string) => {
+    const valid = normalizeTime(time);
+    return valid === null ? null : Number(valid.slice(0, 2)) * 60 + Number(valid.slice(3));
+  };
+  const start = minutes(from) ?? 0;
+  const end = minutes(until) ?? 23 * 60 + 59;
+  return end < start ? 0 : Math.floor((end - start) / everyMinutes) + 1;
+}
+
 /** How the days of a simple mode are offered: the four choices of the segmented control. */
 export type DayChoice = "every" | "workdays" | "pick" | "month";
 

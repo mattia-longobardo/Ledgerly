@@ -147,6 +147,36 @@ export async function seedPluginsLive(): Promise<void> {
   await bank(ctx, "Alfa Bank", { running: hoursFrom(now, 0.5) });
 }
 
+/**
+ * One bank on the recommended schedule, for the schedule editor of a bank's connection: its current
+ * account chosen, and a savings account left out, so «Choose accounts» has one to offer again.
+ */
+export async function seedBankSchedule(): Promise<void> {
+  const ctx = await contextOf(USERS.bankSchedule.email);
+  if (!(await activatePlugin(ctx, BANK_PLUGIN))) return;
+  await bankCredentials(ctx);
+  await bank(ctx, "Beta Bank");
+  const account = (id: string, name: string, kind: string) => ({
+    externalId: `e2e-${id}`,
+    stableId: `e2e-stable-${id}`,
+    name,
+    identifier: null,
+    currency: "EUR",
+    kind,
+  });
+  const current = account("beta-bank", "Beta Bank current account", "CACC");
+  const savings = account("beta-bank-savings", "Beta Bank savings", "SVGS");
+  await savePluginConnection(ctx, {
+    provider: pluginProvider(BANK_PLUGIN),
+    instanceKey: "IT:Beta Bank",
+    credentials: connectionBag("e2e-not-a-session", [current, savings], {
+      chosen: true,
+      skipped: [savings.stableId],
+    }),
+    expiresAt: hoursFrom(new Date(), 24 * 170),
+  });
+}
+
 /** Wallet failed with no schedule (an error, never «on demand»), Trek failing, a bank's access ended. */
 export async function seedPluginsErrors(): Promise<void> {
   const ctx = await contextOf(USERS.pluginsErrors.email);

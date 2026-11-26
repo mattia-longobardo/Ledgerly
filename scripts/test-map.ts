@@ -89,7 +89,11 @@ export const FLOWS: Flow[] = [
   },
   { id: "payroll", specs: ["payroll", "manual"], screens: ["a11y"] },
   { id: "timeoff", specs: ["timeoff", "holidays"], screens: CROSS_CUTTING },
-  { id: "connections", specs: ["connections", "plugins", "plugin-states", "schedule"], screens: ["a11y"] },
+  {
+    id: "connections",
+    specs: ["connections", "plugins", "plugin-states", "schedule", "bank-schedule"],
+    screens: ["a11y"],
+  },
   { id: "auth", specs: ["auth", "two-factor", "preferences"], screens: ["a11y"] },
   { id: "admin", specs: ["admin"], screens: ["a11y"] },
   { id: "api", specs: ["security", "mcp"] },

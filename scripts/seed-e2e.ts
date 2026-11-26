@@ -52,6 +52,7 @@ import { seedEditOps, seedInvestments, seedLegs, seedPlans, seedPortfolio } from
 import { seedLayout } from "./seed-e2e/layout";
 import { seedPayrollHand } from "./seed-e2e/payroll";
 import {
+  seedBankSchedule,
   seedPluginsCleanup,
   seedPluginsDisconnected,
   seedPluginsErrors,
@@ -222,6 +223,7 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [["pluginsOff"], seedPluginsOff],
   [["pluginsOn"], seedPluginsOn],
   [["pluginsLive"], seedPluginsLive],
+  [["bankSchedule"], seedBankSchedule],
   [["pluginsErrors"], seedPluginsErrors],
   [["pluginsMixed"], seedPluginsMixed],
   [["pluginsDisconnected"], seedPluginsDisconnected],

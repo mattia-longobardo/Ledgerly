@@ -371,6 +371,8 @@
           "cron": "Questa espressione cron non è valida.",
           "neverRuns": "Questa regola non parte mai.",
           "tooFrequent": "Due sincronizzazioni alle {first} e alle {second}: tienile ad almeno {minutes} minuti di distanza.",
+          "tooMany": "{count} sincronizzazioni in un giorno: questo collegamento ne consente al massimo {max} al giorno.",
+          "tooManySaved": "Questo orario ha troppe sincronizzazioni: questo collegamento ne consente al massimo {max} al giorno.",
           "time": "Scrivi l'orario come HH:MM, ad esempio 06:43."
         },
         "manualHint": "Nessuna regola: solo “Sincronizza ora” avvia una sincronizzazione. Aggiungi una regola o scegli un'altra modalità.",
@@ -1471,10 +1473,7 @@
         "back": "Torna a Plugin",
         "schedule": {
           "title": "Pianificazione",
-          "description": "Quando Ledgerly aggiorna ogni collegamento da solo.",
-          "fixed": "{count, plural, one {# volta al giorno} other {# volte al giorno}} · Prossimo: {time}",
-          "fixedNoNext": "{count, plural, one {# volta al giorno} other {# volte al giorno}}",
-          "off": "Aggiornamento automatico spento"
+          "description": "Quando Ledgerly aggiorna ogni collegamento da solo."
         },
         "log": {
           "title": "Registro",

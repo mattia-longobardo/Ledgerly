@@ -21,6 +21,7 @@ export function ConnectionSchedule({
   recommended,
   next,
   timeZone,
+  maxPerDay,
 }: {
   connectionId: string;
   name: string;
@@ -28,6 +29,8 @@ export function ConnectionSchedule({
   recommended: SyncSchedule;
   next: string | null;
   timeZone: string;
+  /** The most passes a day the server accepts (a bank's connection); none when unset. */
+  maxPerDay?: number;
 }) {
   const router = useRouter();
   const preview: PreviewSchedule = (rules) =>
@@ -36,7 +39,8 @@ export function ConnectionSchedule({
     try {
       await call(connections.setSchedule, { params: { id: connectionId }, body: rules });
     } catch (error) {
-      if (error instanceof ApiError && error.status < 500) return { ok: false };
+      if (error instanceof ApiError && error.status < 500)
+        return { ok: false, tooMany: error.reason === "tooMany" };
       throw error;
     }
     router.refresh();
@@ -49,6 +53,7 @@ export function ConnectionSchedule({
       recommended={recommended}
       next={next}
       timeZone={timeZone}
+      maxPerDay={maxPerDay}
       save={save}
       preview={preview}
     />

@@ -3,7 +3,7 @@
 import { MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract/settings";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
-import type { SchedulePreview, SyncSchedule } from "./types";
+import type { SchedulePreview, ScheduleText, SyncSchedule } from "./types";
 
 /** Asks for the preview of a schedule: the server's answer on the web, an answer at once in a test. */
 export type PreviewSchedule = (schedule: SyncSchedule) => SchedulePreview | Promise<SchedulePreview>;
@@ -40,6 +40,18 @@ export function usePreview(
   return settled?.key === key ? settled.answer : undefined;
 }
 
+/** What is wrong with the rules, said for the problem the person can act on. */
+function problemText(problems: SchedulePreview["problems"], text: ScheduleText): string {
+  const tooFrequent = problems.find((one) => one.code === "tooFrequent");
+  if (tooFrequent?.code === "tooFrequent") {
+    const { first, second } = tooFrequent;
+    return text("errors.tooFrequent", { first, second, minutes: MIN_SYNC_GAP_MINUTES });
+  }
+  const tooMany = problems.find((one) => one.code === "tooMany");
+  if (tooMany?.code === "tooMany") return text("errors.tooMany", { count: tooMany.count, max: tooMany.max });
+  return text("preview.fix");
+}
+
 /** The next passes, or what is wrong with the rules, beside the fields they answer. */
 export function PreviewPanel({
   headingId,
@@ -69,22 +81,10 @@ export function PreviewPanel({
     hourCycle: "h23",
   });
   const problems = answer?.problems ?? [];
-  const tooFrequent = problems.find((one) => one.code === "tooFrequent");
   if (manual) return <p className="text-sm text-muted">{text("preview.manual")}</p>;
   if (!valid) return <p className="text-sm text-neg">{text("preview.fix")}</p>;
   if (answer === undefined) return <p className="text-sm text-muted">{common("loading")}</p>;
-  if (tooFrequent?.code === "tooFrequent") {
-    return (
-      <p className="text-sm text-neg">
-        {text("errors.tooFrequent", {
-          first: tooFrequent.first,
-          second: tooFrequent.second,
-          minutes: MIN_SYNC_GAP_MINUTES,
-        })}
-      </p>
-    );
-  }
-  if (problems.length > 0) return <p className="text-sm text-neg">{text("preview.fix")}</p>;
+  if (problems.length > 0) return <p className="text-sm text-neg">{problemText(problems, text)}</p>;
   return (
     // Three on a phone: the list has to stay on the same screen as the fields it answers.
     <ol
