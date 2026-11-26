@@ -243,8 +243,71 @@ test("an archived account can be deleted from its Danger zone", async ({ page })
 });
 
 /**
- * The subscriptions an account pays (R5a, ST-13, D1): they take the place of its «Connections», the
- * list kept by hand. The section is read-only and leads to Subscriptions, where they are edited.
+ * Connections (owner, 2026-09-21): what hangs off an account, kept by hand next to its subscriptions.
+ * The journey: empty, add one, the same name twice on one channel refused, read on Overview, rename,
+ * remove. Every name here is made up.
+ */
+test("what hangs off an account is added, read on Overview, changed and removed", async ({ page }) => {
+  await page.goto("/accounts/new");
+  await page.getByLabel("Name").fill("Conto collegamenti");
+  await page
+    .getByRole("button", { name: /Save|Create|Add/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}/);
+  const url = page.url().split("?")[0];
+  const section = page.getByRole("region", { name: "Connections" });
+
+  await test.step("an empty account says so, and a connection is added on the IBAN", async () => {
+    await page.goto(`${url}?tab=settings`);
+    await expect(section).toContainText("Nothing yet.");
+    await section.getByRole("button", { name: "Add" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Add a connection" });
+    await dialog.getByLabel("Name").fill("Fornitore prova");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(section.getByRole("button", { name: "Fornitore prova" })).toBeVisible();
+  });
+
+  await test.step("the same name on the same channel is refused, and on the other is not", async () => {
+    await section.getByRole("button", { name: "Add" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Add a connection" });
+    await dialog.getByLabel("Name").fill("fornitore prova");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog.getByRole("alert")).toContainText("already on this channel");
+    // The card is a different way to the same account, so the name is free there.
+    await dialog.getByLabel("Reaches the account through").selectOption("card");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  await test.step("Overview shows both lists without opening Settings", async () => {
+    await page.goto(url);
+    const details = page.getByRole("main");
+    await expect(details).toContainText("Fornitore prova");
+    await expect(details.getByText("Card", { exact: true })).toBeVisible();
+  });
+
+  await test.step("a connection is renamed and then removed", async () => {
+    await page.goto(`${url}?tab=settings`);
+    await section.getByRole("button", { name: "Fornitore prova", exact: true }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Edit connection" });
+    await dialog.getByLabel("Name").fill("Fornitore rinominato");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(section.getByRole("button", { name: "Fornitore rinominato" })).toBeVisible();
+
+    // The dialog by its name: the toast that confirms the removal is a dialog to the tree too.
+    await section.getByRole("button", { name: "Fornitore rinominato" }).click();
+    await dialog.getByRole("button", { name: "Remove" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(section.getByRole("button", { name: "Fornitore rinominato" })).toBeHidden();
+  });
+});
+
+/**
+ * The subscriptions an account pays (R5a, ST-13, D1), next to its «Connections». The section is
+ * read-only and leads to Subscriptions, where they are edited.
  */
 test("an account's settings list the subscriptions it pays", async ({ page }) => {
   await page.goto("/accounts/new");
@@ -258,7 +321,6 @@ test("an account's settings list the subscriptions it pays", async ({ page }) =>
   await page.goto(`${url}?tab=settings`);
   const section = page.getByRole("region", { name: "Subscriptions" });
   await expect(section).toContainText("None");
-  await expect(page.getByRole("region", { name: "Connections" })).toHaveCount(0);
   await section.getByRole("link", { name: "Manage subscriptions" }).click();
   await expect(page).toHaveURL(/\/subscriptions$/);
 });

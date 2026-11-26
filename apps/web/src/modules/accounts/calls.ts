@@ -1,7 +1,7 @@
 // The calls of the accounts' forms to `/api/v1` (rewrite plan R3): each keeps the name and the answer of
 // the Server Action it replaces — `{ ok }` or the use case's code — so a form reads one shape whatever
 // sent it. An amount is typed in the person's number format and travels as a plain decimal.
-import { accounts, accountSwitch, balances, summary } from "@ledgerly/api-contract/accounts";
+import { accounts, accountSwitch, balances, links, summary } from "@ledgerly/api-contract/accounts";
 import { profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
@@ -114,6 +114,24 @@ export async function runSnapshotNowAction() {
   const result = await writing(() => call(summary.runSnapshot, { body: {} }));
   if (result.ok) invalidate(summary.listSnapshots);
   return result;
+}
+
+interface LinkInput {
+  channel: "iban" | "card";
+  name: string;
+  note?: string | null;
+}
+
+export function addConnectionAction(accountId: string, input: LinkInput) {
+  return writing(() => call(links.addAccountLink, { params: { id: accountId }, body: input }));
+}
+
+export function updateConnectionAction(accountId: string, linkId: string, input: LinkInput) {
+  return writing(() => call(links.updateAccountLink, { params: { id: accountId, linkId }, body: input }));
+}
+
+export function removeConnectionAction(accountId: string, linkId: string) {
+  return writing(() => call(links.removeAccountLink, { params: { id: accountId, linkId } }));
 }
 
 // ——— «Move the account to the bank» (ux/n4-account-switch.md) ———————————————————————————————————

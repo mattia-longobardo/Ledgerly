@@ -79,6 +79,22 @@ const OVERLAYS: Screen[] = [
       await settledDialog(page);
     },
   },
+  // The dialog that adds what hangs off an account (its «Connections»). Opened only: nothing is saved.
+  {
+    name: "the add connection dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/accounts", "ING Conto Arancio");
+      await openTab(page, "settings");
+      await page
+        .getByRole("region", { name: "Connections" })
+        .getByRole("button", { name: "Add" })
+        .first()
+        .click();
+      await settledDialog(page);
+    },
+  },
   // Release R5c (decision ST-8): «Import CSV» of an account «a mano», its file and its columns. The
   // preview writes nothing, so the shared `layout` user is left as it was.
   {

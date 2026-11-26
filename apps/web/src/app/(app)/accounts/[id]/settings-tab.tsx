@@ -1,8 +1,8 @@
 "use client";
 
-// The tab «Settings» of an account's page: the subscriptions it pays, its settings form, the switch to
-// the bank and the Danger zone. The account and its context are the page's, the subscriptions are read
-// by their section; the tab reads the IBAN (H45) and the twin of a double (H58), which only it shows.
+// The tab «Settings» of an account's page: its connections, the subscriptions it pays, its settings
+// form, the switch to the bank and the Danger zone. The account and its context are the page's, the
+// connections and the subscriptions are read by their sections; the tab reads the IBAN (H45) and the twin of a double (H58), which only it shows.
 import { useTranslations } from "next-intl";
 import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts/client";
@@ -12,7 +12,7 @@ import { ButtonLink } from "@ledgerly/ui/button";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
-import { AccountSettingsForm, UndoSwitch } from "@/modules/accounts/client";
+import { AccountSettingsForm, ConnectionsSection, UndoSwitch } from "@/modules/accounts/client";
 import { AccountSubscriptions } from "@/modules/subscriptions/client";
 import type { AccountPage } from "./account-screen";
 import { DeleteAccount } from "./delete-account";
@@ -25,8 +25,9 @@ export function SettingsTab({ page }: { page: AccountPage }) {
   const twin = useApi(accountRoutes.getAccountTwin, input);
   return (
     // Save and Discard for the settings live in the banner, which appears with a change: above the
-    // subscriptions, the first section of the tab, so it is seen where the tab starts.
+    // connections, the first section of the tab, so it is seen where the tab starts.
     <UnsavedChangesProvider>
+      <ConnectionsSection accountId={page.account.id} />
       <AccountSubscriptions accountId={page.account.id} />
       <Loaded state={iban}>
         {(own) => (
