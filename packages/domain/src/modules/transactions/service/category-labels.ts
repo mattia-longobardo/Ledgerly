@@ -65,7 +65,7 @@ export interface LabelsImport {
 
 const EXPORT = "export";
 /** The largest export the import reads. */
-const MAX_BYTES = 5 * 1024 * 1024;
+export const LABELS_MAX_BYTES = 5 * 1024 * 1024;
 /** How far apart, in days, a row of the export and a movement of the same amount are one payment. */
 const SAME_PAYMENT_DAYS = 3;
 const DAY_MS = 86_400_000;
@@ -90,7 +90,7 @@ interface Label {
  * replaces the labels of the last. `null`: the file is not such an export. The caller trains.
  */
 export async function importCategoryLabels(ctx: Who, bytes: Uint8Array): Promise<LabelsImport | null> {
-  if (bytes.byteLength > MAX_BYTES) throw new LabelsImportError("too_large");
+  if (bytes.byteLength > LABELS_MAX_BYTES) throw new LabelsImportError("too_large");
   const text = decodeText(bytes);
   const rows = exportLabels(parseRecords(text, detectDelimiter(text)));
   if (rows === null) return null;

@@ -26,7 +26,12 @@ export {
   suggestionsForMovement,
 } from "./categorize/service";
 export { setEmbedder } from "./categorize/service";
-export { importCategoryLabels, type LabelsImport, LabelsImportError } from "./service/category-labels";
+export {
+  importCategoryLabels,
+  LABELS_MAX_BYTES,
+  type LabelsImport,
+  LabelsImportError,
+} from "./service/category-labels";
 export type { Embedder } from "./rules/embedding";
 export type { Measure, Reach, Tally } from "./rules/categories-measure";
 export type { Diagnosis, TopK } from "./rules/categories-diagnosis";

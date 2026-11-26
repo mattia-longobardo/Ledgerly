@@ -938,6 +938,7 @@
     "DoubleMatch",
     "Embedder",
     "IncomingTransaction",
+    "LABELS_MAX_BYTES",
     "LabelsImportError",
     "MACROS",
     "MANUAL_KINDS",

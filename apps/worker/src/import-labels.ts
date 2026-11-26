@@ -5,11 +5,12 @@
  * copied into the container. A row that is one movement here gives it the export's category. It
  * prints the counts and nothing else, then queues the training the running worker does.
  */
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { importCategoryLabels, LabelsImportError } from "@ledgerly/domain/transactions";
+import { importCategoryLabels, LABELS_MAX_BYTES, LabelsImportError } from "@ledgerly/domain/transactions";
 import { contextFor, personById } from "@ledgerly/domain/users";
 import { tasks } from "@ledgerly/web/jobs";
+import { readCapped } from "./read-capped";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -17,12 +18,6 @@ const valueOf = (argv: readonly string[], flag: string) => {
   const place = argv.indexOf(flag);
   return place === -1 ? undefined : argv[place + 1];
 };
-
-async function stdin(): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks);
-}
 
 export async function importLabels(argv: readonly string[]): Promise<number> {
   const file = valueOf(argv, "--import-labels");
@@ -37,7 +32,9 @@ export async function importLabels(argv: readonly string[]): Promise<number> {
     return 1;
   }
   const ctx = await contextFor(person);
-  const bytes = new Uint8Array(file === "-" ? await stdin() : await readFile(file));
+  // Never more than one byte past the limit: an oversized file is refused as `too_large` unread.
+  const input = file === "-" ? process.stdin : createReadStream(file);
+  const bytes = new Uint8Array(await readCapped(input, LABELS_MAX_BYTES));
   let outcome;
   try {
     outcome = await importCategoryLabels(ctx, bytes);
