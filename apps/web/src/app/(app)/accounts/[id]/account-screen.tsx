@@ -18,7 +18,6 @@ import { DetailHeader } from "@ledgerly/ui/detail-header";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { StateWord } from "@ledgerly/ui/plugin-row";
 import { Page } from "@ledgerly/ui/shell/page";
-import { EmptyState } from "@ledgerly/ui/states";
 import { SyncStatus } from "@ledgerly/ui/sync-status";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
@@ -28,6 +27,7 @@ import { EntriesTab } from "./entries-tab";
 import { OverviewTab } from "./overview-tab";
 import { SettingsTab } from "./settings-tab";
 import { StoppedBanner } from "./source-state";
+import { TransactionsTab } from "./transactions-tab";
 
 const TABS = ["overview", "transactions", "entries", "settings"] as const;
 
@@ -124,12 +124,7 @@ function AccountView({
       <Header page={page} view={view} disconnected={disconnected} />
       <TabLinks label={detailText("tabs.label")} tabs={tabs} />
       {tab === "overview" && <OverviewTab page={page} />}
-      {tab === "transactions" && (
-        <EmptyState
-          title={detailText("transactions.title")}
-          description={detailText("transactions.description")}
-        />
-      )}
+      {tab === "transactions" && <TransactionsTab page={page} />}
       {tab === "entries" && <EntriesTab page={page} />}
       {tab === "settings" && <SettingsTab page={page} />}
     </>
