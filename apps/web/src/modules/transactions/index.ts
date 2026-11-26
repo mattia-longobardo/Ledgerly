@@ -30,4 +30,4 @@ export {
   undoMoveToMacro,
 } from "./taxonomy-calls";
 export type { CategoryFormInput, MacroMoveFacts } from "./taxonomy-calls";
-export { categoryColor, categoryColors, withMacroTitles } from "./ui/display";
+export { activePickerOptions, categoryColor, categoryColors, withMacroTitles } from "./ui/display";

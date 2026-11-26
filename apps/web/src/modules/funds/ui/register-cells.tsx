@@ -4,16 +4,15 @@
 import { useTranslations } from "next-intl";
 import { NULL_DISPLAY } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
-import { ButtonLink } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import type { DataColumn } from "@ledgerly/ui/data-table";
-import { withParams } from "@ledgerly/ui/url";
 import {
   type ContributionSetup,
   DeleteContributionButton,
   EditContributionButton,
 } from "./contribution-dialog";
 import type { Contributions } from "./contribution-setup";
+import { LegLink } from "@/platform/leg-link";
 import type { Say } from "@/platform/say";
 import { cents, contributionFormOfRow } from "./wire-forms";
 
@@ -90,16 +89,13 @@ function Actions({ one, cells }: { one: Operation; cells: Cells }) {
   const register = useTranslations("funds.fund.contributions.register");
   const { setup } = cells;
   const leg = one.legTransactionId !== null && (
-    // shortcut: Expenses opens on the leg's day and account, not on the leg itself; upgrade when it takes a movement id.
-    <ButtonLink
-      size="sm"
-      variant="ghost"
-      href={withParams("/expenses", {}, { from: one.on, to: one.on, acc: cells.accountId })}
-      aria-label={register("legLabel", { date: cells.long(one.on) })}
-      data-testid="register-leg"
-    >
-      {register("leg")}
-    </ButtonLink>
+    <LegLink
+      accountId={cells.accountId}
+      on={one.on}
+      label={register("leg")}
+      ariaLabel={register("legLabel", { date: cells.long(one.on) })}
+      testId="register-leg"
+    />
   );
   if (setup === null || one.source === "import")
     return leg ? <span className="flex justify-end gap-1">{leg}</span> : null;

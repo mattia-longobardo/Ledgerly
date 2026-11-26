@@ -4,10 +4,9 @@
 // realized and its commands: a table from `md`, a card each below it (DataTable).
 import { useTranslations } from "next-intl";
 import { formatDate, monthName } from "@ledgerly/format/format";
-import { ButtonLink } from "@ledgerly/ui/button";
 import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { withParams } from "@ledgerly/ui/url";
+import { LegLink } from "@/platform/leg-link";
 import { useEventText } from "../event-text";
 import { OperationMenu } from "../operations";
 import { centsOf } from "../present";
@@ -39,16 +38,13 @@ function Actions({ page, row }: { page: ServicePage; row: EventRow }) {
   return (
     <span className="flex items-center justify-end gap-1">
       {row.legTransactionId !== null && (
-        // shortcut: Expenses opens on the leg's day and account, not on the leg itself; upgrade when it takes a movement id.
-        <ButtonLink
-          size="sm"
-          variant="ghost"
-          href={withParams("/expenses", {}, { from: row.on, to: row.on, acc: page.id })}
-          aria-label={text("activityTab.legLabel", { date: formatDate(row.on, "long", page.say.locale) })}
-          data-testid="activity-leg"
-        >
-          {text("activityTab.leg")}
-        </ButtonLink>
+        <LegLink
+          accountId={page.id}
+          on={row.on}
+          label={text("activityTab.leg")}
+          ariaLabel={text("activityTab.legLabel", { date: formatDate(row.on, "long", page.say.locale) })}
+          testId="activity-leg"
+        />
       )}
       {row.transfer && (
         <UnlinkTransferButton

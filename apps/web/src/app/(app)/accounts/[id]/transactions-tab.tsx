@@ -12,7 +12,7 @@ import { Card } from "@ledgerly/ui/card";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { withParams } from "@ledgerly/ui/url";
-import { categoryColor, categoryColors, withMacroTitles } from "@/modules/transactions";
+import { activePickerOptions, categoryColors } from "@/modules/transactions";
 import { lineViewOf, TransactionsTable } from "@/modules/transactions/client";
 import type { AccountPage } from "./account-screen";
 
@@ -56,22 +56,14 @@ export function TransactionsTab({ page }: { page: AccountPage }) {
 type Lines = RouteOutput<typeof movements.getTransactionsView>["rows"];
 type Categories = RouteOutput<typeof categoryRoutes.listCategories>["categories"];
 
-/** The active categories as the pickers offer them, under the title of their macro, as in Expenses. */
+/** The active categories as the pickers offer them, as in Expenses. */
 function useOptions(categories: Categories) {
   const text = useTranslations("expenses");
   const colorOf = categoryColors(categories);
-  const options = withMacroTitles(
-    categories
-      .filter((one) => one.archivedAt === null)
-      .map((one) => ({
-        id: one.id,
-        name: one.name,
-        color: colorOf.get(one.id) ?? categoryColor(one.color, 0),
-        depth: one.depth,
-        type: one.type,
-      })),
-    { income: text("categories.macro.income"), expense: text("categories.macro.expense") },
-  );
+  const options = activePickerOptions(categories, colorOf, {
+    income: text("categories.macro.income"),
+    expense: text("categories.macro.expense"),
+  });
   return { colorOf, options };
 }
 

@@ -792,6 +792,12 @@ export const MODULES: Module[] = [
   },
   // Where a fund is since R5b, which the specs of `funds` share.
   { id: "funds-place", files: ["tests/e2e/_shared/funds.ts"], flows: ["funds"] },
+  // The link from an Investments or a Funds row to its leg in Expenses (PERS-651).
+  {
+    id: "leg-link",
+    files: ["apps/web/src/platform/leg-link.tsx"],
+    usedBy: ["investments", "funds", "e2e:investments", "e2e:funds"],
+  },
   // A changed file of a flow's folder starts the whole folder: its journeys and its screens.
   ...FLOWS.filter((flow) => flow.id !== "screens").map((flow) => ({
     id: `spec-${flow.id}`,
