@@ -777,9 +777,9 @@
    "cashPartial": false,
    "income": "0.00",
    "expense": "-243.44",
-   "net": "-243.44",
+   "net": "7.56",
    "incomeLessExpense": "-243.44",
-   "transactions": 5,
+   "transactions": 6,
    "accounts": 4,
    "lastSnapshotMonth": null
   }
@@ -958,6 +958,24 @@
     {
      "id": "<id-16>",
      "on": "2031-10-05",
+     "occurredAt": "2031-10-05T10:00:00.000Z",
+     "timeKnown": false,
+     "accountId": "<id-6>",
+     "accountName": "Fideuram Piano Accumulo",
+     "amount": "251.00",
+     "currency": "EUR",
+     "type": "transfer",
+     "state": "cleared",
+     "categoryId": null,
+     "categoryName": null,
+     "payee": null,
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-17>",
+     "on": "2031-10-05",
      "occurredAt": "2031-10-05T09:00:00.000Z",
      "timeKnown": false,
      "accountId": "<id-3>",
@@ -974,7 +992,7 @@
      "hidden": false
     },
     {
-     "id": "<id-17>",
+     "id": "<id-18>",
      "on": "2031-10-03",
      "occurredAt": "2031-10-03T09:00:00.000Z",
      "timeKnown": false,
@@ -984,7 +1002,7 @@
      "currency": "EUR",
      "type": "expense",
      "state": "cleared",
-     "categoryId": "<id-18>",
+     "categoryId": "<id-19>",
      "categoryName": "Streaming",
      "payee": "Netflix",
      "note": null,
@@ -992,7 +1010,7 @@
      "hidden": false
     },
     {
-     "id": "<id-19>",
+     "id": "<id-20>",
      "on": "2031-09-27",
      "occurredAt": "2031-09-27T09:00:00.000Z",
      "timeKnown": false,
@@ -1002,7 +1020,7 @@
      "currency": "EUR",
      "type": "income",
      "state": "cleared",
-     "categoryId": "<id-20>",
+     "categoryId": "<id-21>",
      "categoryName": "Salary",
      "payee": "ACME S.p.A.",
      "note": null,
@@ -1010,7 +1028,7 @@
      "hidden": false
     },
     {
-     "id": "<id-21>",
+     "id": "<id-22>",
      "on": "2031-09-21",
      "occurredAt": "2031-09-21T09:00:00.000Z",
      "timeKnown": false,
@@ -1028,7 +1046,7 @@
      "hidden": false
     },
     {
-     "id": "<id-22>",
+     "id": "<id-23>",
      "on": "2031-09-13",
      "occurredAt": "2031-09-13T09:00:00.000Z",
      "timeKnown": false,
@@ -1046,7 +1064,7 @@
      "hidden": false
     },
     {
-     "id": "<id-23>",
+     "id": "<id-24>",
      "on": "2031-09-12",
      "occurredAt": "2031-09-12T09:00:00.000Z",
      "timeKnown": false,
@@ -1064,7 +1082,7 @@
      "hidden": false
     },
     {
-     "id": "<id-24>",
+     "id": "<id-25>",
      "on": "2031-09-08",
      "occurredAt": "2031-09-08T09:00:00.000Z",
      "timeKnown": false,
@@ -1082,7 +1100,25 @@
      "hidden": false
     },
     {
-     "id": "<id-25>",
+     "id": "<id-26>",
+     "on": "2031-09-05",
+     "occurredAt": "2031-09-05T10:00:00.000Z",
+     "timeKnown": false,
+     "accountId": "<id-6>",
+     "accountName": "Fideuram Piano Accumulo",
+     "amount": "251.00",
+     "currency": "EUR",
+     "type": "transfer",
+     "state": "cleared",
+     "categoryId": null,
+     "categoryName": null,
+     "payee": null,
+     "note": null,
+     "labels": [],
+     "hidden": false
+    },
+    {
+     "id": "<id-27>",
      "on": "2031-09-05",
      "occurredAt": "2031-09-05T09:00:00.000Z",
      "timeKnown": false,
@@ -1100,7 +1136,7 @@
      "hidden": false
     },
     {
-     "id": "<id-26>",
+     "id": "<id-28>",
      "on": "2031-09-03",
      "occurredAt": "2031-09-03T09:00:00.000Z",
      "timeKnown": false,
@@ -1110,7 +1146,7 @@
      "currency": "EUR",
      "type": "expense",
      "state": "cleared",
-     "categoryId": "<id-18>",
+     "categoryId": "<id-19>",
      "categoryName": "Streaming",
      "payee": "Netflix",
      "note": null,
@@ -1119,10 +1155,10 @@
     }
    ],
    "summary": {
-    "count": 12,
+    "count": 14,
     "income": "2450.00",
     "expense": "-579.98",
-    "net": "1870.02",
+    "net": "2372.02",
     "incomeLessExpense": "1870.02"
    }
   }
@@ -1167,7 +1203,7 @@
   "answer": {
    "pockets": [
     {
-     "id": "<id-27>",
+     "id": "<id-29>",
      "name": "Holidays",
      "color": null,
      "state": "active",
@@ -1225,7 +1261,7 @@
   "answer": {
    "subscriptions": [
     {
-     "id": "<id-28>",
+     "id": "<id-30>",
      "name": "Netflix",
      "state": "active",
      "categoryId": null,
@@ -1243,7 +1279,7 @@
      "monthly": "12.99",
      "yearly": "155.88",
      "current": {
-      "id": "<id-29>",
+      "id": "<id-31>",
       "dueOn": "2031-10-03",
       "state": "paid",
       "expected": "12.99",
@@ -1326,7 +1362,7 @@
   "answer": {
    "rules": [
     {
-     "id": "<id-30>",
+     "id": "<id-32>",
      "accountId": "<id-4>",
      "account": "Revolut Saving",
      "validFrom": "2031-01-01",
@@ -1385,7 +1421,7 @@
   "isError": false,
   "answer": {
    "rule": {
-    "id": "<id-30>",
+    "id": "<id-32>",
     "accountId": "<id-4>",
     "account": "Revolut Saving",
     "validFrom": "2031-01-01",
@@ -1420,7 +1456,7 @@
    },
    "settlements": [
     {
-     "id": "<id-31>",
+     "id": "<id-33>",
      "periodFrom": "2031-09-01",
      "periodTo": "2031-09-30",
      "settleOn": "2031-10-01",
@@ -1435,7 +1471,7 @@
      "postingError": null
     },
     {
-     "id": "<id-32>",
+     "id": "<id-34>",
      "periodFrom": "2031-08-01",
      "periodTo": "2031-08-31",
      "settleOn": "2031-09-01",
@@ -1450,7 +1486,7 @@
      "postingError": null
     },
     {
-     "id": "<id-33>",
+     "id": "<id-35>",
      "periodFrom": "2031-07-01",
      "periodTo": "2031-07-31",
      "settleOn": "2031-08-01",
@@ -1465,7 +1501,7 @@
      "postingError": null
     },
     {
-     "id": "<id-34>",
+     "id": "<id-36>",
      "periodFrom": "2031-06-01",
      "periodTo": "2031-06-30",
      "settleOn": "2031-07-01",
@@ -1480,7 +1516,7 @@
      "postingError": null
     },
     {
-     "id": "<id-35>",
+     "id": "<id-37>",
      "periodFrom": "2031-05-01",
      "periodTo": "2031-05-31",
      "settleOn": "2031-06-01",
@@ -1495,7 +1531,7 @@
      "postingError": null
     },
     {
-     "id": "<id-36>",
+     "id": "<id-38>",
      "periodFrom": "2031-04-01",
      "periodTo": "2031-04-30",
      "settleOn": "2031-05-01",
@@ -1510,7 +1546,7 @@
      "postingError": null
     },
     {
-     "id": "<id-37>",
+     "id": "<id-39>",
      "periodFrom": "2031-03-01",
      "periodTo": "2031-03-31",
      "settleOn": "2031-04-01",
@@ -1525,7 +1561,7 @@
      "postingError": null
     },
     {
-     "id": "<id-38>",
+     "id": "<id-40>",
      "periodFrom": "2031-02-01",
      "periodTo": "2031-02-28",
      "settleOn": "2031-03-01",
@@ -1540,7 +1576,7 @@
      "postingError": null
     },
     {
-     "id": "<id-39>",
+     "id": "<id-41>",
      "periodFrom": "2031-01-01",
      "periodTo": "2031-01-31",
      "settleOn": "2031-02-01",
@@ -1557,630 +1593,630 @@
    ],
    "days": [
     {
-     "id": "<id-40>",
+     "id": "<id-42>",
      "on": "2031-10-14",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-41>",
+     "id": "<id-43>",
      "on": "2031-10-13",
      "balance": "12000.00",
      "net": "0.88",
      "status": "accrued"
     },
     {
-     "id": "<id-42>",
+     "id": "<id-44>",
      "on": "2031-10-12",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-43>",
+     "id": "<id-45>",
      "on": "2031-10-11",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-44>",
+     "id": "<id-46>",
      "on": "2031-10-10",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-45>",
+     "id": "<id-47>",
      "on": "2031-10-09",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-46>",
+     "id": "<id-48>",
      "on": "2031-10-08",
      "balance": "12000.00",
      "net": "0.88",
      "status": "accrued"
     },
     {
-     "id": "<id-47>",
+     "id": "<id-49>",
      "on": "2031-10-07",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-48>",
+     "id": "<id-50>",
      "on": "2031-10-06",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-49>",
+     "id": "<id-51>",
      "on": "2031-10-05",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-50>",
+     "id": "<id-52>",
      "on": "2031-10-04",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-51>",
+     "id": "<id-53>",
      "on": "2031-10-03",
      "balance": "12000.00",
      "net": "0.88",
      "status": "accrued"
     },
     {
-     "id": "<id-52>",
+     "id": "<id-54>",
      "on": "2031-10-02",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-53>",
+     "id": "<id-55>",
      "on": "2031-10-01",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-54>",
+     "id": "<id-56>",
      "on": "2031-09-30",
      "balance": "12000.00",
      "net": "0.89",
      "status": "accrued"
     },
     {
-     "id": "<id-55>",
+     "id": "<id-57>",
      "on": "2031-09-29",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-56>",
+     "id": "<id-58>",
      "on": "2031-09-28",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-57>",
+     "id": "<id-59>",
      "on": "2031-09-27",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-58>",
+     "id": "<id-60>",
      "on": "2031-09-26",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-59>",
+     "id": "<id-61>",
      "on": "2031-09-25",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-60>",
+     "id": "<id-62>",
      "on": "2031-09-24",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-61>",
+     "id": "<id-63>",
      "on": "2031-09-23",
      "balance": "11500.00",
      "net": "0.86",
      "status": "accrued"
     },
     {
-     "id": "<id-62>",
+     "id": "<id-64>",
      "on": "2031-09-22",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-63>",
+     "id": "<id-65>",
      "on": "2031-09-21",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-64>",
+     "id": "<id-66>",
      "on": "2031-09-20",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-65>",
+     "id": "<id-67>",
      "on": "2031-09-19",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-66>",
+     "id": "<id-68>",
      "on": "2031-09-18",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-67>",
+     "id": "<id-69>",
      "on": "2031-09-17",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-68>",
+     "id": "<id-70>",
      "on": "2031-09-16",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-69>",
+     "id": "<id-71>",
      "on": "2031-09-15",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-70>",
+     "id": "<id-72>",
      "on": "2031-09-14",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-71>",
+     "id": "<id-73>",
      "on": "2031-09-13",
      "balance": "11500.00",
      "net": "0.86",
      "status": "accrued"
     },
     {
-     "id": "<id-72>",
+     "id": "<id-74>",
      "on": "2031-09-12",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-73>",
+     "id": "<id-75>",
      "on": "2031-09-11",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-74>",
+     "id": "<id-76>",
      "on": "2031-09-10",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-75>",
+     "id": "<id-77>",
      "on": "2031-09-09",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-76>",
+     "id": "<id-78>",
      "on": "2031-09-08",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-77>",
+     "id": "<id-79>",
      "on": "2031-09-07",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-78>",
+     "id": "<id-80>",
      "on": "2031-09-06",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-79>",
+     "id": "<id-81>",
      "on": "2031-09-05",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-80>",
+     "id": "<id-82>",
      "on": "2031-09-04",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-81>",
+     "id": "<id-83>",
      "on": "2031-09-03",
      "balance": "11500.00",
      "net": "0.86",
      "status": "accrued"
     },
     {
-     "id": "<id-82>",
+     "id": "<id-84>",
      "on": "2031-09-02",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-83>",
+     "id": "<id-85>",
      "on": "2031-09-01",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-84>",
+     "id": "<id-86>",
      "on": "2031-08-31",
      "balance": "11500.00",
      "net": "0.85",
      "status": "accrued"
     },
     {
-     "id": "<id-85>",
+     "id": "<id-87>",
      "on": "2031-08-30",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-86>",
+     "id": "<id-88>",
      "on": "2031-08-29",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-87>",
+     "id": "<id-89>",
      "on": "2031-08-28",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-88>",
+     "id": "<id-90>",
      "on": "2031-08-27",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-89>",
+     "id": "<id-91>",
      "on": "2031-08-26",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-90>",
+     "id": "<id-92>",
      "on": "2031-08-25",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-91>",
+     "id": "<id-93>",
      "on": "2031-08-24",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-92>",
+     "id": "<id-94>",
      "on": "2031-08-23",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-93>",
+     "id": "<id-95>",
      "on": "2031-08-22",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-94>",
+     "id": "<id-96>",
      "on": "2031-08-21",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-95>",
+     "id": "<id-97>",
      "on": "2031-08-20",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-96>",
+     "id": "<id-98>",
      "on": "2031-08-19",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-97>",
+     "id": "<id-99>",
      "on": "2031-08-18",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-98>",
+     "id": "<id-100>",
      "on": "2031-08-17",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-99>",
+     "id": "<id-101>",
      "on": "2031-08-16",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-100>",
+     "id": "<id-102>",
      "on": "2031-08-15",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-101>",
+     "id": "<id-103>",
      "on": "2031-08-14",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-102>",
+     "id": "<id-104>",
      "on": "2031-08-13",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-103>",
+     "id": "<id-105>",
      "on": "2031-08-12",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-104>",
+     "id": "<id-106>",
      "on": "2031-08-11",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-105>",
+     "id": "<id-107>",
      "on": "2031-08-10",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-106>",
+     "id": "<id-108>",
      "on": "2031-08-09",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-107>",
+     "id": "<id-109>",
      "on": "2031-08-08",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-108>",
+     "id": "<id-110>",
      "on": "2031-08-07",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-109>",
+     "id": "<id-111>",
      "on": "2031-08-06",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-110>",
+     "id": "<id-112>",
      "on": "2031-08-05",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-111>",
+     "id": "<id-113>",
      "on": "2031-08-04",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-112>",
+     "id": "<id-114>",
      "on": "2031-08-03",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-113>",
+     "id": "<id-115>",
      "on": "2031-08-02",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-114>",
+     "id": "<id-116>",
      "on": "2031-08-01",
      "balance": "11000.00",
      "net": "0.82",
      "status": "accrued"
     },
     {
-     "id": "<id-115>",
+     "id": "<id-117>",
      "on": "2031-07-31",
      "balance": "11000.00",
      "net": "0.81",
      "status": "accrued"
     },
     {
-     "id": "<id-116>",
+     "id": "<id-118>",
      "on": "2031-07-30",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-117>",
+     "id": "<id-119>",
      "on": "2031-07-29",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-118>",
+     "id": "<id-120>",
      "on": "2031-07-28",
      "balance": "10500.00",
      "net": "0.77",
      "status": "accrued"
     },
     {
-     "id": "<id-119>",
+     "id": "<id-121>",
      "on": "2031-07-27",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-120>",
+     "id": "<id-122>",
      "on": "2031-07-26",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-121>",
+     "id": "<id-123>",
      "on": "2031-07-25",
      "balance": "10500.00",
      "net": "0.77",
      "status": "accrued"
     },
     {
-     "id": "<id-122>",
+     "id": "<id-124>",
      "on": "2031-07-24",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-123>",
+     "id": "<id-125>",
      "on": "2031-07-23",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-124>",
+     "id": "<id-126>",
      "on": "2031-07-22",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-125>",
+     "id": "<id-127>",
      "on": "2031-07-21",
      "balance": "10500.00",
      "net": "0.77",
      "status": "accrued"
     },
     {
-     "id": "<id-126>",
+     "id": "<id-128>",
      "on": "2031-07-20",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-127>",
+     "id": "<id-129>",
      "on": "2031-07-19",
      "balance": "10500.00",
      "net": "0.78",
      "status": "accrued"
     },
     {
-     "id": "<id-128>",
+     "id": "<id-130>",
      "on": "2031-07-18",
      "balance": "10500.00",
      "net": "0.77",
      "status": "accrued"
     },
     {
-     "id": "<id-129>",
+     "id": "<id-131>",
      "on": "2031-07-17",
      "balance": "10500.00",
      "net": "0.78",
@@ -2195,7 +2231,7 @@
    "year": 2031,
    "types": [
     {
-     "id": "<id-130>",
+     "id": "<id-132>",
      "name": "Vacation",
      "color": "primary",
      "unit": "half_day",
@@ -2203,7 +2239,7 @@
      "toCalendar": true
     },
     {
-     "id": "<id-131>",
+     "id": "<id-133>",
      "name": "ROL",
      "color": "warn",
      "unit": "half_day",
@@ -2211,7 +2247,7 @@
      "toCalendar": true
     },
     {
-     "id": "<id-132>",
+     "id": "<id-134>",
      "name": "Time off in lieu",
      "color": "accent",
      "unit": "half_day",
@@ -2219,7 +2255,7 @@
      "toCalendar": true
     },
     {
-     "id": "<id-133>",
+     "id": "<id-135>",
      "name": "Other",
      "color": "faint",
      "unit": "half_day",
@@ -2229,13 +2265,13 @@
    ],
    "allowances": [
     {
-     "typeId": "<id-130>",
+     "typeId": "<id-132>",
      "year": 2031,
      "days": 26,
      "carriedDays": null
     },
     {
-     "typeId": "<id-131>",
+     "typeId": "<id-133>",
      "year": 2031,
      "days": 4,
      "carriedDays": null
@@ -2243,7 +2279,7 @@
    ],
    "balances": [
     {
-     "typeId": "<id-130>",
+     "typeId": "<id-132>",
      "residual": {
       "basis": "payslip",
       "remainingMinutes": 1660,
@@ -2265,19 +2301,19 @@
        {
         "on": "2031-08-11",
         "fraction": 1,
-        "typeId": "<id-130>",
+        "typeId": "<id-132>",
         "minutes": null
        },
        {
         "on": "2031-08-12",
         "fraction": 1,
-        "typeId": "<id-130>",
+        "typeId": "<id-132>",
         "minutes": null
        },
        {
         "on": "2031-08-13",
         "fraction": 1,
-        "typeId": "<id-130>",
+        "typeId": "<id-132>",
         "minutes": null
        }
       ],
@@ -2300,19 +2336,19 @@
        {
         "on": "2031-08-11",
         "fraction": 1,
-        "typeId": "<id-130>",
+        "typeId": "<id-132>",
         "minutes": null
        },
        {
         "on": "2031-08-12",
         "fraction": 1,
-        "typeId": "<id-130>",
+        "typeId": "<id-132>",
         "minutes": null
        },
        {
         "on": "2031-08-13",
         "fraction": 1,
-        "typeId": "<id-130>",
+        "typeId": "<id-132>",
         "minutes": null
        }
       ],
@@ -2329,7 +2365,7 @@
      }
     },
     {
-     "typeId": "<id-131>",
+     "typeId": "<id-133>",
      "residual": {
       "basis": "payslip",
       "remainingMinutes": 1720,
@@ -2351,7 +2387,7 @@
        {
         "on": "2031-09-19",
         "fraction": 0.5,
-        "typeId": "<id-131>",
+        "typeId": "<id-133>",
         "minutes": null
        }
       ],
@@ -2374,7 +2410,7 @@
        {
         "on": "2031-09-19",
         "fraction": 0.5,
-        "typeId": "<id-131>",
+        "typeId": "<id-133>",
         "minutes": null
        }
       ],
@@ -2407,14 +2443,14 @@
    "unrecordedByType": [
     {
      "month": "2031-02-01",
-     "typeId": "<id-130>",
+     "typeId": "<id-132>",
      "payrollMinutes": 480,
      "recordedMinutes": 0,
      "missingMinutes": 480
     },
     {
      "month": "2031-03-01",
-     "typeId": "<id-131>",
+     "typeId": "<id-133>",
      "payrollMinutes": 240,
      "recordedMinutes": 0,
      "missingMinutes": 240
@@ -2492,7 +2528,7 @@
      "id": "payroll-2031-02-01-vacation-0",
      "usagePeriod": "2031-02-01",
      "kind": "vacation",
-     "typeId": "<id-130>",
+     "typeId": "<id-132>",
      "hours": 8,
      "payrollPeriod": "2031-03-01"
     },
@@ -2501,39 +2537,15 @@
      "id": "payroll-2031-03-01-rol-1",
      "usagePeriod": "2031-03-01",
      "kind": "rol",
-     "typeId": "<id-131>",
+     "typeId": "<id-133>",
      "hours": 4,
      "payrollPeriod": "2031-04-01"
     },
     {
      "source": "day",
-     "id": "<id-134>",
-     "on": "2031-08-11",
-     "typeId": "<id-130>",
-     "fraction": 1,
-     "minutes": null,
-     "note": null,
-     "origin": "manual",
-     "status": "planned",
-     "sync": "upsert"
-    },
-    {
-     "source": "day",
-     "id": "<id-135>",
-     "on": "2031-08-12",
-     "typeId": "<id-130>",
-     "fraction": 1,
-     "minutes": null,
-     "note": null,
-     "origin": "manual",
-     "status": "planned",
-     "sync": "upsert"
-    },
-    {
-     "source": "day",
      "id": "<id-136>",
-     "on": "2031-08-13",
-     "typeId": "<id-130>",
+     "on": "2031-08-11",
+     "typeId": "<id-132>",
      "fraction": 1,
      "minutes": null,
      "note": null,
@@ -2544,8 +2556,32 @@
     {
      "source": "day",
      "id": "<id-137>",
+     "on": "2031-08-12",
+     "typeId": "<id-132>",
+     "fraction": 1,
+     "minutes": null,
+     "note": null,
+     "origin": "manual",
+     "status": "planned",
+     "sync": "upsert"
+    },
+    {
+     "source": "day",
+     "id": "<id-138>",
+     "on": "2031-08-13",
+     "typeId": "<id-132>",
+     "fraction": 1,
+     "minutes": null,
+     "note": null,
+     "origin": "manual",
+     "status": "planned",
+     "sync": "upsert"
+    },
+    {
+     "source": "day",
+     "id": "<id-139>",
      "on": "2031-09-19",
-     "typeId": "<id-131>",
+     "typeId": "<id-133>",
      "fraction": 0.5,
      "minutes": null,
      "note": null,
@@ -2563,11 +2599,11 @@
     "totalMinutes": 1680,
     "byType": [
      {
-      "typeId": "<id-130>",
+      "typeId": "<id-132>",
       "minutes": 1440
      },
      {
-      "typeId": "<id-131>",
+      "typeId": "<id-133>",
       "minutes": 240
      }
     ]
@@ -2586,7 +2622,7 @@
      "month": "2031-02-01",
      "payrollByType": [
       {
-       "typeId": "<id-130>",
+       "typeId": "<id-132>",
        "minutes": 480
       }
      ],
@@ -2599,7 +2635,7 @@
      "month": "2031-03-01",
      "payrollByType": [
       {
-       "typeId": "<id-131>",
+       "typeId": "<id-133>",
        "minutes": 240
       }
      ],
@@ -2645,7 +2681,7 @@
      "payrollByType": null,
      "recordedByType": [
       {
-       "typeId": "<id-130>",
+       "typeId": "<id-132>",
        "minutes": 1440
       }
      ],
@@ -2658,7 +2694,7 @@
      "payrollByType": null,
      "recordedByType": [
       {
-       "typeId": "<id-131>",
+       "typeId": "<id-133>",
        "minutes": 240
       }
      ],
@@ -2802,14 +2838,14 @@
      "year": 2031,
      "rows": [
       {
-       "id": "<id-138>",
-       "payslipId": "<id-139>",
+       "id": "<id-140>",
+       "payslipId": "<id-141>",
        "year": 2031,
        "period": "2031-04-01",
        "kind": "ordinary",
        "extraNumber": null,
        "source": "read",
-       "documentId": "<id-138>",
+       "documentId": "<id-140>",
        "fields": {
         "bodyDeductions": "35.00",
         "bodyDeductionsPrinted": "35.00",
@@ -2860,14 +2896,14 @@
        "openWarnings": 0
       },
       {
-       "id": "<id-140>",
-       "payslipId": "<id-141>",
+       "id": "<id-142>",
+       "payslipId": "<id-143>",
        "year": 2031,
        "period": "2031-03-01",
        "kind": "ordinary",
        "extraNumber": null,
        "source": "read",
-       "documentId": "<id-140>",
+       "documentId": "<id-142>",
        "fields": {
         "bodyDeductions": "35.00",
         "bodyDeductionsPrinted": "35.00",
@@ -3020,7 +3056,7 @@
    },
    "funds": [
     {
-     "id": "<id-142>",
+     "id": "<id-144>",
      "name": "Fideuram Piano Accumulo",
      "provider": "Fideuram",
      "compartment": "Bilanciato",
@@ -3032,7 +3068,7 @@
      "accountId": "<id-6>",
      "accountName": "Fideuram Piano Accumulo",
      "line": {
-      "fundId": "<id-142>",
+      "fundId": "<id-144>",
       "status": "measured",
       "start": {
        "on": "2030-10-31",
@@ -3065,7 +3101,7 @@
      "stale": false,
      "lastValueOn": "2031-09-30",
      "debit": {
-      "sourceId": "<id-143>",
+      "sourceId": "<id-145>",
       "state": "active",
       "amount": "251.00",
       "frequency": {
@@ -3102,14 +3138,14 @@
       "total": "29.00",
       "funds": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "gain": "29.00",
         "share": 0.004673303020711909
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2030-10-31",
         "to": "2030-12-31",
         "gain": "29.00",
@@ -3126,28 +3162,28 @@
       "total": "180.00",
       "funds": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "gain": "180.00",
         "share": 0.029006708404418744
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2030-12-31",
         "to": "2031-03-31",
         "gain": "82.00",
         "share": 0.013214167162012984
        },
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2031-03-31",
         "to": "2031-06-30",
         "gain": "155.00",
         "share": 0.024977998903805032
        },
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2031-06-30",
         "to": "2031-09-30",
         "gain": "-57.00",
@@ -3258,7 +3294,7 @@
   "isError": false,
   "answer": {
    "fund": {
-    "id": "<id-142>",
+    "id": "<id-144>",
     "name": "Fideuram Piano Accumulo",
     "provider": "Fideuram",
     "compartment": "Bilanciato",
@@ -3313,7 +3349,7 @@
     ]
    },
    "line": {
-    "fundId": "<id-142>",
+    "fundId": "<id-144>",
     "status": "measured",
     "start": {
      "on": "2030-10-31",
@@ -3353,14 +3389,14 @@
       "total": "29.00",
       "funds": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "gain": "29.00",
         "share": 0.004673303020711909
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2030-10-31",
         "to": "2030-12-31",
         "gain": "29.00",
@@ -3377,28 +3413,28 @@
       "total": "180.00",
       "funds": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "gain": "180.00",
         "share": 0.029006708404418744
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2030-12-31",
         "to": "2031-03-31",
         "gain": "82.00",
         "share": 0.013214167162012984
        },
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2031-03-31",
         "to": "2031-06-30",
         "gain": "155.00",
         "share": 0.024977998903805032
        },
        {
-        "fundId": "<id-142>",
+        "fundId": "<id-144>",
         "from": "2031-06-30",
         "to": "2031-09-30",
         "gain": "-57.00",
@@ -3492,7 +3528,7 @@
    "bridge": null,
    "payslipsAccrued": null,
    "debit": {
-    "sourceId": "<id-143>",
+    "sourceId": "<id-145>",
     "state": "active",
     "amount": "251.00",
     "frequency": {
@@ -3514,7 +3550,7 @@
    },
    "recent": [
     {
-     "id": "<id-144>",
+     "id": "<id-146>",
      "on": "2031-10-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3527,12 +3563,13 @@
      "units": "0",
      "competence": null,
      "transactionId": null,
+     "legTransactionId": "<id-16>",
      "note": null,
      "gross": "251.00",
      "origin": "manual"
     },
     {
-     "id": "<id-145>",
+     "id": "<id-147>",
      "on": "2031-09-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3545,12 +3582,13 @@
      "units": "0",
      "competence": null,
      "transactionId": null,
+     "legTransactionId": "<id-26>",
      "note": null,
      "gross": "251.00",
      "origin": "manual"
     },
     {
-     "id": "<id-146>",
+     "id": "<id-148>",
      "on": "2031-08-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3563,12 +3601,13 @@
      "units": "0",
      "competence": null,
      "transactionId": null,
+     "legTransactionId": "<id-149>",
      "note": null,
      "gross": "251.00",
      "origin": "manual"
     },
     {
-     "id": "<id-147>",
+     "id": "<id-150>",
      "on": "2031-07-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3581,12 +3620,13 @@
      "units": "0",
      "competence": null,
      "transactionId": null,
+     "legTransactionId": "<id-151>",
      "note": null,
      "gross": "251.00",
      "origin": "manual"
     },
     {
-     "id": "<id-148>",
+     "id": "<id-152>",
      "on": "2031-06-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3599,6 +3639,7 @@
      "units": "0",
      "competence": null,
      "transactionId": null,
+     "legTransactionId": "<id-153>",
      "note": null,
      "gross": "251.00",
      "origin": "manual"
@@ -3697,182 +3738,182 @@
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-16>",
+       "id": "<id-17>",
        "on": "2031-10-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-17>",
+       "id": "<id-18>",
        "on": "2031-10-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-21>",
+       "id": "<id-22>",
        "on": "2031-09-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-22>",
+       "id": "<id-23>",
        "on": "2031-09-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-23>",
+       "id": "<id-24>",
        "on": "2031-09-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-24>",
+       "id": "<id-25>",
        "on": "2031-09-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-25>",
+       "id": "<id-27>",
        "on": "2031-09-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-26>",
+       "id": "<id-28>",
        "on": "2031-09-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-149>",
+       "id": "<id-154>",
        "on": "2031-08-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-150>",
+       "id": "<id-155>",
        "on": "2031-08-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-151>",
+       "id": "<id-156>",
        "on": "2031-08-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-152>",
+       "id": "<id-157>",
        "on": "2031-08-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-153>",
+       "id": "<id-158>",
        "on": "2031-08-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-154>",
+       "id": "<id-159>",
        "on": "2031-08-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-155>",
+       "id": "<id-160>",
        "on": "2031-07-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-156>",
+       "id": "<id-161>",
        "on": "2031-07-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-157>",
+       "id": "<id-162>",
        "on": "2031-07-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-158>",
+       "id": "<id-163>",
        "on": "2031-07-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-159>",
+       "id": "<id-164>",
        "on": "2031-07-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-160>",
+       "id": "<id-165>",
        "on": "2031-07-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-161>",
+       "id": "<id-166>",
        "on": "2031-06-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-162>",
+       "id": "<id-167>",
        "on": "2031-06-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-163>",
+       "id": "<id-168>",
        "on": "2031-06-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-164>",
+       "id": "<id-169>",
        "on": "2031-06-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-165>",
+       "id": "<id-170>",
        "on": "2031-06-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-166>",
+       "id": "<id-171>",
        "on": "2031-06-03",
        "amount": "12.99",
        "payee": "Netflix",
@@ -3881,46 +3922,130 @@
      ],
      "in": [
       {
-       "id": "<id-19>",
+       "id": "<id-16>",
+       "on": "2031-10-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-20>",
        "on": "2031-09-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-167>",
+       "id": "<id-26>",
+       "on": "2031-09-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-172>",
        "on": "2031-08-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-168>",
+       "id": "<id-149>",
+       "on": "2031-08-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-173>",
        "on": "2031-07-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-169>",
+       "id": "<id-151>",
+       "on": "2031-07-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-174>",
        "on": "2031-07-01",
        "amount": "2000.00",
        "payee": "Bonifico",
        "accountName": "Directa"
       },
       {
-       "id": "<id-170>",
+       "id": "<id-175>",
        "on": "2031-06-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-171>",
+       "id": "<id-153>",
+       "on": "2031-06-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-176>",
+       "on": "2031-05-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-177>",
+       "on": "2031-04-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-178>",
+       "on": "2031-03-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-179>",
        "on": "2031-03-03",
        "amount": "10000.00",
        "payee": "Bonifico",
        "accountName": "Directa"
+      },
+      {
+       "id": "<id-180>",
+       "on": "2031-02-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-181>",
+       "on": "2031-01-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-182>",
+       "on": "2030-12-05",
+       "amount": "251.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
+      },
+      {
+       "id": "<id-183>",
+       "on": "2030-11-01",
+       "amount": "5000.00",
+       "payee": null,
+       "accountName": "Fideuram Piano Accumulo"
       }
      ]
     }

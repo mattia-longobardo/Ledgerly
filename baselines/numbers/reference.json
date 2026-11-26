@@ -2544,11 +2544,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 0,
+    "count": 1,
     "expenseCents": "0",
     "incomeCents": "0",
-    "netCents": "0",
-    "transferCount": 0,
+    "netCents": "500000",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2563,11 +2563,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 0,
+    "count": 1,
     "expenseCents": "0",
     "incomeCents": "0",
-    "netCents": "0",
-    "transferCount": 0,
+    "netCents": "25100",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2582,11 +2582,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 0,
+    "count": 1,
     "expenseCents": "0",
     "incomeCents": "0",
-    "netCents": "0",
-    "transferCount": 0,
+    "netCents": "25100",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2601,11 +2601,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 0,
+    "count": 1,
     "expenseCents": "0",
     "incomeCents": "0",
-    "netCents": "0",
-    "transferCount": 0,
+    "netCents": "25100",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2632,11 +2632,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 1,
+    "count": 2,
     "expenseCents": "0",
     "incomeCents": "1000000",
-    "netCents": "1000000",
-    "transferCount": 0,
+    "netCents": "1025100",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2651,11 +2651,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 0,
+    "count": 1,
     "expenseCents": "0",
     "incomeCents": "0",
-    "netCents": "0",
-    "transferCount": 0,
+    "netCents": "25100",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2670,11 +2670,11 @@
     "unbudgetedCents": "0"
    },
    "summary": {
-    "count": 0,
+    "count": 1,
     "expenseCents": "0",
     "incomeCents": "0",
-    "netCents": "0",
-    "transferCount": 0,
+    "netCents": "25100",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2735,11 +2735,11 @@
     "unbudgetedCents": "33654"
    },
    "summary": {
-    "count": 7,
+    "count": 8,
     "expenseCents": "-33654",
     "incomeCents": "245000",
-    "netCents": "211346",
-    "transferCount": 0,
+    "netCents": "236446",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2811,11 +2811,11 @@
     "unbudgetedCents": "33654"
    },
    "summary": {
-    "count": 8,
+    "count": 9,
     "expenseCents": "-33654",
     "incomeCents": "445000",
-    "netCents": "411346",
-    "transferCount": 0,
+    "netCents": "436446",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2876,11 +2876,11 @@
     "unbudgetedCents": "33654"
    },
    "summary": {
-    "count": 7,
+    "count": 8,
     "expenseCents": "-33654",
     "incomeCents": "245000",
-    "netCents": "211346",
-    "transferCount": 0,
+    "netCents": "236446",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -2962,11 +2962,11 @@
     "unbudgetedCents": "4949"
    },
    "summary": {
-    "count": 7,
+    "count": 8,
     "expenseCents": "-33654",
     "incomeCents": "245000",
-    "netCents": "211346",
-    "transferCount": 0,
+    "netCents": "236446",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   },
@@ -3039,11 +3039,11 @@
     "unbudgetedCents": "4949"
    },
    "summary": {
-    "count": 5,
+    "count": 6,
     "expenseCents": "-24344",
     "incomeCents": "0",
-    "netCents": "-24344",
-    "transferCount": 0,
+    "netCents": "756",
+    "transferCount": 1,
     "unpairedTransferCount": 0
    }
   }
@@ -3235,11 +3235,11 @@
   "incomeCents": "0",
   "lastSnapshotMonth": null,
   "month": "2031-10-01",
-  "netCents": "-24344",
+  "netCents": "756",
   "netWorthCents": "4367140",
   "netWorthPartial": false,
   "previousNetWorthCents": "4156484",
-  "transactions": 5
+  "transactions": 6
  },
  "timeOff": {
   "2031": {
