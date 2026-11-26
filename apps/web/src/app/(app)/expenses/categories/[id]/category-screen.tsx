@@ -12,6 +12,7 @@ import {
   profile,
 } from "@ledgerly/api-contract/settings";
 import { movements, rules as ruleRoutes, spending } from "@ledgerly/api-contract/transactions";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { today } from "@ledgerly/format/dates";
 import { numberStyle } from "@ledgerly/format/format";
 import { ButtonLink } from "@ledgerly/ui/button";
@@ -48,14 +49,30 @@ export function CategoryScreen({ id }: { id: string }) {
   // Archived ones too: an archived category has its page, with «Restore».
   const categoryList = useApi(categoryRoutes.listCategories, { query: { archived: "true" } });
   const labelList = useApi(labelRoutes.listLabels, {});
-  if (prefs.data === undefined || categoryList.data === undefined || labelList.data === undefined) {
-    const state = [prefs, categoryList, labelList].find((one) => one.data === undefined) ?? prefs;
+  // Every account, archived too: the other side a giroconto can be given.
+  const accountList = useApi(accountRoutes.listAccounts, { query: { archived: "true" } });
+  if (
+    prefs.data === undefined ||
+    categoryList.data === undefined ||
+    labelList.data === undefined ||
+    accountList.data === undefined
+  ) {
+    const state =
+      [prefs, categoryList, labelList, accountList].find((one) => one.data === undefined) ?? prefs;
     return <Reading title={text("categories.title")} state={state} />;
   }
   const all = categoryList.data.categories;
   const category = all.find((one) => one.id === id);
   if (!category) return <Missing title={text("categories.title")} />;
-  return <CategoryView category={category} all={all} prefs={prefs.data} labels={labelList.data.labels} />;
+  return (
+    <CategoryView
+      category={category}
+      all={all}
+      prefs={prefs.data}
+      labels={labelList.data.labels}
+      accounts={accountList.data.accounts}
+    />
+  );
 }
 
 /** A read that has no answer yet, inside the page's frame: the screen has its `<main>` from the start. */
@@ -91,12 +108,8 @@ function CategoryView({
   all,
   prefs,
   labels,
-}: {
-  category: Category;
-  all: readonly Category[];
-  prefs: CategoryPage["prefs"];
-  labels: CategoryPage["labels"];
-}) {
+  accounts,
+}: Pick<CategoryPage, "category" | "prefs" | "labels" | "accounts"> & { all: readonly Category[] }) {
   const text = useTranslations("expenses");
   const query = parseExpensesQuery(Object.fromEntries(useSearchParams().entries()), today(prefs.timeZone));
   const period = { preset: query.params.preset, from: query.params.from, to: query.params.to };
@@ -118,6 +131,7 @@ function CategoryView({
     colorOf,
     options,
     labels,
+    accounts,
     listHref: (macro) =>
       withParams("/expenses/categories", carry, { macro: macro === "expense" ? undefined : macro }),
   };

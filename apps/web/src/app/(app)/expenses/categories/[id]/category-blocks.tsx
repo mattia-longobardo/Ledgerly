@@ -51,6 +51,8 @@ export interface CategoryPage {
   colorOf: ReadonlyMap<string, string>;
   options: readonly (CategoryOption & { section: string })[];
   labels: RouteOutput<typeof labelRoutes.listLabels>["labels"];
+  /** Every account, archived too: the other side a giroconto can be given. */
+  accounts: readonly { id: string; name: string }[];
   listHref: (macro: string) => string;
 }
 
@@ -232,12 +234,14 @@ export function Movements({ view, page }: { view: ApiState<View>; page: Category
                         numberFormat: page.numberFormat,
                         colorOf: page.colorOf,
                         categories: page.options,
+                        accounts: page.accounts,
                       }),
                     ),
                   },
                 ]}
                 categories={page.options}
                 labels={page.labels}
+                accounts={page.accounts}
                 params={page.carry}
                 sort="date"
                 direction="desc"

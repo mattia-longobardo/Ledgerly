@@ -182,6 +182,7 @@ describe("the table with the automatic categories", () => {
             groups={[{ key: "all", label: null, count: 3, total: "", rows: [automatic, suggested, none] }]}
             categories={CATEGORIES}
             labels={[]}
+            accounts={[]}
             params={{}}
             sort="date"
             direction="desc"

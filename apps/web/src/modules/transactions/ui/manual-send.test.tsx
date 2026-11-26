@@ -92,6 +92,7 @@ function renderScreen(commands: ManualCommands, send: RowView["send"] = null) {
           ]}
           categories={[]}
           labels={[]}
+          accounts={[]}
           params={{}}
           sort="date"
           direction="desc"

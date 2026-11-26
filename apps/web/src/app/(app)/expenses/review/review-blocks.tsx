@@ -60,6 +60,8 @@ export interface ReviewData {
   options: readonly CategoryOption[];
   colorOf: ReadonlyMap<string, string>;
   accountName: ReadonlyMap<string, string>;
+  /** Every account, archived too: the other side a giroconto can be given. */
+  accounts: readonly { id: string; name: string }[];
   /** The accounts that take an automatic category, in the order of the accounts. */
   eligible: readonly { id: string; name: string }[];
   /** The accounts the address chose, among those; none means all of them. */
@@ -310,6 +312,7 @@ function SinglesTable({
       ]}
       categories={data.options}
       labels={data.labels}
+      accounts={data.accounts}
       params={data.params}
       sort="date"
       direction="desc"

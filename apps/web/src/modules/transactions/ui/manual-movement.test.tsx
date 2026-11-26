@@ -98,6 +98,7 @@ function renderScreen(commands: ManualCommands, options: { shown?: ShownRange; o
           groups={GROUPS}
           categories={CATEGORIES}
           labels={[]}
+          accounts={[]}
           params={{}}
           sort="date"
           direction="desc"

@@ -203,6 +203,7 @@ function useReviewData({
     options,
     colorOf,
     accountName: new Map(accounts.map((account) => [account.id, account.name])),
+    accounts,
     eligible: accounts.filter((account) => eligibleIds.includes(account.id)),
     link: (changes) => withParams(HERE, params, changes),
   };

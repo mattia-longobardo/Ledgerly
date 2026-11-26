@@ -76,7 +76,7 @@ export function TransactionsTable({
   path = "/expenses",
   sortable = true,
   visibility = changeVisibility,
-  accounts = [],
+  accounts,
 }: {
   groups: readonly GroupView[];
   categories: readonly CategoryOption[];
@@ -91,7 +91,7 @@ export function TransactionsTable({
   /** Hide, restore and delete for good; the route rebuilds a manual movement's balance (PERS-473). */
   visibility?: (ids: string[], change: "hide" | "restore" | "delete") => Promise<CommandResult>;
   /** The person's accounts: the other side a giroconto can be given. */
-  accounts?: readonly { id: string; name: string }[];
+  accounts: readonly { id: string; name: string }[];
 }) {
   const t = useTranslations("expenses");
   const router = useRouter();
