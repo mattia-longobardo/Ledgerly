@@ -526,9 +526,9 @@ async function planInstrument(on: string): Promise<string> {
 }
 
 /**
- * One person's plans: «Piani», a portfolio made today with 1.000 € of cash, a weekly plan of 100 €
- * (fee 1 €) due today, started three weeks ago, paid from a bank account whose transaction of 101 €
- * the job finds, and a second one from today the journey skips; and «Senza liquidità», with no cash
+ * One person's plans: «Piani», a portfolio made today with 1.000 € of cash from three weeks ago, a
+ * weekly plan of 100 € (fee 1 €) due today, started three weeks ago, paid from a bank account whose
+ * transaction of 101 € the job finds, and a second one from today the journey skips; and «Senza liquidità», with no cash
  * and an automatic plan the job could not buy (P2); «Titoli a valore», kept by value until today's
  * «Switch to positions», with a plan started two weeks ago. The daily job runs once: every instalment
  * of today is proposed.
@@ -542,7 +542,14 @@ async function planUser(email: string, instrumentId: string, key: string): Promi
   const debit = walletMovement(`e2e-plans-${key}-tx-1`, on, -10_100n, "BROKER SPA", null);
   await upsertFromProvider(ctx, bank, [debit], { provider: WALLET_PROVIDER });
   const piani = await createPortfolioWithAccount(ctx, { name: "Piani", currency: "EUR", url: null });
-  await recordOperation(ctx, piani.accountId, { kind: "deposit", on, amountCents: 1_000_00n });
+  // The cash is there from the plan's start: «Record the past instalments» proposes each purchase on
+  // the first close on or after its due date, and the closes are shared, so a close another run left
+  // on an earlier day can be that day.
+  await recordOperation(ctx, piani.accountId, {
+    kind: "deposit",
+    on: addDays(on, -21),
+    amountCents: 1_000_00n,
+  });
   const weekly = { amountCents: 100_00n, frequency: "week" as const, day, feeCents: 1_00n, instrument };
   await createPlan(ctx, piani.accountId, {
     ...weekly,
