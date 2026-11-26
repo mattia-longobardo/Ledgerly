@@ -9,7 +9,7 @@ import { createTestUser } from "../../../../../../test/users";
 import { getTransaction, listTransactions } from "../queries";
 import type { IncomingTransaction } from "../rules";
 import { categoryLabels, categoryModels } from "../schema";
-import { setCategory, upsertFromProvider } from "../service";
+import { chooseTransferSide, setCategory, upsertFromProvider } from "../service";
 import { listCategories } from "../taxonomy";
 import { createDefaultGroups } from "./review";
 import { importCategoryLabels } from "../service/category-labels";
@@ -118,6 +118,16 @@ async function arrives(ctx: Ctx, bank: string, payee: string, day: number) {
   return (await getTransaction(ctx, row.id))!;
 }
 
+/** A row of the export of 12.34 spent at a grocer's, as `incoming` spends it. */
+const payment = (date: string) =>
+  `Cash;Groceries;EUR;12.34;12.34;Expense;Transfer;MERCATO ALFA;${date};false;;`;
+
+/** The person's one movement with this payee. */
+async function movement(ctx: Ctx, payee: string) {
+  const [row] = (await listTransactions(ctx, { includeHidden: true })).filter((one) => one.payee === payee);
+  return (await getTransaction(ctx, row.id))!;
+}
+
 beforeEach(resetDatabase);
 afterAll(closeDatabase);
 
@@ -138,11 +148,13 @@ describe("the labels of an export", () => {
     );
     expect(outcome).toEqual({
       imported: 61,
+      categorised: 0,
+      keptByHand: 0,
+      ambiguous: 0,
       transfers: 1,
       unknown: 1,
       unreadable: 0,
       unmapped: 1,
-      duplicates: 0,
     });
     expect(await listTransactions(ctx, { includeHidden: true })).toEqual([]);
 
@@ -157,21 +169,62 @@ describe("the labels of an export", () => {
     ).toHaveLength(1);
   });
 
-  it("leaves out a row that is already a movement here, and refuses a file that is not an export", async () => {
-    const { ctx, bank } = await person();
+  it("gives a row's category to its one movement here, as the person's, and keeps the label", async () => {
+    const { ctx, bank, id } = await person();
     await upsertFromProvider(ctx, bank, [incoming("Mercato Alfa", 3)], { provider: BANK });
-    // Same sign and amount, a day apart: one payment, learnt from the movement only.
+    const other = await person();
+    await upsertFromProvider(other.ctx, other.bank, [incoming("Mercato Alfa", 3)], { provider: BANK });
+    // Same sign and amount, a day apart: one payment.
+    const outcome = await importCategoryLabels(
+      ctx,
+      file([HEADER, payment("2026-10-04T08:00:00.000Z")].join("\n")),
+    );
+    expect(outcome).toMatchObject({ imported: 1, categorised: 1, keptByHand: 0, ambiguous: 0 });
+    expect(await movement(ctx, "Mercato Alfa")).toMatchObject({
+      categoryId: id("Groceries"),
+      categoryOrigin: "user",
+    });
+    // Another person's movement of the same amount and day is never theirs to file.
+    expect((await movement(other.ctx, "Mercato Alfa")).categoryId).toBeNull();
+    expect(await importCategoryLabels(ctx, file("date;amount\n2026-01-01;1"))).toBeNull();
+  });
+
+  it("never changes a category chosen by hand, nor a giroconto", async () => {
+    const { ctx, bank, id } = await person();
+    await upsertFromProvider(ctx, bank, [incoming("Chosen", 3), incoming("Giro", 20)], { provider: BANK });
+    await setCategory(ctx, [(await movement(ctx, "Chosen")).id], id("Bar, cafe"));
+    await chooseTransferSide(ctx, (await movement(ctx, "Giro")).id, { kind: "outside" });
+    const outcome = await importCategoryLabels(
+      ctx,
+      file([HEADER, payment("2026-10-04T08:00:00.000Z"), payment("2026-10-20T08:00:00.000Z")].join("\n")),
+    );
+    expect(outcome).toMatchObject({ imported: 2, categorised: 0, keptByHand: 1, ambiguous: 0 });
+    expect(await movement(ctx, "Chosen")).toMatchObject({
+      categoryId: id("Bar, cafe"),
+      categoryOrigin: "user",
+    });
+    expect(await movement(ctx, "Giro")).toMatchObject({ type: "transfer", categoryId: null });
+  });
+
+  it("gives no category when the match is not the only one, on either side", async () => {
+    const { ctx, bank } = await person();
+    await upsertFromProvider(ctx, bank, [incoming("One", 3), incoming("Two", 4), incoming("Three", 20)], {
+      provider: BANK,
+    });
     const outcome = await importCategoryLabels(
       ctx,
       file(
         [
           HEADER,
-          `Cash;Groceries;EUR;12.34;12.34;Expense;Transfer;MERCATO ALFA;2026-10-04T08:00:00.000Z;false;;`,
+          // Two movements near one row; then two rows near one movement.
+          payment("2026-10-04T08:00:00.000Z"),
+          payment("2026-10-19T08:00:00.000Z"),
+          payment("2026-10-21T08:00:00.000Z"),
         ].join("\n"),
       ),
     );
-    expect(outcome).toMatchObject({ imported: 0, duplicates: 1 });
-    expect(await importCategoryLabels(ctx, file("date;amount\n2026-01-01;1"))).toBeNull();
+    expect(outcome).toMatchObject({ imported: 3, categorised: 0, keptByHand: 0, ambiguous: 3 });
+    for (const payee of ["One", "Two", "Three"]) expect((await movement(ctx, payee)).categoryId).toBeNull();
   });
 
   it("are one person's only", async () => {

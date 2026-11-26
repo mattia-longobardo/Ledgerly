@@ -8,7 +8,6 @@ import {
   changeCategories,
   createDefaultGroups,
   dismissMergeProposal,
-  importCategoryLabels,
   isPreparing,
   listMergeProposals,
   restoreMergeProposal,
@@ -18,7 +17,6 @@ import {
   suggestionsForMovement,
   undoChange,
   type ReviewGroup,
-  LabelsImportError,
 } from "@ledgerly/domain/transactions";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { refusing, type TransactionCases } from "./cases";
@@ -120,18 +118,6 @@ export function serveReview(app: Hono<ApiEnv>, guard: Guard, cases: TransactionC
     const found = await refusing(suggestionsForMovement(ctx, params.id));
     if (found === null) throw new ApiRefusal("not_found");
     return { categoryId: found.suggestion?.categoryId ?? null, top: found.top };
-  });
-  serve(app, guard, review.importCategoryLabels, async ({ ctx, body }) => {
-    let outcome;
-    try {
-      outcome = await refusing(importCategoryLabels(ctx, new Uint8Array(await body.file.arrayBuffer())));
-    } catch (error) {
-      if (!(error instanceof LabelsImportError)) throw error;
-      throw new ApiRefusal("too_large", error.code === "too_many_rows" ? error.code : undefined);
-    }
-    if (outcome === null) throw new ApiRefusal("invalid", "columns");
-    await cases.learn(ctx, true);
-    return outcome;
   });
   serve(app, guard, review.createDefaultGroups, async ({ ctx, body }) => {
     const count = await refusing(createDefaultGroups(ctx, body.keys, ctx.locale));

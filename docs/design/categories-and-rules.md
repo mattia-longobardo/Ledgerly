@@ -768,6 +768,14 @@ Decisioni di Mattia 1A–10A (PERS-627). Sostituiscono QC1, QC7 e la parte «Tra
      giroconto, un codice banca di bonifico). Si accoppia solo il candidato unico più vicino da entrambi i lati; un
      pareggio diventa una proposta (`giroconto_proposals`), mai una decisione. Una proposta rifiutata non torna;
   4. 1-a-N mai automatico; una coppia fatta a mano (marcatore `transferGroupId`) non la tocca nessuna regola.
+
+**Storico di un'altra app** (13A, rivisto il 25/11/2026: nessuna schermata, nessuna rotta)
+- Una volta, al rilascio: `node /app/worker.mjs --import-labels <file|-> --user <id>` (`-` legge da stdin). Ogni riga
+  categorizzata dell'export diventa un'etichetta in `category_labels`, sotto la categoria della persona con lo stesso
+  nome e segno; un nuovo import sostituisce il precedente; poi il worker riaddestra.
+- Una riga che è un movimento qui (stesso importo, ±3 giorni, unica da entrambi i lati) dà la sua categoria a quel
+  movimento come scelta della persona; mai sopra una scelta a mano, mai su un giroconto; un abbinamento ambiguo resta
+  solo etichetta. Date lette solo in ISO 8601 con fuso, o solo giorno.
 - Totali, budget e report: un giroconto, anche verso un conto esterno, è fuori da entrate, uscite e budget (6A). Il
   netto resta la somma di tutti i movimenti (D3).
 - API: `PUT /transactions/{id}/transfer` (`account`, `outside`, `none`), `POST /transactions/transfer-pairs`,

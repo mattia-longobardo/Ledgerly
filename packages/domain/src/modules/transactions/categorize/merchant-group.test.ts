@@ -144,6 +144,20 @@ describe("the labels of an export", () => {
     });
   });
 
+  it("reads a date only as ISO 8601 with its zone, or a day alone", () => {
+    const at = (date: string) =>
+      exportLabels(
+        [HEADER, `Cash;Groceries;EUR;1;1;Expense;Cash;X;${date};false;;`].map((line) => line.split(";")),
+      );
+    expect(at("2026-03-01T10:00:00.000Z")!.labels[0].at).toEqual(new Date("2026-03-01T10:00:00.000Z"));
+    expect(at("2026-03-01T11:00:00+01:00")!.labels[0].at).toEqual(new Date("2026-03-01T10:00:00.000Z"));
+    expect(at("2026-03-01")!.labels[0].at).toEqual(new Date("2026-03-01T00:00:00.000Z"));
+    // A day first would be another day; a time with no zone depends on the server's; 30/02 is no day.
+    for (const date of ["05/03/2026", "2026-03-05T10:00:00", "2026-02-30", "2026-13-01", ""]) {
+      expect(at(date)).toMatchObject({ labels: [], unreadable: 1 });
+    }
+  });
+
   it("is not read from a file whose header lacks a column", () => {
     expect(exportLabels([["date", "amount"]])).toBeNull();
     expect(exportLabels([])).toBeNull();

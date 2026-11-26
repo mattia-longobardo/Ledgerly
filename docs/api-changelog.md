@@ -4,15 +4,8 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
-## Unreleased · Categories learnt from an export and from every correction (additive)
+## Unreleased · Categories learnt from every correction, the top three and the group (additive)
 
-- New: `POST /categories/labels` (`multipart/form-data`, `file`): the CSV export of the app the person
-  used before (header with `category`, `amount`, `type`, `note`, `date`, `transfer`, `payee`) becomes
-  labels the automatic categories learn from. No movement is written. Answers the counts `imported`,
-  `transfers`, `unknown`, `unreadable`, `unmapped` (no category of the person's with that name and sign)
-  and `duplicates` (already a movement here: same sign and amount within 3 days). A new import replaces
-  the last. Refusals: `invalid` with `reason` `columns`, `too_large` (5 MiB, or `reason`
-  `too_many_rows` past 20,000 rows).
 - New: `GET /transactions/{id}/category-suggestions`: `categoryId` (the cascade's answer, or `null`)
   and `top`, the three likeliest categories of the movement's kind, for the top of the category
   selector. A giroconto is `not_found`.
@@ -20,8 +13,11 @@ deprecated (`apiLevel` and `minClientLevel` 2).
 - A suggestion may be a group (a category with no parent), with the reason code `group`, when no
   sub-category is likely enough.
 - Every confirmation or correction — `POST /transactions/categories/confirm`, `.../choose`,
-  `PUT /transactions/category`, a CSV import — trains the model again in the worker, not only the
-  memory.
+  `PUT /transactions/category` — trains the model again in the worker, not only the memory.
+- No route reads another app's export: the release imports it once with the worker's command
+  `node /app/worker.mjs --import-labels <file|-> --user <id>` (labels in `category_labels`; a row
+  that is the only match of one movement here gives it the export's category, never over a person's
+  choice and never to a giroconto).
 
 ## Unreleased · Giroconti without a category, the default tree of 11 groups (not additive)
 

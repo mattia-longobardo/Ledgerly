@@ -33,6 +33,26 @@ const COLUMNS = ["category", "amount", "type", "note", "date", "transfer", "paye
 /** The export's buckets for a record nobody categorised. */
 const UNKNOWN = /^(unknown( income| expense)?|uncategori[sz]ed|to be categori[sz]ed|missing)$/;
 
+/**
+ * The export's moment: ISO 8601 with its zone (`2025-03-10T10:00:00.000Z`, as the export writes it) or a
+ * day alone. Anything else — a day first, a time with no zone — is not read: it would be another day,
+ * or one that depends on the server's zone.
+ */
+const MOMENT = /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2}))?$/;
+
+/** The moment of a `date` cell, or `null` when it is not one `MOMENT` reads or the day does not exist. */
+function exportMoment(cell: string): Date | null {
+  const text = cell.trim();
+  const parts = MOMENT.exec(text);
+  if (parts === null) return null;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return null;
+  // `2025-02-30` is not a day: a calendar that rolls it over to March says so.
+  const day = new Date(Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])));
+  const real = day.getUTCMonth() === Number(parts[2]) - 1 && day.getUTCDate() === Number(parts[3]);
+  return real ? date : null;
+}
+
 const plain = (text: string) => text.trim().toLowerCase();
 const orNull = (text: string | undefined) => (text === undefined || text.trim() === "" ? null : text.trim());
 
@@ -46,8 +66,8 @@ function labelOf(row: readonly string[], cell: Cell): ExportLabel | "transfers" 
   if (category === "" || UNKNOWN.test(plain(category))) return "unknown";
   const type = plain(cell(row, "type"));
   const size = parseAmountCell(cell(row, "amount"), ".");
-  const date = new Date(cell(row, "date").trim());
-  if ((type !== "income" && type !== "expense") || size === null || Number.isNaN(date.getTime())) {
+  const date = exportMoment(cell(row, "date"));
+  if ((type !== "income" && type !== "expense") || size === null || date === null) {
     return "unreadable";
   }
   // The export writes the size and says the sign in `type`.
