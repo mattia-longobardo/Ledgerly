@@ -19,9 +19,15 @@ test("a row opens its edit dialog on Enter, keeps the focus inside and gives it 
   const dialog = page.getByRole("dialog", { name: "Edit", exact: true });
   await expect(dialog).toBeVisible();
   await dialogHasFocus(page);
-  // Thirty Tabs go round the dialog more than once: the focus never leaves it.
+  // Thirty Tabs go round the dialog more than once: the focus never leaves it. Base UI's
+  // `data-base-ui-focus-guard` sentinels and `<body>` are how its trap goes round, not a way out
+  // (tests/e2e/shell/keyboard.spec.ts).
   const outside = () =>
-    page.evaluate(() => !document.querySelector('[role="dialog"]')?.contains(document.activeElement));
+    page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element || document.querySelector('[role="dialog"]')?.contains(element)) return false;
+      return element !== document.body && !element.hasAttribute("data-base-ui-focus-guard");
+    });
   expect(await tabUntil(page, 30, outside), "the focus left the dialog").toBe(-1);
 
   await page.keyboard.press("Escape");
