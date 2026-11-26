@@ -123,7 +123,17 @@ function RegisterCard({
   const everEmpty = contributions.operationsEver === 0;
   const other = (one: Operation) =>
     one.classification === "withdrawal" ? negative(one.other) : money(one.other);
-  const cells = { say, label, setup, money, negative, other, long, voluntaryHeader };
+  const cells = {
+    say,
+    label,
+    setup,
+    money,
+    negative,
+    other,
+    long,
+    voluntaryHeader,
+    accountId: contributions.fund.accountId,
+  };
   const registerColumns = useRegisterColumns(columns, cells);
 
   return (

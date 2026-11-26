@@ -16,9 +16,10 @@ import { DateField, MoneyField } from "@ledgerly/ui/form-fields";
 import { Select } from "@ledgerly/ui/input";
 import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
-import { type ActionResult, recordOperation, recordPortfolioOperation } from "../../calls";
+import { type ActionResult, AUTOMATIC, recordOperation, recordPortfolioOperation } from "../../calls";
 import { PriceOrAmount, type PriceFields } from "../price-fields";
 import { FORM_GRID, NoteField, type ServiceContext, useErrorText } from "../dialog-kit";
+import { CounterpartField } from "./counterpart-field";
 import { FxRateField, InstrumentField, type PickedInstrument } from "./instrument-field";
 
 const KINDS = ["buy", "sell", "deposit", "withdrawal", "income"] as const;
@@ -43,7 +44,20 @@ function useOperationForm(context: ServiceContext, start: OperationStart) {
   const [fee, setFee] = useState("");
   const [fxRate, setFxRate] = useState("");
   const [note, setNote] = useState("");
-  const typed = { day, instrument, holdingId, how, quantity, unitPrice, amount, fee, fxRate, note };
+  const [counterpart, setCounterpart] = useState(AUTOMATIC);
+  const typed = {
+    day,
+    instrument,
+    holdingId,
+    how,
+    quantity,
+    unitPrice,
+    amount,
+    fee,
+    fxRate,
+    note,
+    counterpart,
+  };
   const fields: PriceFields = {
     how,
     setHow,
@@ -65,6 +79,7 @@ function useOperationForm(context: ServiceContext, start: OperationStart) {
     setFee,
     setFxRate,
     setNote,
+    setCounterpart,
   };
   return { kind, setKind, typed, set, fields };
 }
@@ -94,6 +109,7 @@ function save(context: ServiceContext, form: OperationForm): Promise<ActionResul
       on: typed.day,
       amount: typed.amount,
       note: typed.note,
+      counterpart: typed.counterpart,
     });
   if (typed.instrument === null) return Promise.resolve({ ok: false, error: "invalid" });
   return recordPortfolioOperation(accountId, {
@@ -255,6 +271,16 @@ function KindFields({ id, context, form }: { id: string; context: ServiceContext
         currency={context.currency}
         autoFocus
       />
+      {kind !== "income" && (
+        <CounterpartField
+          id={id}
+          context={context}
+          kind={kind}
+          day={typed.day}
+          value={typed.counterpart}
+          onChange={set.setCounterpart}
+        />
+      )}
     </>
   );
 }
@@ -284,12 +310,15 @@ function useRecord(context: ServiceContext, form: OperationForm, onClose: () => 
     onSubmit,
     pickKind: (kind: Kind) => {
       form.setKind(kind);
+      // A bank movement of one direction is no side of the other.
+      form.set.setCounterpart(AUTOMATIC);
       setRefused(null);
     },
     /** «Record a deposit»: the same form, a deposit on the day of the refused operation. */
     toDeposit: () => {
       form.setKind("deposit");
       form.set.setAmount("");
+      form.set.setCounterpart(AUTOMATIC);
       setRefused(null);
     },
   };

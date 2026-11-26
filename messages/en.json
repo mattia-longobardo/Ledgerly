@@ -1837,7 +1837,8 @@
       "edited": "Edited here",
       "transfer": "Transfer",
       "pending": "Pending",
-      "unpaired": "Choose the account"
+      "unpaired": "Choose the account",
+      "investments": "Investments"
     },
     "breakdown": {
       "title": "By category",
@@ -2296,7 +2297,8 @@
       "category": "Category",
       "transferHint": "A transfer has no category.",
       "actions": "Other actions",
-      "rowHint": "Click or press Enter to edit the transaction."
+      "rowHint": "Click or press Enter to edit the transaction.",
+      "investmentsHint": "Recorded by Investments: amount, date and account follow the operation, and it goes away only with it. Change them in Investments."
     }
   },
   "overview": {
@@ -2483,8 +2485,10 @@
         }
       },
       "transactions": {
-        "title": "Transactions arrive with expenses",
-        "description": "This account's transactions will appear here once the expenses module lands."
+        "title": "Latest transactions",
+        "openInExpenses": "Open in Expenses",
+        "empty": "No transaction on this account.",
+        "more": "The latest {shown}: the others are in Expenses."
       },
       "managedInInvestments": "Shown in Investments"
     },
@@ -3976,7 +3980,9 @@
           "feeUnknown": "A fee is unknown: the totals count it as 0.",
           "empty": "No contribution {when}.",
           "emptyEver": "No contribution yet.",
-          "fromSources": "Contributions from the sources arrive automatically."
+          "fromSources": "Contributions from the sources arrive automatically.",
+          "leg": "Transaction",
+          "legLabel": "Transaction in Expenses, {date}"
         },
         "debit": {
           "amount": "{amount} {frequency}",
@@ -5109,7 +5115,9 @@
       "emptyFiltered": "Nothing matches the search.",
       "accountMovements": "Account transactions",
       "accountMovementsNote": "Deposits and withdrawals are the transactions of the account in Accounts.",
-      "openAccount": "Open in Accounts"
+      "openAccount": "Open in Accounts",
+      "leg": "Transaction",
+      "legLabel": "Transaction in Expenses, {date}"
     },
     "connection": {
       "alerts": "To check",
@@ -5355,7 +5363,20 @@
       "priceOn": "{mode} · {date}",
       "priceSwitch": "Automatic price · {name}",
       "priceSaved": "Price mode of {name} saved",
-      "stale": "To update"
+      "stale": "To update",
+      "counterpart": {
+        "from": "From account",
+        "to": "To account",
+        "hint": "Ledgerly records the transaction in the account too. Automatic: the one matching bank transaction, else an account outside.",
+        "automatic": "Automatic",
+        "movements": "Bank transactions around that day",
+        "accounts": "Your accounts",
+        "outside": "An account outside Ledgerly",
+        "noneIn": "None: an income",
+        "noneOut": "None: a spending",
+        "movementOption": "{date} · {payee} · {amount} · {account}",
+        "noPayee": "No payee"
+      }
     },
     "convertForm": {
       "title": "Switch to positions · {name}",

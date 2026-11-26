@@ -193,7 +193,31 @@ export type PortfolioOperationForm =
       fxRate: string;
       note: string;
     }
-  | { kind: "deposit" | "withdrawal"; on: string; amount: string; note: string };
+  | {
+      kind: "deposit" | "withdrawal";
+      on: string;
+      amount: string;
+      note: string;
+      /** The «From account»/«To account» choice as the select holds it (`counterpartOf`). */
+      counterpart: string;
+    };
+
+/** The empty choice: the server pairs the leg by its own rule (PERS-651). */
+export const AUTOMATIC = "";
+
+/**
+ * The other side of a deposit's or a withdrawal's leg, from the select's value: `tx:<id>` a bank
+ * movement, `acc:<id>` one of the person's accounts, `outside`, `none` (an income or a spending), or
+ * the automatic rule (`""`): neither field is sent.
+ */
+export function counterpartOf(choice: string) {
+  if (choice.startsWith("tx:")) return { transactionId: choice.slice(3) };
+  if (choice.startsWith("acc:"))
+    return { counterpart: { kind: "account" as const, accountId: choice.slice(4) } };
+  if (choice === "outside") return { counterpart: { kind: "outside" as const } };
+  if (choice === "none") return { counterpart: { kind: "none" as const } };
+  return {};
+}
 
 async function portfolioBody(input: PortfolioOperationForm) {
   const format = await formatOf();
@@ -201,7 +225,7 @@ async function portfolioBody(input: PortfolioOperationForm) {
   if (input.kind !== "buy") {
     const amount = amountOf(input.amount, format);
     if (amount === null) throw new RangeError("amount");
-    return { kind: input.kind, on: input.on, amount, note };
+    return { kind: input.kind, on: input.on, amount, note, ...counterpartOf(input.counterpart) };
   }
   const byPrice = input.how === "price";
   return {
