@@ -81,6 +81,11 @@ export interface RowView {
    * (ux §9.8): the state, and the source's name for "Not sent to {source}".
    */
   send?: { state: "to_send" | "not_sent"; source: string } | null;
+  /**
+   * The leg of a deposit or a withdrawal of Investments (origin `investments`, PERS-651): its amount,
+   * date and account follow the operation, and it goes only with it.
+   */
+  investments?: boolean;
 }
 
 /**
@@ -193,6 +198,7 @@ export function lineViewOf(
     note: line.note,
     labels: line.labels,
     labelIds: line.labelIds,
+    investments: line.origin === "investments",
     ...editableOf(line, formatAmountInput(cents < 0n ? -cents : cents, numberFormat)),
   };
 }

@@ -44,9 +44,22 @@ function useActions({ row, onVisibility, onDeleteHidden }: ActionsInput): Action
     run: onVisibility,
     danger: !row.hidden && !own,
   });
-  if (own) actions.push({ label: text("selection.delete"), run: () => own.openDelete(row), danger: true });
-  else if (row.hidden) actions.push({ label: text("selection.delete"), run: onDeleteHidden, danger: true });
+  const remove = removalOf(row, own, onDeleteHidden);
+  if (remove) actions.push({ label: text("selection.delete"), run: remove, danger: true });
   return actions;
+}
+
+/**
+ * «Delete»: a manual movement at once; any other once hidden — but a leg of Investments goes only
+ * with its operation (PERS-651).
+ */
+function removalOf(
+  row: RowView,
+  own: ReturnType<typeof useManualMovement> | null,
+  onDeleteHidden: () => void,
+): (() => void) | null {
+  if (own) return () => own.openDelete(row);
+  return row.hidden && !row.investments ? onDeleteHidden : null;
 }
 
 /** What the row's «⋯» menu offered, under the form. Each one leaves the dialog first. */

@@ -52,6 +52,7 @@ function RowBadges({ row }: { row: RowView }) {
             {text(`badges.${badge}`)}
           </Badge>
         ))}
+      {row.investments && <Badge tone="neutral">{text("badges.investments")}</Badge>}
       {row.send && <SendBadge send={row.send} />}
     </>
   );
