@@ -14,7 +14,10 @@ interface Wording {
 
 const WORDINGS: readonly Wording[] = [
   // ING Italia, card payments and some transfers: "… del 12/11/2026 alle ore 14:32 …".
-  { timeZone: "Europe/Rome", pattern: /\bdel (\d{2})\/(\d{2})\/(\d{4}) alle ore (\d{2})[:.](\d{2})\b/i },
+  {
+    timeZone: "Europe/Rome",
+    pattern: /\bdel\s+(\d{2})\/(\d{2})\/(\d{4})\s+alle\s+ore\s+(\d{2})[:.](\d{2})\b/i,
+  },
 ];
 
 const MINUTE_MS = 60_000;
