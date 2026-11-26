@@ -20,11 +20,12 @@ export const tasks = {
   job: (name: string): Task => ({ kind: "job", key: `job:${name}`, payload: { name } }),
   /** The jobs that read the movements, after a sync that changed them (docs/scheduler.md). */
   afterSync: (tier: RecordedTier): Task => ({ kind: "after-sync", key: "after-sync", payload: { tier } }),
-  /** The memory and the cascade of the categories, after a person chose. */
-  categorise: (userId: string, train: boolean): Task => ({
+  /** The memory and the cascade of the categories, after a person chose; `runAfter`: not before then. */
+  categorise: (userId: string, train: boolean, runAfter?: Date): Task => ({
     kind: "categorise",
     key: `categorise:${userId}:${train ? "train" : "learn"}`,
     payload: { userId, train },
+    runAfter,
   }),
   /** The first flows of a service just connected: 24 months of an exchange take minutes. */
   firstFlows: (userId: string, connectionId: string, accountId: string): Task => ({

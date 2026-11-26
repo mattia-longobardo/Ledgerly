@@ -10,6 +10,8 @@ export interface Task {
   /** One waiting task per key; two tasks of one key never run together. */
   key: string;
   payload: Record<string, unknown>;
+  /** Not claimed before this moment; a task of the key already waiting keeps its own. */
+  runAfter?: Date;
 }
 
 export interface QueuedTask extends Task {
@@ -27,7 +29,7 @@ const MAX_ATTEMPTS = 3;
 export async function enqueue(task: Task): Promise<boolean> {
   const rows = await getDb()
     .insert(jobQueue)
-    .values({ key: task.key, kind: task.kind, payload: task.payload })
+    .values({ key: task.key, kind: task.kind, payload: task.payload, runAfter: task.runAfter })
     .onConflictDoNothing({ target: jobQueue.key, where: sql`${jobQueue.status} = 'queued'` })
     .returning({ id: jobQueue.id });
   return rows.length > 0;

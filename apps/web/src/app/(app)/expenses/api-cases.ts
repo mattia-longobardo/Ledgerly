@@ -19,6 +19,10 @@ import {
   updateManual,
 } from "./manual";
 
+/** 2 minutes: a training takes 3–10 s of the worker's one CPU, so a person correcting without a pause
+ * holds it at most ~8% of the time, and the classifier still follows within 2 minutes. */
+const TRAIN_EVERY_MS = 2 * 60_000;
+
 export const transactionCases: TransactionCases = {
   editableAtSource: (ctx, ids) => editableAtSource(ctx, ids),
   sendSources: (ctx, accountIds) => sendSourceNames(ctx, accountIds),
@@ -50,7 +54,10 @@ export const transactionCases: TransactionCases = {
       }
     }),
   changeVisibility: (ctx, ids, change) => changeVisibility(ctx, ids, change),
+  // The memory learns a choice at once; the classifier trains at most once every TRAIN_EVERY_MS a
+  // person, and the waiting training reads every choice made until it runs (SEC-03).
   async learn(ctx, train) {
-    await enqueue(tasks.categorise(ctx.userId, train));
+    await enqueue(tasks.categorise(ctx.userId, false));
+    if (train) await enqueue(tasks.categorise(ctx.userId, true, new Date(Date.now() + TRAIN_EVERY_MS)));
   },
 };

@@ -69,6 +69,25 @@ describe("the queue", () => {
     expect((await claimNext("worker"))?.key).toBe("connection:1");
   });
 
+  it("holds a task until its moment, and the choices made meanwhile join it (SEC-03)", async () => {
+    const now = new Date();
+    const later = new Date(now.getTime() + 2 * 60_000);
+    const training = { kind: "categorise", key: "categorise:u:train", payload: {}, runAfter: later };
+    expect(await enqueue(training)).toBe(true);
+    // A second correction while it waits does not add a training: the waiting one reads both.
+    expect(await enqueue({ ...training, runAfter: new Date(later.getTime() + 60_000) })).toBe(false);
+    expect(await claimNext("worker", now)).toBeNull();
+    const running = await claimNext("worker", later);
+    expect(running?.key).toBe("categorise:u:train");
+    // A correction while it trains waits its own turn, after the one running: none is lost.
+    expect(await enqueue({ ...training, runAfter: new Date(later.getTime() + 2 * 60_000) })).toBe(true);
+    await finishTask(running!.id);
+    expect(await claimNext("worker", new Date(later.getTime() + 60_000))).toBeNull();
+    expect((await claimNext("worker", new Date(later.getTime() + 2 * 60_000)))?.key).toBe(
+      "categorise:u:train",
+    );
+  });
+
   it("closes the job and sync runs a worker left running, and only those started before", async () => {
     const ctx = await newContext();
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
