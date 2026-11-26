@@ -20,6 +20,7 @@ export type { InstancePlugin, PluginDiagnostic } from "./queries";
 export {
   AUTH_STATE_MINUTES,
   BANK_SCHEDULE,
+  MAX_BANK_SYNCS_PER_DAY,
   RATE_LIMIT_WAIT_HOURS,
   REREAD_DAYS,
   bankAccountNames,

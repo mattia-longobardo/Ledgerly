@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { SESSION_CSRF_HEADER } from "@ledgerly/api-contract";
+import { MAX_BANK_SYNCS_PER_DAY, SESSION_CSRF_HEADER } from "@ledgerly/api-contract";
 import { authAccounts, sessions, users } from "@domain/platform/auth/schema";
 import { getDb } from "@domain/platform/db/client";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
@@ -504,6 +504,61 @@ describe("POST /connections/{id}/schedule/preview", () => {
       origin: "https://evil.example",
     });
     expect(crossSite.status).toBe(403);
+  });
+});
+
+// A bank allows few readings a day without the person (PSD2): its connection's schedule is capped,
+// in the preview and in the save; a service's is not.
+describe("the schedule of a bank's connection", () => {
+  const daily = (times: string[]) => ({ rules: [{ kind: "times", times, days: { kind: "every" } }] });
+  const four = daily(["06:00", "11:00", "16:00", "21:00"]);
+  const five = daily(["06:00", "10:00", "14:00", "18:00", "22:00"]);
+  const hourly = {
+    rules: [{ kind: "interval", everyMinutes: 60, from: "00:00", until: "23:59", days: { kind: "every" } }],
+  };
+  const bank = async () =>
+    (
+      await saveConnection(
+        { userId: alice.userId },
+        { provider: "plugin:enablebanking", credentials: { session: "s" } },
+      )
+    ).id;
+  const save = (id: string, schedule: unknown) =>
+    call(`/connections/${id}/schedule`, alice, { method: "PUT", body: schedule });
+  const previewOf = async (id: string, schedule: unknown) =>
+    (await call(`/connections/${id}/schedule/preview`, alice, { method: "POST", body: schedule })).json();
+  const scheduleOf = async (id: string) =>
+    (
+      (await (await call("/connections", alice)).json()).connections as { id: string; schedule: unknown }[]
+    ).find((one) => one.id === id)?.schedule;
+
+  it("accepts four readings a day", async () => {
+    const id = await bank();
+    expect((await previewOf(id, four)).problems).toEqual([]);
+    expect((await save(id, four)).status).toBe(204);
+    expect(await scheduleOf(id)).toEqual(four);
+  });
+
+  it("refuses five readings a day and the hourly preset as tooMany, and saves nothing", async () => {
+    const id = await bank();
+    expect((await save(id, four)).status).toBe(204);
+    for (const schedule of [five, hourly]) {
+      const [problem] = (await previewOf(id, schedule)).problems;
+      expect(problem).toMatchObject({ code: "tooMany", max: MAX_BANK_SYNCS_PER_DAY });
+      const refused = await save(id, schedule);
+      expect(refused.status).toBe(400);
+      expect(await refused.json()).toMatchObject({ error: "invalid", reason: "tooMany" });
+    }
+    expect(await scheduleOf(id)).toEqual(four);
+  });
+
+  it("leaves a service's schedule without a cap", async () => {
+    const { id } = await saveConnection(
+      { userId: alice.userId },
+      { provider: "plugin:wallet", credentials: { token: "test-token" } },
+    );
+    expect((await previewOf(id, hourly)).problems).toEqual([]);
+    expect((await save(id, hourly)).status).toBe(204);
   });
 });
 

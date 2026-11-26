@@ -10,7 +10,14 @@ import { categorisableAccountIds } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
 import { passFor } from "@/platform/integrations/registry";
-import { dueConnections, listRuns, readSyncJob } from "@domain/platform/integrations/service";
+import {
+  dueConnections,
+  findConnection,
+  listRuns,
+  readSyncJob,
+  saveSchedule,
+} from "@domain/platform/integrations/service";
+import { BANK_SCHEDULE, MAX_BANK_SYNCS_PER_DAY } from "@domain/platform/plugins/rules";
 import type { Fetch } from "@plugin-host/client";
 import {
   PLUGIN_PATHS,
@@ -490,6 +497,25 @@ describe("the choice of the accounts", () => {
       iban: ACCOUNT.identifier,
       ibanFromSource: true,
     });
+  });
+
+  it("gives the recommended schedule the first time, and a later choice keeps the person's own", async () => {
+    const SECOND: PluginAccount = { ...ACCOUNT, externalId: "u-2", stableId: "hash-2", identifier: null };
+    const plugin = fakePlugin({ accounts: [ACCOUNT, SECOND] });
+    const { ctx, connectionId } = await connected(plugin);
+    const target = { pluginId: PLUGIN, connectionId };
+    await chooseAccounts(ctx, { ...target, decisions: [asNew("hash-1", "A")] }, bankSink, NOW);
+    expect((await findConnection(ctx, connectionId))?.schedule).toEqual(BANK_SCHEDULE);
+
+    const own = {
+      rules: [{ kind: "times", times: ["06:30", "11:30", "16:30", "21:30"], days: { kind: "every" } }],
+    };
+    await saveSchedule(ctx, connectionId, own, { now: NOW, maxPerDay: MAX_BANK_SYNCS_PER_DAY });
+    const before = await findConnection(ctx, connectionId);
+    await chooseAccounts(ctx, { ...target, decisions: [asNew("hash-2", "B")] }, bankSink, later(1));
+    const after = await findConnection(ctx, connectionId);
+    expect(after?.schedule).toEqual(own);
+    expect(after?.nextSyncAt).toEqual(before?.nextSyncAt);
   });
 
   it("does not read before it is made", async () => {

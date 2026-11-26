@@ -110,7 +110,7 @@ export type AccountDecision = AccountChoice | { providerAccountId: string; targe
 
 /**
  * Applies the choice of the accounts (ux/n1-plugin-bank.md §6.4): ties each chosen account,
- * marks the connection as complete and gives it its three readings a day. At least one account
+ * marks the connection as complete and, the first time, gives it its three readings a day. At least one account
  * of the bank has to be tied when this ends. The first reading is the caller's next call.
  */
 export async function chooseAccounts(
@@ -166,7 +166,8 @@ export async function chooseAccounts(
     add: skipped,
     remove: choices.map((choice) => choice.providerAccountId),
   });
-  await saveSchedule(ctx, connection.id, BANK_SCHEDULE, now);
+  // The recommended schedule only at the first choice: a later one keeps the person's own.
+  if (!bag.chosen) await saveSchedule(ctx, connection.id, BANK_SCHEDULE, { now });
   // An account tied after the first reading (chosen later, or deleted and chosen again) has no
   // history here: the next reading reads it alone, from the start, before the usual ones (PERS-419).
   const tiedNow = choices.map((choice) => choice.providerAccountId);

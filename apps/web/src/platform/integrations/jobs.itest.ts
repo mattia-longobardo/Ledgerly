@@ -81,7 +81,7 @@ describe("integrations-sync", () => {
       ctx,
       connection.id,
       { rules: [{ kind: "times", times: ["19:30", "06:43"], days: { kind: "every" } }] },
-      now,
+      { now },
     );
     expect(early.schedule).toEqual({
       rules: [{ kind: "times", times: ["06:43", "19:30"], days: { kind: "every" } }],
@@ -138,7 +138,7 @@ describe("integrations-sync", () => {
     };
     // Friday 13 November 2026, 00:00 in Rome.
     const start = new Date("2026-11-12T23:00:00Z");
-    await saveSchedule(ctx, connection.id, schedule, start);
+    await saveSchedule(ctx, connection.id, schedule, { now: start });
     const preview = nextSyncTimes(schedule, ctx.timeZone, start, 11);
 
     // One tick a minute, as the cron sidecar does, for three days: to Sunday midnight.
@@ -248,7 +248,7 @@ describe("integrations-sync", () => {
       ctx,
       connection.id,
       { rules: [{ kind: "times", times: ["07:00"], days: { kind: "every" } }] },
-      now,
+      { now },
     );
     await rescheduleConnections({ userId: ctx.userId, timeZone: "America/New_York" }, now);
     expect((await listConnections(ctx))[0].nextSyncAt).toEqual(new Date("2026-11-10T12:00:00Z"));

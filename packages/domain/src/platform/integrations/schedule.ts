@@ -27,7 +27,13 @@ import {
 // The limits and the shape of a rule are the contract's (`@ledgerly/api-contract`, one source for
 // the web, the apps and the domain); the domain adds what it computes from: sorted lists without
 // repeats, a cron written with single spaces, and a cron whose fields name real values.
-export { LAST_DAY, MAX_RULES, MAX_TIMES, MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract";
+export {
+  LAST_DAY,
+  MAX_BANK_SYNCS_PER_DAY,
+  MAX_RULES,
+  MAX_TIMES,
+  MIN_SYNC_GAP_MINUTES,
+} from "@ledgerly/api-contract";
 
 /** How far ahead a schedule is looked at: a cron that names 29 February runs once in four years. */
 const HORIZON_DAYS = 4 * 366 + 7;
@@ -297,15 +303,21 @@ export function nextSyncAfterPass(
 
 export type ScheduleProblem =
   | { code: "tooFrequent"; day: CivilDate; first: string; second: string }
+  | { code: "tooMany"; day: CivilDate; count: number; max: number }
   | { code: "neverRuns"; rule: number };
 
 /**
  * Whether a well-formed schedule is also one the app accepts: every rule runs at least once in
  * {@link HORIZON_DAYS} (a cron that names 31 February never does), and no two passes are closer
  * than {@link MIN_SYNC_GAP_MINUTES}, over all rules together and across midnight, checked on the
- * wall clock over {@link GAP_CHECK_DAYS} from `today`.
+ * wall clock over {@link GAP_CHECK_DAYS} from `today`. With `maxPerDay` (a bank's connection), no
+ * day of {@link HORIZON_DAYS} from `today` has more passes than that, over all rules together.
  */
-export function scheduleProblems(schedule: SyncSchedule, today: CivilDate): ScheduleProblem[] {
+export function scheduleProblems(
+  schedule: SyncSchedule,
+  today: CivilDate,
+  maxPerDay?: number,
+): ScheduleProblem[] {
   const problems: ScheduleProblem[] = [];
   schedule.rules.forEach((rule, index) => {
     for (let offset = 0; offset <= HORIZON_DAYS; offset += 1) {
@@ -313,6 +325,10 @@ export function scheduleProblems(schedule: SyncSchedule, today: CivilDate): Sche
     }
     problems.push({ code: "neverRuns", rule: index });
   });
+  if (maxPerDay !== undefined) {
+    const crowded = crowdedDay(schedule, today, maxPerDay);
+    if (crowded) problems.push({ code: "tooMany", ...crowded, max: maxPerDay });
+  }
   let previous: { at: number; day: CivilDate; minutes: number } | null = null;
   for (let offset = 0; offset < GAP_CHECK_DAYS; offset += 1) {
     const day = addDays(today, offset);
@@ -333,6 +349,21 @@ export function scheduleProblems(schedule: SyncSchedule, today: CivilDate): Sche
   return problems;
 }
 
+/** The first day from `today` with more than `max` passes, and how many; null when there is none. */
+function crowdedDay(
+  schedule: SyncSchedule,
+  today: CivilDate,
+  max: number,
+): { day: CivilDate; count: number } | null {
+  if (schedule.rules.length === 0) return null;
+  for (let offset = 0; offset <= HORIZON_DAYS; offset += 1) {
+    const day = addDays(today, offset);
+    const count = scheduleMinutesOn(schedule, day).length;
+    if (count > max) return { day, count };
+  }
+  return null;
+}
+
 /** What the preview of a schedule can say: its problems, or a rule the server does not accept. */
 export type PreviewProblem = ScheduleProblem | { code: "invalidRule"; rule: number };
 
@@ -340,18 +371,20 @@ export type PreviewProblem = ScheduleProblem | { code: "invalidRule"; rule: numb
  * The preview of a schedule not saved yet (`POST /connections/{id}/schedule/preview`): the rules
  * the server refuses, else the problems of the whole, else the next `count` passes after `now`.
  * The same answer the editor computed in the browser before R3: a client now asks for it.
+ * `maxPerDay`: the most passes a day allows, for a bank's connection (`tooMany`).
  */
 export function previewSchedule(
   rules: readonly unknown[],
   timeZone: string,
   now: Date,
   count: number,
+  maxPerDay?: number,
 ): { next: Date[]; problems: PreviewProblem[] } {
   const invalid = rules.flatMap((rule, index) =>
     syncRuleSchema.safeParse(rule).success ? [] : [{ code: "invalidRule" as const, rule: index }],
   );
   if (invalid.length > 0) return { next: [], problems: invalid };
   const schedule = syncScheduleSchema.parse({ rules });
-  const problems = scheduleProblems(schedule, civilDateIn(now, timeZone));
+  const problems = scheduleProblems(schedule, civilDateIn(now, timeZone), maxPerDay);
   return { next: problems.length > 0 ? [] : nextSyncTimes(schedule, timeZone, now, count), problems };
 }

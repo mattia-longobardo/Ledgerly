@@ -12,6 +12,12 @@ const MAX_INTERVAL_MINUTES = 24 * 60;
 export const MAX_RULES = 8;
 /** One rule's times: as many as the gap allows in a day. */
 export const MAX_TIMES = (24 * 60) / MIN_SYNC_GAP_MINUTES;
+/**
+ * The most automatic passes in one day of a bank's connection: PSD2 lets a bank refuse more than
+ * four readings a day without the person present (decision of 26/11/2026). A client disables what
+ * goes over it; the server refuses it as `tooMany`.
+ */
+export const MAX_BANK_SYNCS_PER_DAY = 4;
 /** In `monthDays`, the last day of the month. */
 export const LAST_DAY = -1;
 /** How many coming passes the preview answers. */

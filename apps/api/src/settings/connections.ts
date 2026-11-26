@@ -21,7 +21,7 @@ import {
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
 import { getAuth } from "@ledgerly/domain/platform/auth";
-import { isBankPluginProvider } from "@ledgerly/domain/platform/plugins";
+import { isBankPluginProvider, MAX_BANK_SYNCS_PER_DAY } from "@ledgerly/domain/platform/plugins";
 import {
   PluginActionError,
   removeUserCredentials,
@@ -141,6 +141,10 @@ async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   return connection;
 }
 
+/** The most passes a day a connection's schedule may have: a bank's is capped, the others are not. */
+const maxSyncsPerDay = async (provider: string) =>
+  (await isBankPluginProvider(provider)) ? MAX_BANK_SYNCS_PER_DAY : undefined;
+
 /** A refusal of a use case of the web as the contract names it; a card's connection gone is not found. */
 function settled<T extends { ok: true }>(answer: T | Refused): T {
   if (answer.ok) return answer;
@@ -236,15 +240,24 @@ function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: Connectio
   serve(app, guard, connections.setSchedule, async ({ ctx, params, body }) => {
     const connection = await connectionOf(ctx, params.id);
     try {
-      await saveSchedule(ctx, connection.id, body);
+      await saveSchedule(ctx, connection.id, body, { maxPerDay: await maxSyncsPerDay(connection.provider) });
     } catch (error) {
-      if (error instanceof IntegrationError) throw new ApiRefusal("invalid", "schedule");
+      if (error instanceof IntegrationError) {
+        const tooMany = error.problems.some((problem) => problem.code === "tooMany");
+        throw new ApiRefusal("invalid", tooMany ? "tooMany" : "schedule");
+      }
       throw error;
     }
   });
   serve(app, guard, connections.previewSchedule, async ({ ctx, params, body }) => {
-    await connectionOf(ctx, params.id);
-    const preview = previewSchedule(body.rules, ctx.timeZone, new Date(), SCHEDULE_PREVIEW_COUNT);
+    const connection = await connectionOf(ctx, params.id);
+    const preview = previewSchedule(
+      body.rules,
+      ctx.timeZone,
+      new Date(),
+      SCHEDULE_PREVIEW_COUNT,
+      await maxSyncsPerDay(connection.provider),
+    );
     return { next: preview.next.map((instant) => instant.toISOString()), problems: preview.problems };
   });
   serveConnectionAccounts(app, guard, cases);

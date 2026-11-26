@@ -193,7 +193,7 @@ describe("a connection", () => {
       ctx,
       connection.id,
       { rules: [{ kind: "times", times: ["07:10"], days: { kind: "every" } }] },
-      NOW,
+      { now: NOW },
     );
     const report = async (at: Date) => {
       await run(ctx, connection, null, at);

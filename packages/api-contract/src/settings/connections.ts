@@ -329,6 +329,13 @@ const scheduleProblem = z.discriminatedUnion("code", [
   z.object({ code: z.literal("neverRuns"), rule: z.number().int().min(0) }),
   /** The rule at index `rule` is not one the server accepts (a cron field out of range). */
   z.object({ code: z.literal("invalidRule"), rule: z.number().int().min(0) }),
+  /** More passes in one day than a bank's connection allows (`MAX_BANK_SYNCS_PER_DAY`): the first such day. */
+  z.object({
+    code: z.literal("tooMany"),
+    day: civilDate(),
+    count: z.number().int().min(1),
+    max: z.number().int().min(1),
+  }),
 ]);
 
 export const previewSchedule = defineRoute({

@@ -55,6 +55,7 @@ export {
 } from "./routes";
 export {
   LAST_DAY,
+  MAX_BANK_SYNCS_PER_DAY,
   MAX_RULES,
   MAX_TIMES,
   MIN_SYNC_GAP_MINUTES,
