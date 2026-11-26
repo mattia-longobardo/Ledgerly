@@ -156,6 +156,18 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
+    // PERS-651: a deposit's «From account», the other side of its leg in the account.
+    name: "the record operation dialog, a deposit with its other side",
+    session: "portfolio",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^Broker$/);
+      await page.getByRole("button", { name: "Record operation" }).click();
+      await page.getByRole("dialog").getByLabel("Type").selectOption("deposit");
+      await settledDialog(page);
+    },
+  },
+  {
     name: "the switch to positions dialog",
     session: "portfolio",
     roots: ['[role="dialog"]'],

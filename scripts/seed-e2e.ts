@@ -48,7 +48,7 @@ import {
   seedFundsSetup,
 } from "./seed-e2e/funds";
 import { seedInterests } from "./seed-e2e/interests";
-import { seedInvestments, seedPlans, seedPortfolio } from "./seed-e2e/investments";
+import { seedInvestments, seedLegs, seedPlans, seedPortfolio } from "./seed-e2e/investments";
 import { seedLayout } from "./seed-e2e/layout";
 import { seedPayrollHand } from "./seed-e2e/payroll";
 import {
@@ -189,6 +189,7 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [["fundsSetup"], seedFundsSetup],
   [["investments"], seedInvestments],
   [["portfolio", "portfolioJourney"], seedPortfolio],
+  [["legs"], seedLegs],
   [["plans", "plansJourney"], seedPlans],
   [["payrollHand"], seedPayrollHand],
   [["timeoff"], () => seedTimeOff(USERS.timeoff.email)],

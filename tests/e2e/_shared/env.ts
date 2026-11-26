@@ -79,6 +79,9 @@ export const USERS = {
     email: "portfolio-journey@example.test",
     name: "Portfolio Journey",
   },
+  // PERS-651: a manual portfolio with no operation and a bank account with two transfers out to it,
+  // for the journey of a deposit paired with its bank transaction and its leg in Expenses and Accounts.
+  legs: { email: "legs@example.test", name: "Legs" },
   // R5d, step 2: two manual portfolios with purchase plans and an instalment of today proposed — one
   // with its bank transaction found, one with no cash (P2) — for the screen check; `plansJourney` has the
   // same and the journey writes on it.
@@ -308,6 +311,7 @@ export const SESSIONS = {
   investments: { user: "investments", file: "investments-session.json" },
   portfolio: { user: "portfolio", file: "portfolio-session.json" },
   portfolioJourney: { user: "portfolioJourney", file: "portfolio-journey-session.json" },
+  legs: { user: "legs", file: "legs-session.json" },
   plans: { user: "plans", file: "plans-session.json" },
   plansJourney: { user: "plansJourney", file: "plans-journey-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },

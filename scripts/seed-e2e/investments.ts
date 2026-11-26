@@ -487,6 +487,27 @@ export async function seedPortfolio(): Promise<void> {
 }
 
 /**
+ * A deposit's leg (PERS-651): «Broker», a manual portfolio with no operation, and «Conto corrente»,
+ * a bank account Wallet reads with two transfers of 1.000 € out to it, today and yesterday — two
+ * candidates, so the deposit's dialog is where one is chosen.
+ */
+export async function seedLegs(): Promise<void> {
+  const ctx = await contextOf(USERS.legs.email);
+  const on = today(ctx.timeZone);
+  const bank = await syncedAccount(ctx, "e2e-legs-1", "Conto corrente");
+  await upsertFromProvider(
+    ctx,
+    bank,
+    [
+      walletMovement("e2e-legs-tx-1", on, -100_000n, "BROKER SPA", null),
+      walletMovement("e2e-legs-tx-2", addDays(on, -1), -100_000n, "BROKER SPA", null),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
+  await createPortfolioWithAccount(ctx, { name: "Broker", currency: "EUR", url: null });
+}
+
+/**
  * The instrument of the plans (R5d, step 2): a public example ISIN (ISO 6166) of its own, priced by a
  * source of the seed's, so its close of today is known without the instance's prices plugin. The
  * registers are answered here, as for the portfolio's instrument.
