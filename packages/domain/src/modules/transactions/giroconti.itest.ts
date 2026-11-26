@@ -269,6 +269,80 @@ describe("what the person decides", () => {
   });
 });
 
+describe("a choice of the person reads only the rows the rules can join to it (SEC-04)", () => {
+  /** Every row's pair, read from the table: what the full run would change shows as a difference. */
+  async function pairs(): Promise<Map<string, string | null>> {
+    const { rows: all } = await getPool().query<{ payee: string; transfer_group_id: string | null }>(
+      "SELECT payee, transfer_group_id FROM transactions WHERE user_id = $1 ORDER BY payee",
+      [ctx.userId],
+    );
+    return new Map(all.map((row) => [row.payee, row.transfer_group_id]));
+  }
+
+  it("ends where a run over every movement ends, among hundreds of the same amounts", async () => {
+    // 600 synthetic movements: six amounts, both signs, two accounts, 30 days, a third giroconti.
+    const amounts = [10_000n, 25_100n, 5_000n, 777n, 1_234n, 99_900n];
+    const noise = (account: "ing" | "rev") =>
+      Array.from({ length: 300 }, (_, at) => {
+        const amount = amounts[at % amounts.length]! * (at % 2 === 0 ? -1n : 1n);
+        return movement({
+          externalId: `${account}-${at}`,
+          payee: `${account}-${at}`,
+          amountCents: amount,
+          occurredAt: new Date(Date.UTC(2026, 0, 1 + ((at * 7) % 30), 9 + (at % 8))),
+          ...(at % 3 === 0 ? { type: "transfer" as const } : {}),
+        });
+      });
+    // The case that makes the pass do something: X pairs with Y, the nearer; Z waits.
+    const leg = { type: "transfer" as const, occurredAt: new Date("2026-03-10T11:00:00Z") };
+    await read(ctx, ing, [
+      ...noise("ing"),
+      movement({ externalId: "x", ...leg, amountCents: -4_321n, payee: "X" }),
+    ]);
+    await read(ctx, rev, [
+      ...noise("rev"),
+      movement({ externalId: "y", ...leg, amountCents: 4_321n, payee: "Y" }),
+      movement({
+        externalId: "z",
+        ...leg,
+        amountCents: 4_321n,
+        payee: "Z",
+        occurredAt: new Date("2026-03-11T11:00:00Z"),
+      }),
+    ]);
+    expect(await linkOwnTransfers(ctx)).toBe(0);
+    const before = await pairs();
+    expect(before.get("X")).not.toBeNull();
+    expect(before.get("Y")).toBe(before.get("X"));
+
+    // Y is «not a giroconto»: X is free again and pairs with Z, which the narrow read must find.
+    const { rows: ids } = await getPool().query<{ payee: string; id: string }>(
+      "SELECT payee, id FROM transactions WHERE user_id = $1",
+      [ctx.userId],
+    );
+    const byPayee = new Map(ids.map((row) => [row.payee, row.id]));
+    await chooseTransferSide(ctx, byPayee.get("Y")!, { kind: "none" });
+    const after = await pairs();
+    expect(after.get("Z")).not.toBeNull();
+    expect(after.get("X")).toBe(after.get("Z"));
+    // A run over every movement finds nothing left to change: the same pairs and proposals.
+    expect(await linkOwnTransfers(ctx)).toBe(0);
+    expect(await pairs()).toEqual(after);
+
+    // A «no» and a pair by hand on the noise end where the full run ends, too.
+    const proposals = await listTransferProposals(ctx);
+    if (proposals.length > 0) {
+      await answerTransferProposal(ctx, proposals[0]!.id, false);
+      expect(await linkOwnTransfers(ctx)).toBe(0);
+    }
+    const free = [...(await pairs())].filter(([payee, group]) => group === null && payee.includes("-"));
+    const out = free.find(([payee]) => payee.startsWith("ing-") && Number(payee.slice(4)) % 2 === 0)!;
+    const into = free.find(([payee]) => payee.startsWith("rev-") && Number(payee.slice(4)) % 2 === 1)!;
+    await pairByHand(ctx, byPayee.get(out[0])!, byPayee.get(into[0])!);
+    expect(await linkOwnTransfers(ctx)).toBe(0);
+  });
+});
+
 describe("a run of the rules never undoes what the person did meanwhile", () => {
   it("leaves a category filed between the run's read and its write, and plans again", async () => {
     const groceries = await createCategory(ctx, {

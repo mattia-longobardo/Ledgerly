@@ -2,7 +2,7 @@
 // 6A–10A of 2026-11-25): the automatic pairing after every write that can make one, and what the
 // person decides by hand — the other account, an account outside, "not a giroconto", a pair, an
 // answer to a proposal. The rules are `rules/giroconti.ts`; this file reads and writes.
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -46,7 +46,7 @@ async function ownIbans(ctx: Who): Promise<OwnIban[]> {
 }
 
 /** The movements that count — not hidden, not gone — as the rules of the giroconti read them. */
-function pairingRows(ctx: Who) {
+function pairingRows(ctx: Who, only?: SQL) {
   return getDb()
     .select({
       id: transactions.id,
@@ -72,9 +72,36 @@ function pairingRows(ctx: Who) {
         userScoped(ctx).owns(transactions),
         isNull(transactions.hiddenAt),
         isNull(transactions.removedUpstreamAt),
+        only,
       ),
     )
     .orderBy(asc(transactions.occurredAt), asc(transactions.id));
+}
+
+/**
+ * The rows the rules can join to `seeds`: the rules pair only the same amount (both signs), and a
+ * pair counts its members; so the seeds, the rows of their amounts and the members of their pairs,
+ * again until no new amount or pair appears. The plan over these is the plan over all, on them.
+ */
+async function rowsAround(ctx: Who, seeds: readonly string[]): Promise<PairingRow[]> {
+  const amounts = new Set<Cents>();
+  const groups = new Set<string>();
+  for (;;) {
+    const rows = await pairingRows(
+      ctx,
+      or(
+        inArray(transactions.id, [...seeds]),
+        groups.size > 0 ? inArray(transactions.transferGroupId, [...groups]) : undefined,
+        amounts.size > 0 ? inArray(transactions.amountCents, [...amounts]) : undefined,
+      ),
+    );
+    const known = amounts.size + groups.size;
+    for (const row of rows) {
+      amounts.add(row.amountCents).add(-row.amountCents);
+      if (row.transferGroupId !== null) groups.add(row.transferGroupId);
+    }
+    if (amounts.size + groups.size === known) return rows;
+  }
 }
 
 function proposalRows(ctx: Who) {
@@ -146,25 +173,35 @@ async function writePlan(
  * short transaction. Run after every write that can make a giroconto: a reading, a choice of the
  * person, a saved IBAN. Returns how many rows changed. A choice of the person or a category that
  * lands between the read and the write wins: the run reads and plans again (3 times at most).
+ * With `around` (the rows a request just changed) it reads only the rows the rules can join to
+ * them, and only their proposals go stale: the same pairs, without reading every movement.
  */
-export async function linkOwnTransfers(ctx: Who): Promise<number> {
+export async function linkOwnTransfers(ctx: Who, around?: readonly string[]): Promise<number> {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await linkOnce(ctx);
+      return await linkOnce(ctx, around);
     } catch (error) {
       if (!(error instanceof StalePlan) || attempt === 3) throw error;
     }
   }
 }
 
-async function linkOnce(ctx: Who): Promise<number> {
-  const [own, rows, proposals] = await Promise.all([ownIbans(ctx), pairingRows(ctx), proposalRows(ctx)]);
+async function linkOnce(ctx: Who, around: readonly string[] | undefined): Promise<number> {
+  const [own, rows, proposals] = await Promise.all([
+    ownIbans(ctx),
+    around === undefined ? pairingRows(ctx) : rowsAround(ctx, around),
+    proposalRows(ctx),
+  ]);
+  const read = new Set(rows.map((row) => row.id));
   const keyOf = (one: { outId: string; inId: string }) => proposalKey(one.outId, one.inId);
   const rejected = new Set(proposals.filter((one) => one.state === "rejected").map(keyOf));
   const plan = planOwnTransfers(own, rows, rejected);
   const wanted = new Set(plan.proposals.map(keyOf));
   const open = proposals.filter((one) => one.state === "open");
-  const stale = open.filter((one) => !wanted.has(keyOf(one))).map((one) => one.id);
+  const stale = open
+    .filter((one) => !wanted.has(keyOf(one)))
+    .filter((one) => around === undefined || read.has(one.outId) || read.has(one.inId))
+    .map((one) => one.id);
   const known = new Set(open.map(keyOf));
   const fresh = plan.proposals.filter((one) => !known.has(keyOf(one)));
   if (plan.groups.length + plan.transfers.length + stale.length + fresh.length === 0) return 0;
@@ -197,9 +234,9 @@ export const transferSideSchema = z.discriminatedUnion("kind", [
 ]);
 export type TransferSide = z.infer<typeof transferSideSchema>;
 
-/** Takes the row and its partner out of their pair; the partner stays a giroconto to choose for. */
-async function unpair(trx: Tx, ctx: Who, groupId: string | null): Promise<void> {
-  if (groupId === null) return;
+/** Takes the row and its partner out of their pair; the partner stays a giroconto to choose for. Returns the legs. */
+async function unpair(trx: Tx, ctx: Who, groupId: string | null): Promise<string[]> {
+  if (groupId === null) return [];
   const legs = await trx
     .select({ id: transactions.id, locallyEdited: transactions.locallyEdited })
     .from(transactions)
@@ -217,6 +254,7 @@ async function unpair(trx: Tx, ctx: Who, groupId: string | null): Promise<void> 
       })
       .where(and(eq(transactions.id, leg.id), userScoped(ctx).owns(transactions)));
   }
+  return legs.map((leg) => leg.id);
 }
 
 /** The open proposals that name one of these rows: they are answered by what the person did. */
@@ -247,8 +285,8 @@ export async function chooseTransferSide(ctx: Who, id: string, input: unknown): 
     const account = await getAccount(ctx, side.accountId);
     if (!account || account.id === row.accountId) throw new TransactionError("invalid_reference");
   }
-  await getDb().transaction(async (trx) => {
-    await unpair(trx, ctx, row.transferGroupId);
+  const touched = await getDb().transaction(async (trx) => {
+    const legs = await unpair(trx, ctx, row.transferGroupId);
     const [current] = await trx
       .select({ locallyEdited: transactions.locallyEdited })
       .from(transactions)
@@ -275,8 +313,9 @@ export async function chooseTransferSide(ctx: Who, id: string, input: unknown): 
       .where(and(eq(transactions.id, transactionId), userScoped(ctx).owns(transactions)));
     await dropProposals(trx, ctx, [transactionId]);
     await retypeMovements(trx, ctx);
+    return [transactionId, ...legs];
   });
-  await linkOwnTransfers(ctx);
+  await linkOwnTransfers(ctx, touched);
 }
 
 /**
@@ -292,9 +331,11 @@ export async function pairByHand(ctx: Who, firstId: string, secondId: string): P
   if (first.accountId === second.accountId) throw new TransactionError("invalid");
   if (first.amountCents < 0n === second.amountCents < 0n) throw new TransactionError("invalid");
   if (first.transferGroupId !== null && first.transferGroupId === second.transferGroupId) return;
-  await getDb().transaction(async (trx) => {
-    await unpair(trx, ctx, first.transferGroupId);
-    await unpair(trx, ctx, second.transferGroupId);
+  const touched = await getDb().transaction(async (trx) => {
+    const legs = [
+      ...(await unpair(trx, ctx, first.transferGroupId)),
+      ...(await unpair(trx, ctx, second.transferGroupId)),
+    ];
     const group = firstLeg < secondLeg ? firstLeg : secondLeg;
     for (const id of [firstLeg, secondLeg]) {
       const [current] = await trx
@@ -315,8 +356,9 @@ export async function pairByHand(ctx: Who, firstId: string, secondId: string): P
     }
     await dropProposals(trx, ctx, [firstLeg, secondLeg]);
     await retypeMovements(trx, ctx);
+    return [firstLeg, secondLeg, ...legs];
   });
-  await linkOwnTransfers(ctx);
+  await linkOwnTransfers(ctx, touched);
 }
 
 /** One leg of a proposed giroconto, as the person is shown it. */
@@ -406,5 +448,5 @@ export async function answerTransferProposal(ctx: Who, id: string, accept: boole
     .set({ state: "rejected" })
     .where(and(userScoped(ctx).owns(girocontoProposals), eq(girocontoProposals.id, proposalId)));
   // Without the pair refused, a leg may have one candidate left: it is paired now.
-  await linkOwnTransfers(ctx);
+  await linkOwnTransfers(ctx, [proposal.outId, proposal.inId]);
 }
