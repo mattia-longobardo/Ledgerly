@@ -22,7 +22,7 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { parsePeriodQuery } from "@ledgerly/ui/period";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
-import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, counterValue, NetWorthCard } from "@/modules/accounts/client";
 import { BudgetsOverviewCard } from "@/modules/budgets";
@@ -115,8 +115,8 @@ function OverviewView({ view, format }: { view: NetWorth; format: CardFormat }) 
       {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}
       {/* `minmax(0,1fr)` also in one column: an auto track takes the widest child's min-content
           width — a table's — and the cards would then reach past the page (400 px). */}
-      {/* The cells stretch, so the accounts card ends where the net-worth card does. */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      {/* `items-start`: each card is as tall as its content, so a short list leaves no empty card below it. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <NetWorthCard
           format={format}
           period={parsePeriodQuery(Object.fromEntries(search.entries()), todayOn)}
@@ -249,21 +249,26 @@ function useRowHref(): (row: ViewRow) => string {
       : `/accounts/${row.id}`;
 }
 
-/** The group's name and its subtotal, the figure of its tile. */
-function GroupLabel({ group, view, format }: { group: Group; view: NetWorth; format: CardFormat }) {
+// Each level starts further right: a bucket at 16 px, a group of Investments and a bucket's account at
+// 28 px, a group's account at 40 px. `first:` beats the first cell's own `first:pl-4` (Td).
+const groupIndent = (group: Group) => (group.nested ? "pl-7 font-medium" : "pl-4 font-semibold");
+const accountIndent = (group: Group) => (group.nested ? "pl-10 first:pl-10" : "pl-7 first:pl-7");
+
+/** The group's subtotal, the figure of its tile, in the column of the accounts' balances. */
+function GroupTotal({ group, view, format }: { group: Group; view: NetWorth; format: CardFormat }) {
   return (
-    <span className={cn("flex w-full items-center justify-between gap-2", group.nested && "pl-3")}>
-      <span className={group.nested ? "font-medium" : "font-semibold"}>{group.label}</span>
-      <span
-        data-testid={`overview-group-${group.key}`}
-        data-cents={String(centsOf(group.total) ?? "")}
-        className="font-semibold tabular-nums"
-      >
-        {displayMoney(group.total, view, format)}
-      </span>
+    <span
+      data-testid={`overview-group-${group.key}`}
+      data-cents={String(centsOf(group.total) ?? "")}
+      className={cn("tabular-nums", group.nested ? "font-medium" : "font-semibold")}
+    >
+      {displayMoney(group.total, view, format)}
     </span>
   );
 }
+
+/** A bucket on the page's background; a group of Investments plain, one level inside it. */
+const groupRowClass = (group: Group) => cn("border-b border-border", group.nested ? "h-8" : "h-7 bg-bg");
 
 function AccountsCard({ view, format }: { view: NetWorth; format: CardFormat }) {
   const text = useTranslations("overview");
@@ -271,7 +276,7 @@ function AccountsCard({ view, format }: { view: NetWorth; format: CardFormat }) 
   const groups = useGroups(view);
   const hrefOf = useRowHref();
   return (
-    <Card padded={false}>
+    <Card padded={false} data-testid="overview-accounts">
       <CardHeader
         title={accountsText("title")}
         actions={
@@ -313,14 +318,29 @@ function DesktopTable({ view, format, groups, hrefOf }: ListProps) {
         <TBody>
           {groups.map((group) => (
             <Fragment key={group.key}>
-              <GroupRow colSpan={4} label={<GroupLabel group={group} view={view} format={format} />} />
+              <tr className={groupRowClass(group)}>
+                <th
+                  scope="row"
+                  colSpan={2}
+                  data-testid={`overview-group-label-${group.key}`}
+                  className={cn("pr-2 text-left", groupIndent(group))}
+                >
+                  {group.label}
+                </th>
+                <Td align="right">
+                  <GroupTotal group={group} view={view} format={format} />
+                </Td>
+                <Td />
+              </tr>
               {group.rows.map((row) => {
                 const figures = figuresOf(row, view, format);
                 return (
                   <Tr key={row.id}>
-                    <Td>
+                    <Td className={accountIndent(group)}>
                       <Link
                         href={appRoute(hrefOf(row))}
+                        data-testid="overview-account-name"
+                        data-group={group.key}
                         className="focus-ring inline-flex h-6 items-center rounded-xs font-medium hover:underline"
                       >
                         {row.name}
@@ -328,7 +348,7 @@ function DesktopTable({ view, format, groups, hrefOf }: ListProps) {
                     </Td>
                     <Td muted>{accountsText(`types.${row.type}`)}</Td>
                     <Td align="right">
-                      {figures.balance}
+                      <span data-testid="overview-account-balance">{figures.balance}</span>
                       {figures.counter && <span className="block text-sm text-muted">{figures.counter}</span>}
                     </Td>
                     <Td align="right" className={figures.tone}>
@@ -351,8 +371,15 @@ function PhoneList({ view, format, groups, hrefOf }: ListProps) {
     <ul className="flex flex-col md:hidden">
       {groups.map((group) => (
         <li key={group.key} className="border-b border-border last:border-0">
-          <div className="bg-bg px-4 py-2 text-sm">
-            <GroupLabel group={group} view={view} format={format} />
+          <div
+            className={cn(
+              "flex items-center justify-between gap-2 py-2 pr-4 text-sm",
+              groupIndent(group),
+              !group.nested && "bg-bg",
+            )}
+          >
+            <span data-testid={`overview-group-label-${group.key}`}>{group.label}</span>
+            <GroupTotal group={group} view={view} format={format} />
           </div>
           <ul>
             {group.rows.map((row) => {
@@ -361,14 +388,22 @@ function PhoneList({ view, format, groups, hrefOf }: ListProps) {
                 <li key={row.id} data-testid="overview-account-item" className="border-t border-border">
                   <Link
                     href={appRoute(hrefOf(row))}
-                    className="flex items-center justify-between gap-2 px-4 py-3"
+                    className={cn("flex items-center justify-between gap-2 py-3 pr-4", accountIndent(group))}
                   >
                     <span className="flex min-w-0 flex-col">
-                      <span className="truncate font-medium">{row.name}</span>
+                      <span
+                        data-testid="overview-account-name"
+                        data-group={group.key}
+                        className="truncate font-medium"
+                      >
+                        {row.name}
+                      </span>
                       <span className="text-sm text-muted">{accountsText(`types.${row.type}`)}</span>
                     </span>
                     <span className="flex flex-col items-end tabular-nums">
-                      <span className="font-semibold">{figures.balance}</span>
+                      <span data-testid="overview-account-balance" className="font-semibold">
+                        {figures.balance}
+                      </span>
                       {figures.counter && <span className="text-sm text-muted">{figures.counter}</span>}
                       <span className={cn("text-sm", figures.tone)}>{figures.change}</span>
                     </span>
