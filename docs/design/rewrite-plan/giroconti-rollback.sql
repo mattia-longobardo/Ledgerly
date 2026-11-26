@@ -1,5 +1,5 @@
 -- Giroconti senza categoria e albero di Wallet · recupero (categories-and-rules.md §13; migrazioni
--- 0079_giroconti_wallet_tree, 0080_wallet_category_tree e 0081_category_labels).
+-- 0079_giroconti_wallet_tree, 0080_wallet_category_tree, 0081_category_labels e 0082_times_from_text).
 --
 -- La migrazione cambia dati: le categorie di Trasferimenti e la loro assegnazione ai giroconti si
 -- eliminano, i 15 default si rinominano e si spostano. Il recupero dei dati è solo il dump `pre-*`
@@ -24,6 +24,8 @@ ALTER TABLE categories ADD CONSTRAINT categories_type_ck CHECK (type IN ('income
 -- Le etichette importate si perdono: si reimportano dal file dopo il nuovo deploy.
 DROP TABLE category_labels;
 ALTER TABLE category_models DROP COLUMN group_threshold;
+-- E 0082_times_from_text, per la stessa ragione: è idempotente (solo righe senza ora), il nuovo
+-- deploy la riapplica dopo 0079–0081.
 DELETE FROM drizzle.__drizzle_migrations
-WHERE created_at IN (1795670000000, 1795680000000, 1795690000000);
+WHERE created_at IN (1795670000000, 1795680000000, 1795690000000, 1795700000000);
 COMMIT;
