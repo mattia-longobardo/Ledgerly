@@ -178,3 +178,19 @@ test.describe("at 400 px", () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
 });
+
+test.describe("at 375 px", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("the year running, empty, and a past year with its KPIs fit the window", async ({ page }) => {
+    const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    await page.goto("/payroll");
+    await expect(page.getByRole("navigation", { name: "Year" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^No payslips in \d{4}$/ })).toBeVisible();
+    expect(await overflow()).toBeLessThanOrEqual(1);
+    await page.getByRole("link", { name: "Go to 2031" }).click();
+    await expect(page.getByTestId("kpi-gross-theoretical")).toContainText("× 13");
+    await expect(page.getByRole("link", { name: /March 2031/ })).toBeVisible();
+    expect(await overflow()).toBeLessThanOrEqual(1);
+  });
+});
