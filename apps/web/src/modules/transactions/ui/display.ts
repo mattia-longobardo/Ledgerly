@@ -70,6 +70,34 @@ export function withMacroTitles<T extends { type: "income" | "expense" }>(
 }
 
 /**
+ * The active categories as every picker offers them, each in the screen's colour, under the title of
+ * their macro (§2.4): the category page and an account's Transactions tab.
+ */
+export function activePickerOptions<
+  T extends {
+    id: string;
+    name: string;
+    color: string | null;
+    depth: 0 | 1;
+    type: "income" | "expense";
+    archivedAt: string | null;
+  },
+>(all: readonly T[], colorOf: ReadonlyMap<string, string>, titles: Record<"income" | "expense", string>) {
+  return withMacroTitles(
+    all
+      .filter((one) => one.archivedAt === null)
+      .map((one) => ({
+        id: one.id,
+        name: one.name,
+        color: colorOf.get(one.id) ?? categoryColor(one.color, 0),
+        depth: one.depth,
+        type: one.type,
+      })),
+    titles,
+  );
+}
+
+/**
  * Where a source's categories are matched: a plugin's page is its name, a core source's is its id.
  * shortcut: mirrors the server-only `sourceSlugOf` for the only sources that give categories (a
  * plugin, a core bank source); upgrade when the API answers the source's page itself.

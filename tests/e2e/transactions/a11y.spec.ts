@@ -109,6 +109,20 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
+    // The same dialog on the leg of a deposit of Investments (PERS-651): no delete, a hint instead.
+    name: "the edit dialog of an Investments leg",
+    session: "portfolio",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses");
+      await settled(page);
+      // The row's badge, not the menu's «Investments».
+      const badge = page.getByRole("main").getByText("Investments", { exact: true });
+      await badge.locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
     // The choice of a giroconto's other account, with «Outside account» among the accounts.
     name: "the transfer's account dialog",
     session: "giroconti",

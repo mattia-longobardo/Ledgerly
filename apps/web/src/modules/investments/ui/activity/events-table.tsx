@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { formatDate, monthName } from "@ledgerly/format/format";
 import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
+import { LegLink } from "@/platform/leg-link";
 import { useEventText } from "../event-text";
 import { OperationMenu } from "../operations";
 import { centsOf } from "../present";
@@ -36,6 +37,15 @@ function Actions({ page, row }: { page: ServicePage; row: EventRow }) {
   const text = useTranslations("investments");
   return (
     <span className="flex items-center justify-end gap-1">
+      {row.legTransactionId !== null && (
+        <LegLink
+          accountId={page.id}
+          on={row.on}
+          label={text("activityTab.leg")}
+          ariaLabel={text("activityTab.legLabel", { date: formatDate(row.on, "long", page.say.locale) })}
+          testId="activity-leg"
+        />
+      )}
       {row.transfer && (
         <UnlinkTransferButton
           accountId={page.id}

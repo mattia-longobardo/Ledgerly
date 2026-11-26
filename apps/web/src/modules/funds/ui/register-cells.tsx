@@ -12,6 +12,7 @@ import {
   EditContributionButton,
 } from "./contribution-dialog";
 import type { Contributions } from "./contribution-setup";
+import { LegLink } from "@/platform/leg-link";
 import type { Say } from "@/platform/say";
 import { cents, contributionFormOfRow } from "./wire-forms";
 
@@ -43,6 +44,8 @@ interface Cells {
   other: (one: Operation) => string;
   long: (on: string) => string;
   voluntaryHeader: string;
+  /** The fund's account: where a voluntary contribution's leg is (PERS-651). */
+  accountId: string;
 }
 
 const periodOf = (one: Operation, cells: Cells) =>
@@ -85,9 +88,20 @@ const feeTone = (one: Operation) => cn(one.fee !== null && !isZero(one.fee) && "
 function Actions({ one, cells }: { one: Operation; cells: Cells }) {
   const register = useTranslations("funds.fund.contributions.register");
   const { setup } = cells;
-  if (setup === null || one.source === "import") return null;
+  const leg = one.legTransactionId !== null && (
+    <LegLink
+      accountId={cells.accountId}
+      on={one.on}
+      label={register("leg")}
+      ariaLabel={register("legLabel", { date: cells.long(one.on) })}
+      testId="register-leg"
+    />
+  );
+  if (setup === null || one.source === "import")
+    return leg ? <span className="flex justify-end gap-1">{leg}</span> : null;
   return (
     <span className="flex justify-end gap-1">
+      {leg}
       <EditContributionButton
         setup={setup}
         form={contributionFormOfRow(one, cells.say.format)}

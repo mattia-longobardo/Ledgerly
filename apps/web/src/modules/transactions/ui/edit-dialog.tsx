@@ -163,6 +163,7 @@ export function TransactionEdit(props: EditProps) {
         <SaveError error={error} />
         <TypeChoiceFields {...props} choice={choice} disabled={pending} />
         <BankFields row={row} />
+        {row.investments && <p className="text-sm text-muted">{text("edit.investmentsHint")}</p>}
         <SourceFields row={row} />
         <NoteAndLabels row={row} labels={labels} chosen={chosen} onToggle={toggle} disabled={pending} />
         <EditActions

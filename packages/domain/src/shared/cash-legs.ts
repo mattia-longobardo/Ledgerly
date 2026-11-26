@@ -15,6 +15,21 @@ export interface WantedLeg {
   pairWith: string | null;
 }
 
+/** The leg an operation wants, from the columns Investments and Funds keep alike. */
+export const wantedLegOf = (row: {
+  legTransactionId: string | null;
+  on: CivilDate;
+  amountCents: Cents;
+  note: string | null;
+  transactionId: string | null;
+}): WantedLeg => ({
+  legId: row.legTransactionId,
+  on: row.on,
+  amountCents: row.amountCents,
+  note: row.note,
+  pairWith: row.transactionId,
+});
+
 /** The other side of a giroconto, as the person chooses it. */
 type LegSide = { kind: "account"; accountId: string } | { kind: "outside" } | { kind: "none" };
 

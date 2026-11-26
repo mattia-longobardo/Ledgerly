@@ -1837,7 +1837,8 @@
       "edited": "Modificato qui",
       "transfer": "Giroconto",
       "pending": "In attesa",
-      "unpaired": "Scegli il conto"
+      "unpaired": "Scegli il conto",
+      "investments": "Investments"
     },
     "breakdown": {
       "title": "Per categoria",
@@ -2296,7 +2297,8 @@
       "category": "Categoria",
       "transferHint": "Un giroconto non ha categoria.",
       "actions": "Altre azioni",
-      "rowHint": "Fai clic o premi Invio per modificare il movimento."
+      "rowHint": "Fai clic o premi Invio per modificare il movimento.",
+      "investmentsHint": "Registrato da Investments: importo, data e conto seguono l'operazione, e il movimento se ne va solo con lei. Cambiali in Investments."
     }
   },
   "overview": {
@@ -2483,8 +2485,10 @@
         }
       },
       "transactions": {
-        "title": "I movimenti arrivano con le spese",
-        "description": "I movimenti di questo conto compariranno qui quando arriverà il modulo spese."
+        "title": "Ultimi movimenti",
+        "openInExpenses": "Apri in Spese",
+        "empty": "Nessun movimento su questo conto.",
+        "more": "Gli ultimi {shown}: gli altri sono in Spese."
       },
       "managedInInvestments": "In Investimenti"
     },
@@ -3976,7 +3980,9 @@
           "feeUnknown": "Una commissione è sconosciuta: i totali la contano come 0.",
           "empty": "Nessun contributo {when}.",
           "emptyEver": "Ancora nessun contributo.",
-          "fromSources": "I contributi delle sorgenti arrivano da soli."
+          "fromSources": "I contributi delle sorgenti arrivano da soli.",
+          "leg": "Movimento",
+          "legLabel": "Movimento in Spese, {date}"
         },
         "debit": {
           "amount": "{amount} {frequency}",
@@ -5109,7 +5115,9 @@
       "emptyFiltered": "Nessun movimento corrisponde alla ricerca.",
       "accountMovements": "Movimenti del conto",
       "accountMovementsNote": "Versamenti e prelievi sono i movimenti del conto in Conti.",
-      "openAccount": "Apri in Conti"
+      "openAccount": "Apri in Conti",
+      "leg": "Movimento",
+      "legLabel": "Movimento in Spese, {date}"
     },
     "connection": {
       "alerts": "Da controllare",
@@ -5355,7 +5363,20 @@
       "priceOn": "{mode} · {date}",
       "priceSwitch": "Prezzo automatico · {name}",
       "priceSaved": "Modo del prezzo di {name} salvato",
-      "stale": "Da aggiornare"
+      "stale": "Da aggiornare",
+      "counterpart": {
+        "from": "Dal conto",
+        "to": "Verso il conto",
+        "hint": "Ledgerly registra il movimento anche nel conto. Automatico: il solo movimento della banca corrispondente, altrimenti un conto esterno.",
+        "automatic": "Automatico",
+        "movements": "Movimenti della banca di quei giorni",
+        "accounts": "I tuoi conti",
+        "outside": "Un conto esterno a Ledgerly",
+        "noneIn": "Nessuno: un'entrata",
+        "noneOut": "Nessuno: una spesa",
+        "movementOption": "{date} · {payee} · {amount} · {account}",
+        "noPayee": "Nessun beneficiario"
+      }
     },
     "convertForm": {
       "title": "Passa a posizioni · {name}",

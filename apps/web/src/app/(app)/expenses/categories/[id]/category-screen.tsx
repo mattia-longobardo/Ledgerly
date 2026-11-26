@@ -21,7 +21,7 @@ import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { withParams } from "@ledgerly/ui/url";
-import { categoryColor, categoryColors, withMacroTitles } from "@/modules/transactions";
+import { activePickerOptions, categoryColors } from "@/modules/transactions";
 import {
   CATEGORY_CALLS,
   CategoryActions,
@@ -103,7 +103,7 @@ function CategoryView({
   const carry = { ...period, off: query.params.off, acc: query.params.acc };
   const { summary, series, view, ruleList } = useCategoryReads(category, query);
   const colorOf = categoryColors(all);
-  const options = pickerOptions(all, colorOf, {
+  const options = activePickerOptions(all, colorOf, {
     income: text("categories.macro.income"),
     expense: text("categories.macro.expense"),
   });
@@ -169,24 +169,4 @@ function useCategoryReads(category: Category, query: ExpensesQuery) {
   const ruleList = useApi(ruleRoutes.listRules, { query: { category: category.id } });
 
   return { summary, series, view, ruleList };
-}
-
-/** The active categories as every picker offers them, under the title of their macro (§2.4). */
-function pickerOptions(
-  all: readonly Category[],
-  colorOf: ReadonlyMap<string, string>,
-  titles: Record<Category["type"], string>,
-) {
-  return withMacroTitles(
-    all
-      .filter((one) => one.archivedAt === null)
-      .map((one) => ({
-        id: one.id,
-        name: one.name,
-        color: colorOf.get(one.id) ?? categoryColor(one.color, 0),
-        depth: one.depth,
-        type: one.type,
-      })),
-    titles,
-  );
 }
