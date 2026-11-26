@@ -544,31 +544,7 @@
         "failed": "Non è stato possibile salvare. Riprova."
       },
       "movedHint": "Gruppi e categorie sono in Spese › Categorie.",
-      "movedLink": "Apri Spese › Categorie",
-      "history": {
-        "title": "Impara dal tuo storico",
-        "description": "Importa l'export CSV di Wallet: le categorie automatiche imparano dalle categorie che hai dato lì. Nessun movimento viene creato.",
-        "file": "Export di Wallet (CSV)",
-        "fileHint": "Fino a 5 MB e 20.000 righe. Un nuovo import sostituisce il precedente.",
-        "import": "Importa",
-        "importing": "Importazione…",
-        "result": {
-          "imported": "{count, plural, =0 {Nessuna riga imparata} one {# riga imparata} other {# righe imparate}}",
-          "unmapped": "{count, plural, one {# riga ha} other {# righe hanno}} una categoria che non hai",
-          "duplicates": "{count, plural, one {# riga è} other {# righe sono}} già un movimento qui",
-          "transfers": "{count, plural, one {# giroconto escluso} other {# giroconti esclusi}}",
-          "unknown": "{count, plural, one {# riga} other {# righe}} senza categoria",
-          "unreadable": "{count, plural, one {# riga non leggibile} other {# righe non leggibili}}",
-          "noMovements": "Nessun movimento è stato creato."
-        },
-        "errors": {
-          "noFile": "Scegli un file.",
-          "columns": "Non è un export di Wallet: le colonne non corrispondono.",
-          "too_large": "Il file supera i 5 MB.",
-          "too_many_rows": "Il file ha più di 20.000 righe.",
-          "failed": "L'import non è riuscito. Riprova."
-        }
-      }
+      "movedLink": "Apri Spese › Categorie"
     },
     "labels": {
       "title": "Etichette",

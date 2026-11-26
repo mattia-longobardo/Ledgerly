@@ -111,8 +111,8 @@ export async function seedRules(email: string): Promise<void> {
 }
 
 /**
- * The import of another app's history and the selector's top (decision 14A): the default groups, so
- * the import has categories to match, and on an account kept by hand one movement suggested as a
+ * The selector's top and the group suggestion (decision 14A): the default groups, so
+ * the selector has categories to list, and on an account kept by hand one movement suggested as a
  * group — written as the cascade writes it, because a model sure of a group only is not something a
  * seed can train — and one with nothing. Synthetic payees only.
  */

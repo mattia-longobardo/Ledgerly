@@ -77,30 +77,6 @@ const PAGES: Screen[] = [
   // `layout` user has none.
   { name: "/settings/finance/rules", session: "rules", open: go("/settings/finance/rules") },
   { name: "/settings/finance/rules (no rule)", session: "layout", open: go("/settings/finance/rules") },
-
-  // Decision 14A: the import of another app's history. The answer is the route's, given here, so a
-  // check at every width writes nothing; history.spec.ts imports for real.
-  {
-    name: "/settings/finance (the import of a history, its result)",
-    session: "history",
-    open: async (page) => {
-      await page.route("**/api/v1/categories/labels", (route) =>
-        route.fulfill({
-          json: { imported: 3, transfers: 1, unknown: 1, unreadable: 1, unmapped: 1, duplicates: 1 },
-        }),
-      );
-      await page.goto("/settings/finance");
-      await settled(page);
-      const section = page.getByRole("region", { name: "Learn from your history" });
-      await section.getByLabel("Wallet export (CSV)").setInputFiles({
-        name: "records.csv",
-        mimeType: "text/csv",
-        buffer: Buffer.from("category;amount;type;note;date;transfer;payee\n"),
-      });
-      await section.getByRole("button", { name: "Import" }).click();
-      await section.getByTestId("history-result").waitFor();
-    },
-  },
 ];
 
 const OVERLAYS: Screen[] = [

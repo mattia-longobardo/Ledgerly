@@ -544,31 +544,7 @@
         "failed": "Couldn't save. Try again."
       },
       "movedHint": "Groups and categories are in Expenses › Categories.",
-      "movedLink": "Open Expenses › Categories",
-      "history": {
-        "title": "Learn from your history",
-        "description": "Import the CSV export of Wallet: the automatic categories learn from the categories you gave there. No transaction is created.",
-        "file": "Wallet export (CSV)",
-        "fileHint": "Up to 5 MB and 20,000 rows. A new import replaces the last one.",
-        "import": "Import",
-        "importing": "Importing…",
-        "result": {
-          "imported": "{count, plural, =0 {No row learnt} one {# row learnt} other {# rows learnt}}",
-          "unmapped": "{count, plural, one {# row has} other {# rows have}} a category you do not have",
-          "duplicates": "{count, plural, one {# row is} other {# rows are}} already a transaction here",
-          "transfers": "{count, plural, one {# transfer} other {# transfers}} left out",
-          "unknown": "{count, plural, one {# row} other {# rows}} without a category",
-          "unreadable": "{count, plural, one {# row} other {# rows}} could not be read",
-          "noMovements": "No transaction was created."
-        },
-        "errors": {
-          "noFile": "Choose a file.",
-          "columns": "This is not a Wallet export: the columns do not match.",
-          "too_large": "The file is larger than 5 MB.",
-          "too_many_rows": "The file has more than 20,000 rows.",
-          "failed": "The import failed. Try again."
-        }
-      }
+      "movedLink": "Open Expenses › Categories"
     },
     "labels": {
       "title": "Labels",

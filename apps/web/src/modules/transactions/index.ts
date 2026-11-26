@@ -1,7 +1,6 @@
 // Transactions, the light entry of `app` (rule M3): the calls of the rules and of the categories'
 // settings and of the board of the categories, and the colours of the categories. The screens that list movements use `client.ts`.
-export { createDefaultGroups, dismissMerge, importHistory } from "./category-calls";
-export type { HistoryImported } from "./category-calls";
+export { createDefaultGroups, dismissMerge } from "./category-calls";
 export {
   applyRuleAction,
   deleteRuleAction,

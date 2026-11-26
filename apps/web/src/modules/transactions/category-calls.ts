@@ -3,7 +3,7 @@
 // Server Actions they replace. The similar movements come back with their day and amount formatted.
 import { categories, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { movements, review, rules, spending } from "@ledgerly/api-contract/transactions";
-import { ApiError, call, type RouteOutput } from "@ledgerly/api-client";
+import { ApiError, call } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatDate, formatMoney, numberStyle } from "@ledgerly/format/format";
 import { invalidate, read } from "@ledgerly/ui/data";
@@ -104,25 +104,3 @@ export async function dismissMerge(firstId: string, secondId: string, dismissed:
 /** The default groups a person chose; the pass of the cascade runs after the answer, on the server. */
 export const createDefaultGroups = (keys: string[]): Promise<Plain> =>
   writing(() => call(review.createDefaultGroups, { body: { keys } }));
-
-/** What an import of another app's history answers: how many rows became labels, and why the others did not. */
-export type HistoryImported = RouteOutput<typeof review.importCategoryLabels>;
-
-/**
- * The CSV export of the app the person used before, read by the server as labels the automatic
- * categories learn from: no movement is written. A refusal is its reason (`columns`,
- * `too_many_rows`) or its code (`too_large`, `invalid`).
- */
-export async function importHistory(
-  file: File,
-): Promise<{ ok: true; result: HistoryImported } | { ok: false; error: string }> {
-  // The same limit the route has, said before the file travels.
-  if (file.size > review.LABELS_MAX_BYTES) return { ok: false, error: "too_large" };
-  try {
-    const result = await call(review.importCategoryLabels, { body: { file } });
-    invalidate(review.getReview);
-    return { ok: true, result };
-  } catch (error) {
-    return refused(error);
-  }
-}

@@ -39,7 +39,7 @@ export const USERS = {
   expenses: { email: "expenses@example.test", name: "Expenses" },
   // Giroconti in each of their states, and movements with and without a time of day.
   giroconti: { email: "giroconti@example.test", name: "Giroconti" },
-  // The import of another app's history and a choice from the selector's top: the user that writes.
+  // A choice from the selector's top: the user that writes.
   history: { email: "history@example.test", name: "History" },
   // The same movements, only read: a group suggestion, and a movement with no suggestion. A write
   // trains the model again, and its pass would take the seeded suggestion away.
