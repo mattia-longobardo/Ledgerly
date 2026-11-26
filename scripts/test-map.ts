@@ -811,6 +811,7 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "package.json",
       "packages/*/package.json",
       "package-lock.json",
+      ".npmrc",
       "Dockerfile",
       ".dockerignore",
       // The embedding model of the categories (R6): converted and copied by the Dockerfile.
