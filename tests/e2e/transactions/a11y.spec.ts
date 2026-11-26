@@ -74,12 +74,37 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await page.goto("/expenses?preset=last3Months");
       await settled(page);
+      // The row opens its edit dialog, whose actions are the ones of the old row menu.
+      await page.getByText("Edicola").locator("visible=true").first().click();
       await page
-        .locator('button[aria-label="Row actions"], button[aria-label="Azioni sulla riga"]')
-        .locator("visible=true")
-        .first()
+        .getByRole("dialog")
+        .getByRole("button", { name: /^(Delete|Elimina)$/ })
         .click();
-      await page.getByRole("menuitem", { name: /^(Delete|Elimina)$/ }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // The edit dialog of a movement (owner, 2026-11-26): the type on top, the category, the bank's
+    // fields, the note, the labels and the actions, on a spending — the income ruled out by its sign.
+    name: "the edit dialog of a spending",
+    session: "editing",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?off=1");
+      await settled(page);
+      await page.getByText("Edit cancel").locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    // The same dialog on a giroconto: the other account in place of the category.
+    name: "the edit dialog of a giroconto",
+    session: "giroconti",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?off=1");
+      await settled(page);
+      await page.getByText("Gift out").locator("visible=true").first().click();
       await settledDialog(page);
     },
   },

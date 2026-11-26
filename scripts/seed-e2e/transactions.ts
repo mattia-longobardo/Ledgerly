@@ -7,7 +7,7 @@ import { accounts } from "@domain/modules/accounts/schema";
 import { applyProviderAccounts, createAccount, saveProviderBalance } from "@domain/modules/accounts/service";
 import { markNotSent } from "@domain/modules/transactions/sending";
 import { listTransactions } from "@domain/modules/transactions/queries";
-import { chooseTransferSide, upsertFromProvider } from "@domain/modules/transactions/service";
+import { chooseTransferSide, setCategory, upsertFromProvider } from "@domain/modules/transactions/service";
 import { keepSourceCategory, listSourceCategories } from "@domain/modules/transactions/source-categories";
 import { createCategory, listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, today } from "@domain/shared/dates";
@@ -96,6 +96,45 @@ export async function seedGiroconti(): Promise<void> {
   const ids = new Map((await listTransactions(ctx, { limit: 100 })).map((row) => [row.payee ?? "", row.id]));
   await chooseTransferSide(ctx, ids.get("Gift out") ?? "", { kind: "outside" });
   await chooseTransferSide(ctx, ids.get("Wait out") ?? "", { kind: "account", accountId: three });
+}
+
+/**
+ * The edit dialog of a movement (owner, 2026-11-26): last month, on two Wallet accounts, a spending
+ * for each change of type the dialog makes, an income, and a giroconto with an account outside to
+ * turn back into a spending. Synthetic names and amounts, each amount its own, so no pairing runs.
+ */
+export async function seedEditing(): Promise<void> {
+  const ctx = await contextOf(USERS.editing.email);
+  const [one] = [
+    await syncedAccount(ctx, "e2e-e-1", "Conto Uno"),
+    await syncedAccount(ctx, "e2e-e-2", "Conto Due"),
+  ];
+  const day = (dd: string) => `${lastMonthOf(ctx)}-${dd}`;
+  await upsertFromProvider(
+    ctx,
+    one,
+    [
+      walletMovement("e-recategorise", day("03"), -1210n, "Edit grocer", null),
+      walletMovement("e-to-account", day("04"), -3020n, "Edit to account", null),
+      walletMovement("e-to-outside", day("05"), -2530n, "Edit to outside", null),
+      walletMovement("e-back", day("06"), -4040n, "Edit back", null, "e-none-1"),
+      walletMovement("e-salary", day("07"), 150050n, "Edit salary", null),
+      walletMovement("e-cancel", day("08"), -870n, "Edit cancel", null),
+      walletMovement("e-hide", day("09"), -650n, "Edit hide", null),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
+  const groceries = await createCategory(ctx, { name: "Mercato e2e", type: "expense" });
+  await createCategory(ctx, { name: "Bar e2e", type: "expense" });
+  await createCategory(ctx, { name: "Stipendio e2e", type: "income" });
+  const ids = new Map((await listTransactions(ctx, { limit: 100 })).map((row) => [row.payee ?? "", row.id]));
+  const spending = ["Edit grocer", "Edit to account", "Edit to outside", "Edit cancel"];
+  await setCategory(
+    ctx,
+    spending.map((payee) => ids.get(payee) ?? ""),
+    groceries.id,
+  );
+  await chooseTransferSide(ctx, ids.get("Edit back") ?? "", { kind: "outside" });
 }
 
 /**

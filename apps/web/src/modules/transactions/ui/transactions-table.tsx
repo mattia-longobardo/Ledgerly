@@ -1,7 +1,17 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { type MouseEvent, type ReactNode, useCallback, useMemo, useState, useTransition } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { cn } from "@ledgerly/ui/cn";
 import { DataTable } from "@ledgerly/ui/data-table";
 import { Checkbox } from "@ledgerly/ui/input";
@@ -13,13 +23,11 @@ import { useSelection } from "@ledgerly/ui/use-selection";
 import { useCategoryActions } from "./category-actions";
 import { CategoryCell } from "./category-cell";
 import { changeVisibility, type CommandResult, pairTransfer, setCategory } from "./commands";
-import { TransactionDetails } from "./details-modal";
+import { DeleteHiddenModal, TransactionEdit } from "./edit-dialog";
 import { DEFAULT_DIRECTION, type SortDirection, type SortKey } from "./filters";
-import { useManualMovement } from "./manual-movement";
 import { PayeeCell, RowCard } from "./row-parts";
 import { SelectionBar } from "./selection-bar";
 import { TransferCell, TransferDialog } from "./transfer-cell";
-import { DeleteHiddenModal, TransactionRowMenu } from "./transaction-row-menu";
 import { nextDirection, SortHeading } from "./sort-heading";
 import { useRowKeyboard } from "./use-row-keyboard";
 import { type CategoryOption, dateTimeOf, type GroupView, type LabelOption, type RowView } from "./view";
@@ -88,13 +96,14 @@ export function TransactionsTable({
   const t = useTranslations("expenses");
   const router = useRouter();
   const [editing, setEditing] = useState<string | null>(null);
-  const [detailsFor, setDetailsFor] = useState<string | null>(null);
+  /** The row whose edit dialog is open, and the element it was opened from (focus goes back there). */
+  const [editFor, setEditFor] = useState<string | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const hintId = useId();
   const [deleting, setDeleting] = useState<string | null>(null);
   /** The row whose giroconto's other account is being chosen. */
   const [transferFor, setTransferFor] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  /** The manual movement's dialogs, where the page set them up. */
-  const manual = useManualMovement();
   /** The automatic categories: "Confirm" and "Apply to N similar?", where the page set them up. */
   const automatic = useCategoryActions();
 
@@ -115,20 +124,29 @@ export function TransactionsTable({
   useRowKeyboard(ids, domId, { toggle: selection.toggle, edit: editOnKey });
 
   /**
-   * Double-click a row to open it for editing (owner, 2026-09-20). The same panel the row menu's
-   * "Edit" opens and the same one `E` opens, so the mouse gains a shortcut and nothing else moves.
-   *
-   * A double-click that lands on a control of the row — the checkbox, the category chip, the menu
-   * — belongs to that control: opening the panel on top of it would undo what the person was
-   * doing. The text selection a double-click leaves behind is cleared, because it was a gesture
-   * here and not a request to select a word.
+   * A click on a row opens its edit dialog (owner, 2026-11-26: no «⋯» menu, one «Edit» dialog), and
+   * so does Enter on a focused row. A click that lands on a control of the row — the
+   * checkbox, the category chip, a giroconto's route — belongs to that control, and a drag that
+   * selected some text was a selection, not a request to open.
    */
-  function openOnDoubleClick(event: MouseEvent<HTMLElement>, row: RowView) {
-    if ((event.target as HTMLElement).closest("button, a, input, select, [role='menu']")) return;
-    window.getSelection()?.removeAllRanges();
-    // A movement written by hand opens its own dialog: every field of it is the person's.
-    if (row.manual && manual) manual.openEdit(row);
-    else setDetailsFor(row.id);
+  function openOnClick(event: MouseEvent<HTMLElement>, row: RowView) {
+    const target = event.target as HTMLElement;
+    // A popup of the row (the category picker) is portalled out of it, but its clicks bubble here.
+    if (!event.currentTarget.contains(target)) return;
+    if (target.closest("button, a, input, select, label, [role='menu']")) return;
+    if (window.getSelection()?.toString()) return;
+    openEdit(event.currentTarget, row.id);
+  }
+
+  function openOnEnter(event: KeyboardEvent<HTMLElement>, row: RowView) {
+    if (event.key !== "Enter" || event.target !== event.currentTarget) return;
+    event.preventDefault();
+    openEdit(event.currentTarget, row.id);
+  }
+
+  function openEdit(from: HTMLElement, id: string) {
+    opener.current = from;
+    setEditFor(id);
   }
 
   /** A refusal code from the service, spelled out one branch at a time so the keys stay literal. */
@@ -156,22 +174,25 @@ export function TransactionsTable({
     });
   }
 
+  /** One movement, one category: the similar ones may follow (decision K3). */
+  function afterChoice(id: string, categoryId: string) {
+    const reason = rows.find((row) => row.id === id)?.categoryReason;
+    automatic?.afterChoice(
+      id,
+      categoryId,
+      reason?.code === "rule" && reason.params.ruleId
+        ? { id: reason.params.ruleId, name: reason.params.name ?? "" }
+        : null,
+    );
+  }
+
   function onSetCategory(ids: readonly string[], categoryId: string | null) {
     run(
       async () => {
         const result = await setCategory(ids, categoryId);
-        // One movement, one category: the similar ones may follow (decision K3). Never after a
-        // choice on several rows, where the person already said which ones.
-        if (result.ok && result.count > 0 && ids.length === 1 && categoryId !== null) {
-          const reason = rows.find((row) => row.id === ids[0])?.categoryReason;
-          automatic?.afterChoice(
-            ids[0],
-            categoryId,
-            reason?.code === "rule" && reason.params.ruleId
-              ? { id: reason.params.ruleId, name: reason.params.name ?? "" }
-              : null,
-          );
-        }
+        // Never after a choice on several rows, where the person already said which ones.
+        if (result.ok && result.count > 0 && ids.length === 1 && categoryId !== null)
+          afterChoice(ids[0], categoryId);
         return result;
       },
       (count) => t("toasts.categorySet", { count }),
@@ -224,8 +245,8 @@ export function TransactionsTable({
     );
   }
 
-  /** The row whose details panel is open, if it is still in the list after a revalidation. */
-  const opened = rows.find((row) => row.id === detailsFor);
+  /** The row whose edit dialog is open, if it is still in the list after a revalidation. */
+  const opened = rows.find((row) => row.id === editFor);
   const transferring = rows.find((row) => row.id === transferFor);
 
   /**
@@ -246,19 +267,6 @@ export function TransactionsTable({
         onConfirm={automatic ? () => onConfirm([row.id]) : undefined}
         disabled={pending}
         wide={variant === "list"}
-      />
-    );
-  }
-
-  function rowMenu(row: RowView, variant: "table" | "list") {
-    return (
-      <TransactionRowMenu
-        row={row}
-        onEditCategory={() => setEditing(`${variant}:${row.id}`)}
-        onOpenDetails={() => setDetailsFor(row.id)}
-        onTransfer={() => setTransferFor(row.id)}
-        onVisibility={() => onVisibility([row.id], row.hidden)}
-        onDeleteHidden={() => setDeleting(row.id)}
       />
     );
   }
@@ -297,6 +305,9 @@ export function TransactionsTable({
 
   return (
     <div className="flex flex-col">
+      <p id={hintId} className="sr-only">
+        {t("edit.rowHint")}
+      </p>
       <DeleteHiddenModal
         open={deleting !== null}
         pending={pending}
@@ -330,7 +341,7 @@ export function TransactionsTable({
           page's left the side cards and the table scrolling apart (2026-09-18). The headings stay
           in sight under the sticky top bar (48 px); `overflow-clip` on the card, unlike `hidden`,
           does not make it a scroll container that would catch them.
-          A fixed layout: the checkbox, the date, the amount and the menu have their widths, the
+          A fixed layout: the checkbox, the date and the amount have their widths, the
           account and the category a share, and the payee what is left — every text column
           truncates instead of pushing the table past its column. With an automatic layout the
           longest name set the width, and real names (a 40-character category, a card-terminal
@@ -374,40 +385,32 @@ export function TransactionsTable({
             className: column.className,
             cell: cellOf[column.name],
           })),
-          {
-            key: "actions",
-            align: "right",
-            width: "w-12",
-            hiddenHeader: true,
-            header: t("columns.actions"),
-            cell: (row) => rowMenu(row, "table"),
-          },
         ]}
         rowProps={(row) => ({
           id: domId(row.id),
-          tabIndex: -1,
+          tabIndex: 0,
+          "aria-describedby": hintId,
           selected: selection.has(row.id),
-          onDoubleClick: (event) => openOnDoubleClick(event, row),
+          onClick: (event) => openOnClick(event, row),
+          onKeyDown: (event) => openOnEnter(event, row),
           className: cn(
-            "focus:outline-1 focus:-outline-offset-1 focus:outline-accent",
+            "cursor-pointer focus:outline-1 focus:-outline-offset-1 focus:outline-accent",
             row.hidden && "opacity-60",
           ),
         })}
         cardProps={(row) => ({
-          onDoubleClick: (event) => openOnDoubleClick(event, row),
+          tabIndex: 0,
+          "aria-describedby": hintId,
+          onClick: (event) => openOnClick(event, row),
+          onKeyDown: (event) => openOnEnter(event, row),
           className: cn(
-            "flex items-start gap-3 border-b border-border px-4 py-2.5",
+            "flex cursor-pointer items-start gap-3 border-b border-border px-4 py-2.5 focus:outline-1 focus:-outline-offset-1 focus:outline-accent",
             selection.has(row.id) && "bg-sel",
             row.hidden && "opacity-60",
           ),
         })}
         card={(row) => (
-          <RowCard
-            row={row}
-            checkbox={rowCheckbox(row)}
-            category={categoryTrigger(row, "list")}
-            menu={rowMenu(row, "list")}
-          />
+          <RowCard row={row} checkbox={rowCheckbox(row)} category={categoryTrigger(row, "list")} />
         )}
       />
 
@@ -420,14 +423,19 @@ export function TransactionsTable({
         />
       )}
 
-      {/* One panel for the whole table, keyed by its row so it opens with that row's own values. */}
+      {/* One dialog for the whole table, keyed by its row so it opens with that row's own values. */}
       {opened !== undefined && (
-        <TransactionDetails
+        <TransactionEdit
           key={opened.id}
           row={opened}
           labels={labels}
-          open
-          onOpenChange={(open) => !open && setDetailsFor(null)}
+          categories={categories}
+          accounts={accounts}
+          finalFocus={opener}
+          onClose={() => setEditFor(null)}
+          onCategoryChosen={afterChoice}
+          onVisibility={() => onVisibility([opened.id], opened.hidden)}
+          onDeleteHidden={() => setDeleting(opened.id)}
         />
       )}
     </div>

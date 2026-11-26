@@ -10,12 +10,9 @@ import { Field } from "@ledgerly/ui/field";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { CHIP } from "./category-cell";
-import { setTransferSide, type TransferSide } from "./commands";
+import { setTransferSide } from "./commands";
+import { NONE, OUTSIDE, sideFrom, sideOf } from "./edit-plan";
 import type { RowView } from "./view";
-
-/** The choices of the select that are not an account. */
-const OUTSIDE = "outside";
-const NONE = "none";
 
 /** «From A → to B»: this account and the other one, in the direction the money goes. */
 export function useTransferRoute() {
@@ -85,19 +82,13 @@ export function TransferCell({
   );
 }
 
-function sideOf(value: string): TransferSide {
-  if (value === OUTSIDE) return { kind: "outside" };
-  if (value === NONE) return { kind: "none" };
-  return { kind: "account", accountId: value };
-}
-
 /** Saves the choice; closes the dialog once it is saved, says why when it is not. */
 function useSaveSide(id: string, onClose: () => void) {
   const text = useTranslations("expenses.transfer");
   const [saving, setSaving] = useState(false);
   function save(choice: string) {
     setSaving(true);
-    setTransferSide(id, sideOf(choice))
+    setTransferSide(id, sideFrom(choice))
       .then((result) => {
         if (!result.ok) return notify(text("failed"), "error");
         notify(choice === NONE ? text("toasts.none") : text("toasts.saved"));
@@ -127,7 +118,7 @@ export function TransferDialog({
   const text = useTranslations("expenses.transfer");
   const id = useId();
   const transfer = row.transfer ?? null;
-  const [choice, setChoice] = useState(transfer?.state === "outside" ? OUTSIDE : (transfer?.otherId ?? ""));
+  const [choice, setChoice] = useState(sideOf(row));
   const { saving, save } = useSaveSide(row.id, onClose);
 
   function submit(event: FormEvent<HTMLFormElement>) {

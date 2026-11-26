@@ -159,20 +159,20 @@ describe("the row of a movement that waits for its source", () => {
     expect(within(table).getByText("Manual")).toBeInTheDocument();
     expect(within(table).getByText("To send")).toBeInTheDocument();
 
-    await user.click(within(table).getByRole("button", { name: "Row actions" }));
-    expect(await screen.findByRole("menuitem", { name: "Edit transaction" })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: "Retry sending" })).toBeNull();
+    await user.click(within(table).getByText("Corner bar"));
+    expect(screen.getByRole("button", { name: "Edit transaction" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry sending" })).toBeNull();
   });
 
-  it("says which source did not take it, and retries from the row's menu", async () => {
+  it("says which source did not take it, and retries from the row's dialog", async () => {
     const user = userEvent.setup();
     const retrySend = vi.fn(async () => ({ ok: true as const, sent: true }));
     renderScreen(commandsWith({ retrySend }), { state: "not_sent", source: "Pursely" });
     const table = screen.getByRole("table");
     expect(within(table).getByText("Not sent to Pursely")).toBeInTheDocument();
 
-    await user.click(within(table).getByRole("button", { name: "Row actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Retry sending" }));
+    await user.click(within(table).getByText("Corner bar"));
+    await user.click(screen.getByRole("button", { name: "Retry sending" }));
     await waitFor(() => expect(retrySend).toHaveBeenCalledWith("tx-manual"));
     // The row says what happened: no toast for one movement.
     expect(notify).not.toHaveBeenCalled();
@@ -182,8 +182,8 @@ describe("the row of a movement that waits for its source", () => {
     const user = userEvent.setup();
     const retrySend = vi.fn(async () => ({ ok: false as const }));
     renderScreen(commandsWith({ retrySend }), { state: "not_sent", source: "Pursely" });
-    await user.click(within(screen.getByRole("table")).getByRole("button", { name: "Row actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Retry sending" }));
+    await user.click(within(screen.getByRole("table")).getByText("Corner bar"));
+    await user.click(screen.getByRole("button", { name: "Retry sending" }));
     await waitFor(() => expect(notify).toHaveBeenCalledWith(messages.expenses.errors.failed, "error"));
   });
 

@@ -2282,6 +2282,21 @@
         "acceptLabel": "Conferma: {route}",
         "rejectLabel": "Rifiuta: {route}"
       }
+    },
+    "edit": {
+      "title": "Modifica",
+      "type": "Tipo",
+      "types": {
+        "expense": "Spesa",
+        "income": "Entrata",
+        "transfer": "Giroconto"
+      },
+      "outOnly": "Un'uscita è una spesa o un giroconto: l'importo arriva dalla banca, quindi non può essere un'entrata.",
+      "inOnly": "Un'entrata di denaro è un'entrata o un giroconto: l'importo arriva dalla banca, quindi non può essere una spesa.",
+      "category": "Categoria",
+      "transferHint": "Un giroconto non ha categoria.",
+      "actions": "Altre azioni",
+      "rowHint": "Fai clic o premi Invio per modificare il movimento."
     }
   },
   "overview": {

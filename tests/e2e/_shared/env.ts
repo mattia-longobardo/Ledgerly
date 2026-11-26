@@ -39,6 +39,8 @@ export const USERS = {
   expenses: { email: "expenses@example.test", name: "Expenses" },
   // Giroconti in each of their states, and movements with and without a time of day.
   giroconti: { email: "giroconti@example.test", name: "Giroconti" },
+  // The edit dialog of a movement: a change of type in each direction, on movements of its own.
+  editing: { email: "editing@example.test", name: "Editing" },
   // A choice from the selector's top: the user that writes.
   history: { email: "history@example.test", name: "History" },
   // The same movements, only read: a group suggestion, and a movement with no suggestion. A write
@@ -292,6 +294,7 @@ export const SESSIONS = {
   currency: { user: "currency", file: "currency-session.json" },
   expenses: { user: "expenses", file: "expenses-session.json" },
   giroconti: { user: "giroconti", file: "giroconti-session.json" },
+  editing: { user: "editing", file: "editing-session.json" },
   history: { user: "history", file: "history-session.json" },
   suggestions: { user: "suggestions", file: "suggestions-session.json" },
   budgets: { user: "budgets", file: "budgets-session.json" },

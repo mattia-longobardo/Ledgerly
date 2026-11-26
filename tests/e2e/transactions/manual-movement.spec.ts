@@ -72,10 +72,13 @@ test("a manual movement is written, changed and deleted, and the balance follows
     expect(await balanceOf(page, "Contanti")).toContain("63,00 €");
   });
 
-  await test.step("the row's menu changes the movement in the same dialog, and the balance is corrected", async () => {
+  await test.step("the row's dialog opens the movement's own dialog, and the balance is corrected", async () => {
     await page.goto(EXPENSES);
-    await rowOf(page, "Bar Centrale").getByRole("button", { name: "Row actions" }).click();
-    await page.getByRole("menuitem", { name: "Edit transaction" }).click();
+    await rowOf(page, "Bar Centrale").getByText("Bar Centrale").click();
+    await page
+      .getByRole("dialog", { name: "Edit", exact: true })
+      .getByRole("button", { name: "Edit transaction" })
+      .click();
     await expect(page.getByRole("dialog", { name: "Edit transaction" })).toBeVisible();
     await expect(dialog(page).getByLabel("Amount")).toHaveValue("4,50");
     await dialog(page).getByLabel("Amount").fill("10");
@@ -90,8 +93,11 @@ test("a manual movement is written, changed and deleted, and the balance follows
 
   await test.step("deleting asks first, removes the row for good and gives the balance back", async () => {
     await page.goto(EXPENSES);
-    await rowOf(page, "Bar Centrale").getByRole("button", { name: "Row actions" }).click();
-    await page.getByRole("menuitem", { name: "Delete" }).click();
+    await rowOf(page, "Bar Centrale").getByText("Bar Centrale").click();
+    await page
+      .getByRole("dialog", { name: "Edit", exact: true })
+      .getByRole("button", { name: "Delete" })
+      .click();
     const confirm = page.getByRole("dialog", { name: "Delete this transaction?" });
     await expect(confirm).toContainText("You added it by hand on");
     await confirm.getByRole("button", { name: "Delete" }).click();
@@ -124,8 +130,11 @@ test("an account a bank reads warns about a double, takes the movement and shows
 
   // Put back: the next run and the other tests start from the bank's own balance.
   await page.goto(EXPENSES);
-  await rowOf(page, "Mercato").getByRole("button", { name: "Row actions" }).click();
-  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await rowOf(page, "Mercato").getByText("Mercato").click();
+  await page
+    .getByRole("dialog", { name: "Edit", exact: true })
+    .getByRole("button", { name: "Delete" })
+    .click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(rowOf(page, "Mercato")).toHaveCount(0);
   expect(await balanceOf(page, "Zeta Bank conto")).toContain("1.000,00 €");
