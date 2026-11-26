@@ -10,7 +10,7 @@
 #   - the E2E preview and `npm run perf` run on `ledgerly_1_test`, under the same lock, so that no
 #     integration run of a release resets the database under them: a release that starts its
 #     integration tests meanwhile waits, and this script waits for one that is running;
-#   - the preview is its own container (`ledgerly-full-suite`, 127.0.0.1:3995, S3 prefix
+#   - the preview is its own container (`ledgerly-full-suite`, the first free port of 127.0.0.1:3980-3989, S3 prefix
 #     `tests/full-suite/`) and its own image (`ledgerly:full-suite`): it does not touch the release's
 #     `ledgerly-preview` on 3999 or the image `ledgerly:preview` that `scripts/release.sh` reuses.
 #
@@ -31,14 +31,12 @@ case "$LEDGERLY_ENV_FILE" in /*) ;; *) LEDGERLY_ENV_FILE="$PWD/$LEDGERLY_ENV_FIL
 PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$PWD/test-results/pw}"
 export LEDGERLY_ENV_FILE PLAYWRIGHT_BROWSERS_PATH
 
-# The second preview, beside the one of a release. Not 3997 or 3998: the client stream's previews
-# use them, and a port already taken turned a night red.
+# The second preview, beside the one of a release. Its port is chosen just before it starts
+# (`free_port`): the other streams' previews took a fixed port twice and turned a night red.
 LEDGERLY_TEST_DATABASE=ledgerly_1_test
-LEDGERLY_PREVIEW_PORT=3995
 LEDGERLY_PREVIEW_NAME=ledgerly-full-suite
 LEDGERLY_PREVIEW_S3_PREFIX=tests/full-suite/
-E2E_BASE_URL="http://localhost:$LEDGERLY_PREVIEW_PORT"
-export LEDGERLY_TEST_DATABASE LEDGERLY_PREVIEW_PORT LEDGERLY_PREVIEW_NAME LEDGERLY_PREVIEW_S3_PREFIX E2E_BASE_URL
+export LEDGERLY_TEST_DATABASE LEDGERLY_PREVIEW_NAME LEDGERLY_PREVIEW_S3_PREFIX
 image=ledgerly:full-suite
 
 sha=$(git rev-parse HEAD)
@@ -77,7 +75,21 @@ browser() {
   npx playwright install chromium-headless-shell &&
     node --input-type=module -e 'import { chromium } from "@playwright/test"; await (await chromium.launch()).close()'
 }
+# free_port: the first port of 3980-3989, the suite's own range, that nothing listens on and no
+# container publishes. A port taken after the choice still fails `up`, which the summary shows.
+free_port() {
+  for p in 3980 3981 3982 3983 3984 3985 3986 3987 3988 3989; do
+    [ -z "$(ss -Hltn "sport = :$p")" ] && [ -z "$(docker ps -aq --filter "publish=$p")" ] && echo "$p" && return 0
+  done
+  return 1
+}
 preview() {
+  LEDGERLY_PREVIEW_PORT=$(free_port) || { echo "no free port in 3980-3989" >&2; return 1; }
+  E2E_BASE_URL="http://localhost:$LEDGERLY_PREVIEW_PORT"
+  export LEDGERLY_PREVIEW_PORT E2E_BASE_URL
+  echo "preview on 127.0.0.1:$LEDGERLY_PREVIEW_PORT"
+  # A preview of this suite that a killed run left behind; never another stream's.
+  docker rm -f "$LEDGERLY_PREVIEW_NAME" "$LEDGERLY_PREVIEW_NAME-worker" >/dev/null 2>&1
   # `up` puts the preview on the plugins' network too, and waits until it and its plugins answer.
   sh scripts/preview-on-test.sh up "$image" && sh scripts/preview-on-test.sh seed
 }

@@ -264,7 +264,8 @@ end of the output of a red gate, is printed and written to `test-results/full-su
   with their lock. The preview and `npm run perf` then run on `ledgerly_1_test` under the same lock:
   an integration run of a release waits for them, and the suite waits for one that is running. The
   next integration run resets the database.
-- **Beside a release.** The preview is `ledgerly-full-suite` on `127.0.0.1:3995`, image
+- **Beside a release.** The preview is `ledgerly-full-suite` on the first free port of `127.0.0.1:3980-3989`
+  (the suite's own range, chosen when the preview starts), image
   `ledgerly:full-suite`, S3 prefix `tests/full-suite/`: the release's `ledgerly-preview`, port 3999
   and image `ledgerly:preview` stay untouched. The script removes its preview, its users and its
   image at the end, also when it fails.
