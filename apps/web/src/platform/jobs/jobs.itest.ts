@@ -1,9 +1,9 @@
 import { desc, eq } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { GET as getHealth } from "@/app/api/health/route";
 import { GET as getMetrics } from "@/app/api/metrics/route";
-import { getDb } from "@domain/platform/db/client";
+import { getDb, getPool } from "@domain/platform/db/client";
 import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "@domain/platform/jobs/schema";
@@ -136,7 +136,15 @@ describe("readings at once and the pool (SEC-09)", () => {
   afterAll(closeDatabase);
 
   it("more readings than the pool has connections leave it free, and /api/health answers", async () => {
-    const READINGS = 12; // the pool has 10
+    // Each reading holds two connections of its own: with the pool's 10, the readings alone would ask
+    // the shared Postgres for 30+ slots and fail on its limit, not on the pool. A pool of 2 proves the same.
+    const pool = getPool();
+    const max = pool.options.max;
+    pool.options.max = 2;
+    onTestFinished(() => {
+      pool.options.max = max;
+    });
+    const READINGS = 4;
     const { id: userId } = await createTestUser();
     const ctx = { userId };
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
