@@ -168,7 +168,11 @@ entrypoint `web`, the target of the Cloudflare tunnel, both with the middleware 
 `ledgerly-router` takes `/api` and `/.well-known` to `ledgerly` (priority 100), and
 `ledgerly-web-router` takes the rest of the host to `ledgerly-web` (priority 10). A third router,
 `ledgerly-originals-router` (priority 200), takes `/api/v1/originals/` to `ledgerly` with the access
-log off: the signed token of an original is in its path. The rate limits and
+log off: the signed token of an original is in its path. `ledgerly-router` also has the middleware
+`ledgerly-body-limit`: a request body above 12 MiB gets a 413 from Traefik, before the app, on
+every route of `/api` (the app's own limits are 11 MiB for files and 1 MiB for JSON). The
+middleware buffers the answer too, so `/api/export.zip`, which is streamed, has its own router
+`ledgerly-export-router` (priority 200) without it. The rate limits and
 the security headers are the app's own, in both containers. There is no `websecure` router: Pi-hole
 has no local record for `dash`, so the LAN also goes through Cloudflare.
 
