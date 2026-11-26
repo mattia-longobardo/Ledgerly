@@ -48,7 +48,7 @@ export const FLOWS: Flow[] = [
   },
   {
     id: "transactions",
-    specs: ["expenses", "giroconti", "manual-movement", "manual-send", "wide"],
+    specs: ["edit-dialog", "expenses", "giroconti", "manual-movement", "manual-send", "wide"],
     screens: CROSS_CUTTING,
   },
   {

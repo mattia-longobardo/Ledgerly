@@ -2282,6 +2282,21 @@
         "acceptLabel": "Confirm: {route}",
         "rejectLabel": "Reject: {route}"
       }
+    },
+    "edit": {
+      "title": "Edit",
+      "type": "Type",
+      "types": {
+        "expense": "Expense",
+        "income": "Income",
+        "transfer": "Transfer"
+      },
+      "outOnly": "Money out is an expense or a transfer: the amount comes from the bank, so it cannot be an income.",
+      "inOnly": "Money in is an income or a transfer: the amount comes from the bank, so it cannot be an expense.",
+      "category": "Category",
+      "transferHint": "A transfer has no category.",
+      "actions": "Other actions",
+      "rowHint": "Click or press Enter to edit the transaction."
     }
   },
   "overview": {

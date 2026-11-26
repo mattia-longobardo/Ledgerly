@@ -16,6 +16,7 @@ const visibility = (ids: string[], change: "hide" | "restore" | "delete") =>
   ({ hide, restore, delete: removeHidden })[change](ids);
 const setNote = vi.fn();
 const setLabels = vi.fn();
+const setTransferSide = vi.fn();
 const notify = vi.fn();
 
 vi.mock("@ledgerly/ui/router", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
@@ -24,6 +25,7 @@ vi.mock("./commands", () => ({
   setCategory: (...args: unknown[]) => setCategory(...args),
   setNote: (...args: unknown[]) => setNote(...args),
   setLabels: (...args: unknown[]) => setLabels(...args),
+  setTransferSide: (...args: unknown[]) => setTransferSide(...args),
 }));
 
 vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
@@ -75,6 +77,11 @@ const GONE: RowView = {
 const GROUPS: GroupView[] = [
   { key: "2026-09-01", label: "September 2026", count: 2, total: "−16,99 €", rows: [NETFLIX, GONE] },
 ];
+
+/** The dialog's own actions, under the form: what the row's menu offered before. */
+function actionsOf(dialog: HTMLElement): HTMLElement {
+  return within(dialog).getByRole("region", { name: "Other actions" });
+}
 
 function renderTable(groups: GroupView[] = GROUPS) {
   render(
@@ -165,17 +172,17 @@ describe("TransactionsTable", () => {
   it("offers Delete under Restore on a hidden row only, and deletes after a confirmation", async () => {
     removeHidden.mockResolvedValue({ ok: true, count: 1 });
     const table = renderTable();
-    const visible = table.getByRole("row", { name: /Netflix/ });
-    await userEvent.click(within(visible).getByRole("button", { name: "Row actions" }));
-    expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
+    await userEvent.click(table.getByText("Netflix"));
+    expect(
+      within(actionsOf(screen.getByRole("dialog"))).queryByRole("button", { name: "Delete" }),
+    ).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
-    const hidden = table.getByRole("row", { name: /No payee/ });
-    await userEvent.click(within(hidden).getByRole("button", { name: "Row actions" }));
-    await screen.findByRole("menuitem", { name: "Delete" });
-    const items = screen.getAllByRole("menuitem").map((item) => item.textContent);
+    await userEvent.click(table.getByText("No payee"));
+    const actions = within(actionsOf(screen.getByRole("dialog")));
+    const items = actions.getAllByRole("button").map((item) => item.textContent);
     expect(items.slice(-2)).toEqual(["Restore", "Delete"]);
-    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await userEvent.click(actions.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
     expect(removeHidden).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
@@ -267,7 +274,7 @@ describe("TransactionsTable", () => {
     await userEvent.keyboard(" ");
     expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
 
-    table.getAllByRole("button", { name: "Row actions" })[0].focus();
+    table.getAllByRole("button", { name: /Sort/ })[0].focus();
     await userEvent.keyboard(" ");
     expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
 
@@ -297,10 +304,9 @@ describe("TransactionsTable", () => {
     expect(screen.getByLabelText("search")).toHaveValue("j e");
   });
 
-  it("opens the details panel from the row menu, with the provider's fields as context", async () => {
+  it("opens the edit dialog from a click on the row, with the provider's fields as context", async () => {
     const table = renderTable();
-    await userEvent.click(table.getAllByRole("button", { name: "Row actions" })[0]);
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit details" }));
+    await userEvent.click(table.getByText("Netflix"));
     const panel = screen.getByRole("dialog");
     expect(within(panel).getByLabelText("Note")).toHaveValue("family plan");
     expect(within(panel).getByLabelText("subscriptions")).toBeChecked();
@@ -311,10 +317,16 @@ describe("TransactionsTable", () => {
     expect(within(panel).queryByLabelText("Payee")).not.toBeInTheDocument();
   });
 
-  it("opens the same panel on a double click, and not from a control of the row", async () => {
+  it("opens the same dialog on Enter and on a double click, and not from a control of the row", async () => {
     const table = renderTable();
     const row = table.getAllByRole("row").find((one) => within(one).queryByText("Netflix"))!;
     await userEvent.dblClick(within(row).getByText("Netflix"));
+    expect(within(screen.getByRole("dialog")).getByLabelText("Note")).toHaveValue("family plan");
+
+    await userEvent.keyboard("{Escape}");
+    // The focus goes back to the row it was opened from.
+    expect(row).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
     expect(within(screen.getByRole("dialog")).getByLabelText("Note")).toHaveValue("family plan");
 
     await userEvent.keyboard("{Escape}");
@@ -324,9 +336,7 @@ describe("TransactionsTable", () => {
   });
 
   async function openDetails() {
-    const table = within(screen.getByRole("table"));
-    await userEvent.click(table.getAllByRole("button", { name: "Row actions" })[0]);
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit details" }));
+    await userEvent.click(within(screen.getByRole("table")).getByText("Netflix"));
     return screen.getByRole("dialog");
   }
 
@@ -381,5 +391,85 @@ describe("TransactionsTable", () => {
     );
     expect(screen.queryByText("September 2026")).not.toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("Netflix")).toBeInTheDocument();
+  });
+});
+
+describe("the edit dialog's type", () => {
+  const GIROCONTO: RowView = {
+    ...NETFLIX,
+    id: "tx-3",
+    payee: "To savings",
+    categoryId: null,
+    categoryName: null,
+    categoryColor: null,
+    macros: [],
+    accountId: "acc-1",
+    transfer: { state: "paired", otherId: "acc-2", other: "Savings", out: true },
+    labelIds: [],
+    labels: [],
+    note: null,
+  };
+  const SPENDING: RowView = { ...NETFLIX, macros: ["expense"], accountId: "acc-1" };
+  const TYPED: CategoryOption[] = [
+    { id: "cat-1", name: "Groceries", color: "#2563eb", type: "expense" },
+    { id: "cat-9", name: "Salary", color: "#047857", type: "income" },
+  ];
+
+  function renderOne(row: RowView) {
+    render(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+        <TransactionsTable
+          groups={[{ key: "all", label: null, count: 1, total: row.amount, rows: [row] }]}
+          categories={TYPED}
+          labels={LABELS}
+          params={{}}
+          sort="date"
+          direction="desc"
+          visibility={visibility}
+          accounts={[
+            { id: "acc-1", name: "Revolut Main" },
+            { id: "acc-2", name: "Savings" },
+          ]}
+        />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it("turns a giroconto into a spending with its category in one save", async () => {
+    setTransferSide.mockResolvedValue({ ok: true });
+    setCategory.mockResolvedValue({ ok: true, count: 1 });
+    renderOne(GIROCONTO);
+    await userEvent.click(within(screen.getByRole("table")).getByText("To savings"));
+    const dialog = within(screen.getByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Expense" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Edit category" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Groceries/ }));
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(setCategory).toHaveBeenCalledWith(["tx-3"], "cat-1"));
+    expect(setTransferSide).toHaveBeenCalledWith("tx-3", { kind: "none" });
+    expect(setTransferSide.mock.invocationCallOrder[0]).toBeLessThan(setCategory.mock.invocationCallOrder[0]);
+    expect(notify).toHaveBeenCalledWith("1 transaction updated");
+    expect(notify).not.toHaveBeenCalledWith("It is not a transfer any more");
+  });
+
+  it("offers no income for money out, and says why", async () => {
+    renderOne(SPENDING);
+    await userEvent.click(within(screen.getByRole("table")).getByText("Netflix"));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByRole("button", { name: "Income" })).toBeDisabled();
+    expect(dialog.getByText(/Money out is an expense or a transfer/)).toBeInTheDocument();
+  });
+
+  it("makes a spending a giroconto with an account outside Ledgerly", async () => {
+    setTransferSide.mockResolvedValue({ ok: true });
+    renderOne(SPENDING);
+    await userEvent.click(within(screen.getByRole("table")).getByText("Netflix"));
+    const dialog = within(screen.getByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Transfer" }));
+    expect(dialog.getByRole("button", { name: "Save" })).toBeDisabled();
+    await userEvent.selectOptions(dialog.getByLabelText(/Other account/), "outside");
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(setTransferSide).toHaveBeenCalledWith("tx-1", { kind: "outside" }));
+    expect(setCategory).not.toHaveBeenCalled();
   });
 });

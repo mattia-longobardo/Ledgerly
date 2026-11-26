@@ -28,6 +28,27 @@ const REASONS = [
   "rule_deleted",
 ] as const;
 
+/**
+ * The likeliest categories of a movement, for the top of its picker: asked each time the picker
+ * opens, since a correction moves the top for the next movement. `undefined` where the page did not
+ * set the automatic categories up.
+ */
+export function useLikely(open: boolean, id: string) {
+  const text = useTranslations("expenses");
+  const [likely, setLikely] = useState<readonly string[] | null>(null);
+  const likelyOf = useCategoryActions()?.commands.likely;
+  useEffect(() => {
+    if (!open || !likelyOf) return;
+    let live = true;
+    likelyOf(id).then((ids) => live && setLikely(ids));
+    return () => {
+      live = false;
+      setLikely(null);
+    };
+  }, [open, likelyOf, id]);
+  return likelyOf ? { ids: likely, title: text("row.likely") } : undefined;
+}
+
 /** What the cell of a category needs of a row. */
 type CellRow = Pick<
   RowView,
@@ -75,18 +96,7 @@ export function CategoryCell({
   const t = useTranslations("expenses");
   const [reasonOpen, setReasonOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [likely, setLikely] = useState<readonly string[] | null>(null);
-  const likelyOf = useCategoryActions()?.commands.likely;
-  // Asked each time the picker opens: a correction moves the top for the next movement.
-  useEffect(() => {
-    if (!open || !likelyOf) return;
-    let live = true;
-    likelyOf(row.id).then((ids) => live && setLikely(ids));
-    return () => {
-      live = false;
-      setLikely(null);
-    };
-  }, [open, likelyOf, row.id]);
+  const likely = useLikely(open, row.id);
   const state = onConfirm === undefined ? "chosen" : (row.categoryState ?? "chosen");
   const suggestion = state === "suggestion" ? (row.suggestion ?? null) : null;
 
@@ -201,7 +211,7 @@ export function CategoryCell({
           option.type === undefined || row.macros === undefined || row.macros.some((m) => m === option.type),
       )}
       currentId={row.categoryId}
-      likely={likelyOf ? { ids: likely, title: t("row.likely") } : undefined}
+      likely={likely}
       open={open}
       onOpenChange={onOpenChange}
       onPick={onPick}

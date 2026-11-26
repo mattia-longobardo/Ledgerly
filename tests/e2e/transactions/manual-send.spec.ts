@@ -55,13 +55,17 @@ test("the rows of the movements on their way say where they stand, and the balan
 
 test("'Retry sending' is offered on a movement the source did not take, and only there", async ({ page }) => {
   await page.goto(EXPENSES);
-  await rowOf(page, "Bar Centrale").getByRole("button", { name: "Row actions" }).click();
-  await expect(page.getByRole("menuitem", { name: "Edit transaction" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Retry sending" })).toHaveCount(0);
+  await rowOf(page, "Bar Centrale").getByText("Bar Centrale").click();
+  const edit = page.getByRole("dialog", { name: "Edit", exact: true });
+  await expect(edit.getByRole("button", { name: "Edit transaction" })).toBeVisible();
+  await expect(edit.getByRole("button", { name: "Retry sending" })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  await rowOf(page, "Edicola").getByRole("button", { name: "Row actions" }).click();
-  await page.getByRole("menuitem", { name: "Retry sending" }).click();
+  await rowOf(page, "Edicola").getByText("Edicola").click();
+  await page
+    .getByRole("dialog", { name: "Edit", exact: true })
+    .getByRole("button", { name: "Retry sending" })
+    .click();
   // No source is connected for this user: the movement stays as it is, and stays here.
   await expect(rowOf(page, "Edicola").getByText(/^Not sent to .+/)).toBeVisible();
   await expect(rowOf(page, "Edicola")).toHaveCount(1);
@@ -96,8 +100,11 @@ test("the dialog offers the account under its source, says when the movement goe
 
   await test.step("while it waits it is deleted like every manual movement, and the balance comes back", async () => {
     await page.goto(EXPENSES);
-    await rowOf(page, "Forno Antico").getByRole("button", { name: "Row actions" }).click();
-    await page.getByRole("menuitem", { name: "Delete" }).click();
+    await rowOf(page, "Forno Antico").getByText("Forno Antico").click();
+    await page
+      .getByRole("dialog", { name: "Edit", exact: true })
+      .getByRole("button", { name: "Delete" })
+      .click();
     await page
       .getByRole("dialog", { name: "Delete this transaction?" })
       .getByRole("button", { name: "Delete" })

@@ -85,12 +85,10 @@ export function RowCard({
   row,
   checkbox,
   category,
-  menu,
 }: {
   row: RowView;
   checkbox: ReactNode;
   category: ReactNode;
-  menu: ReactNode;
 }) {
   const text = useTranslations("expenses");
   const payee = row.payee ?? text("row.noPayee");
@@ -111,11 +109,7 @@ export function RowCard({
           <RowBadges row={row} />
         </span>
         <RowDetails row={row} />
-        <span className="flex items-center justify-between gap-2">
-          {category}
-          {/* A long category or a giroconto's route never squeezes the menu below its 24 px. */}
-          <span className="shrink-0">{menu}</span>
-        </span>
+        <span className="flex items-center gap-2">{category}</span>
       </span>
     </>
   );

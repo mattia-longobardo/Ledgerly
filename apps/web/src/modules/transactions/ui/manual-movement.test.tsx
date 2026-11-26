@@ -319,16 +319,23 @@ describe("the manual movement's dialog", () => {
   });
 });
 
+/** A click on the row opens its edit dialog, where the row's menu used to be. */
+async function openRow(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(within(screen.getByRole("table")).getByText("Corner bar"));
+}
+
 describe("a manual movement in the table", () => {
-  it("carries the badge and its own menu: change, hide, delete", async () => {
+  it("carries the badge and its own actions: change, hide, delete", async () => {
     const user = userEvent.setup();
     renderScreen(commandsWith());
     const table = within(screen.getByRole("table"));
 
     expect(table.getByText("Manual")).toBeInTheDocument();
-    await user.click(table.getByRole("button", { name: "Row actions" }));
-    expect((await screen.findAllByRole("menuitem")).map((item) => item.textContent)).toEqual([
-      "Edit category",
+    await openRow(user);
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByRole("button", { name: "Edit category" })).toBeInTheDocument();
+    const actions = within(dialog.getByRole("region", { name: "Other actions" }));
+    expect(actions.getAllByRole("button").map((item) => item.textContent)).toEqual([
       "Edit transaction",
       "Hide",
       "Delete",
@@ -339,8 +346,8 @@ describe("a manual movement in the table", () => {
     const user = userEvent.setup();
     const commands = commandsWith();
     renderScreen(commands);
-    await user.click(within(screen.getByRole("table")).getByRole("button", { name: "Row actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Edit transaction" }));
+    await openRow(user);
+    await user.click(screen.getByRole("button", { name: "Edit transaction" }));
 
     const dialog = within(await screen.findByRole("dialog", { name: "Edit transaction" }));
     await waitFor(() => expect(dialog.getByLabelText("Account")).toBeEnabled());
@@ -363,8 +370,8 @@ describe("a manual movement in the table", () => {
     const user = userEvent.setup();
     const commands = commandsWith();
     renderScreen(commands);
-    await user.click(within(screen.getByRole("table")).getByRole("button", { name: "Row actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await openRow(user);
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     const dialog = within(await screen.findByRole("dialog", { name: "Delete this transaction?" }));
     expect(
@@ -381,8 +388,8 @@ describe("a manual movement in the table", () => {
     const user = userEvent.setup();
     const commands = commandsWith();
     renderScreen(commands);
-    await user.click(within(screen.getByRole("table")).getByRole("button", { name: "Row actions" }));
-    await user.click(await screen.findByRole("menuitem", { name: "Hide" }));
+    await openRow(user);
+    await user.click(screen.getByRole("button", { name: "Hide" }));
 
     await waitFor(() => expect(visibility).toHaveBeenCalledWith(["tx-manual"], "hide"));
   });
