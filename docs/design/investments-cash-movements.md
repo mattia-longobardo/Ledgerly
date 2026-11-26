@@ -287,3 +287,24 @@ scrive 0 righe. Prima del deploy: prova sui conteggi (in produzione 1 deposit, 1
 | Registro del fondo (`operationRow`) | `legTransactionId`: id della gamba, nullable |
 | Movimenti (`transactionLine.origin`) | valore nuovo `investments`: la gamba. Il client mostra «Investments» e blocca importo, data, conto e cancellazione |
 | Cambio di tipo della gamba | `PUT /transactions/{id}/transfer` e `POST /transactions/transfer-pairs` (esistenti, PERS-627) |
+
+### 5.5 Valute diverse (PERS-659, rilievo R2 di PERS-658)
+
+Un servizio in USD (eToro) riceve un bonifico in EUR: con la sola regola «stesso importo, stessa valuta» la gamba
+non si abbinava mai e il bonifico restava «in attesa», contro la decisione 4.
+
+| Punto | Regola |
+|---|---|
+| Quando vale | Solo tra una gamba `origin = investments` e un movimento di altra origine, in due valute. Due movimenti della banca in valute diverse non si abbinano mai; con la stessa valuta nulla cambia (PERS-627/PERS-650) |
+| Conversione | Importo del bonifico convertito nella valuta della gamba con `fx_rates` (ultima fixing BCE al giorno del bonifico, `convertCents`). Senza tasso: nessun abbinamento |
+| Scarto massimo | **3 %** della gamba (`FX_GAP_PERCENT` in `rules/giroconti.ts`) |
+| Resto della regola | Invariato: ±3 giorni (±5 con l'IBAN), un solo candidato → coppia, più candidati alla stessa distanza → proposta, nessuno → «conto esterno» |
+| Lettura | `rowsAround` legge anche tutte le gambe di Investments e i movimenti nei ±5 giorni di ciascuna; i tassi si leggono solo se c'è una gamba e più di una valuta (`service/conversion.ts`) |
+
+Perché 3 %: il costo di cambio del broker su un versamento in un'altra valuta (eToro: circa 0,5–1,5 % secondo il
+metodo) più il movimento del cambio tra il giorno del bonifico e quello dell'accredito (di solito sotto l'1 % in
+3 giorni). Uno scarto più largo aumenta il rischio di abbinare il bonifico sbagliato; una parità resta comunque una
+proposta. In produzione (26/11/2026, sola lettura) non ci sono servizi eToro o Binance collegati né loro
+depositi/prelievi: 0 casi con valuta diversa oggi.
+
+Rollback: nessuna modifica allo schema; lo script `investments-cash-movements-rollback.sql` resta valido.

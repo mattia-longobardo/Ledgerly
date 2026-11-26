@@ -2,7 +2,7 @@
 // 6A–10A of 2026-11-25): the automatic pairing after every write that can make one, and what the
 // person decides by hand — the other account, an account outside, "not a giroconto", a pair, an
 // answer to a proposal. The rules are `rules/giroconti.ts`; this file reads and writes.
-import { and, asc, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, between, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -10,9 +10,18 @@ import { type CivilDate, civilDateIn } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
-import { normalizeIban, type OwnIban, type OwnTransferPlan, planOwnTransfers, proposalKey } from "../rules";
+import {
+  IBAN_DAYS,
+  normalizeIban,
+  type OwnIban,
+  type OwnTransferPlan,
+  planOwnTransfers,
+  proposalKey,
+} from "../rules";
+import { DAY_MS } from "../rules/vocabulary";
 import { retypeMovements } from "../macro";
 import { transactions, girocontoProposals } from "../schema";
+import { conversionFor } from "./conversion";
 import { TransactionError, parseId, requireTransaction } from "./guards";
 
 type Who = Pick<Ctx, "userId">;
@@ -79,28 +88,37 @@ function pairingRows(ctx: Who, only?: SQL) {
 }
 
 /**
- * The rows the rules can join to `seeds`: the rules pair only the same amount (both signs), and a
- * pair counts its members; so the seeds, the rows of their amounts and the members of their pairs,
- * again until no new amount or pair appears. The plan over these is the plan over all, on them.
+ * The rows the rules can join to `seeds`: the rules pair the same amount (both signs) or an
+ * Investments leg with a movement in another currency near its day, and a pair counts its members;
+ * so the seeds, the rows of their amounts, every Investments leg and the rows near one, and the
+ * members of their pairs, again until nothing new appears. The plan over these is the plan over all,
+ * on them.
  */
 async function rowsAround(ctx: Who, seeds: readonly string[]): Promise<PairingRow[]> {
   const amounts = new Set<Cents>();
   const groups = new Set<string>();
+  const legTimes = new Set<number>();
+  const window = IBAN_DAYS * DAY_MS;
   for (;;) {
     const rows = await pairingRows(
       ctx,
       or(
         inArray(transactions.id, [...seeds]),
+        eq(transactions.origin, "investments"),
         groups.size > 0 ? inArray(transactions.transferGroupId, [...groups]) : undefined,
         amounts.size > 0 ? inArray(transactions.amountCents, [...amounts]) : undefined,
+        ...[...legTimes].map((time) =>
+          between(transactions.occurredAt, new Date(time - window), new Date(time + window)),
+        ),
       ),
     );
-    const known = amounts.size + groups.size;
+    const known = amounts.size + groups.size + legTimes.size;
     for (const row of rows) {
       amounts.add(row.amountCents).add(-row.amountCents);
       if (row.transferGroupId !== null) groups.add(row.transferGroupId);
+      if (row.origin === "investments") legTimes.add(row.occurredAt.getTime());
     }
-    if (amounts.size + groups.size === known) return rows;
+    if (amounts.size + groups.size + legTimes.size === known) return rows;
   }
 }
 
@@ -202,7 +220,7 @@ async function linkOnce(ctx: Who, around: readonly string[] | undefined): Promis
   const read = new Set(rows.map((row) => row.id));
   const keyOf = (one: { outId: string; inId: string }) => proposalKey(one.outId, one.inId);
   const rejected = new Set(proposals.filter((one) => one.state === "rejected").map(keyOf));
-  const plan = planOwnTransfers(own, rows, rejected);
+  const plan = planOwnTransfers(own, rows, rejected, await conversionFor(rows));
   const wanted = new Set(plan.proposals.map(keyOf));
   const open = proposals.filter((one) => one.state === "open");
   const stale = open

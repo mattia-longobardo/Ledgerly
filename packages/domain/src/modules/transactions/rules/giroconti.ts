@@ -9,9 +9,26 @@ import { DAY_MS, type TransactionOrigin, type TransactionType } from "./vocabula
  */
 
 /** The longest gap between the two legs of a giroconto found by IBAN: a bank transfer's clearing. */
-const IBAN_DAYS = 5;
+export const IBAN_DAYS = 5;
 /** The longest gap between two legs found by amount and day (rule 3). */
 const MATCH_DAYS = 3;
+
+/**
+ * How far, in percent, an Investments leg in another currency may be from its bank movement converted
+ * on the bank movement's day (PERS-659): the broker's conversion fee and the move of the rate
+ * between the bank's day and the broker's (docs/design/investments-cash-movements.md §5.5).
+ */
+const FX_GAP_PERCENT = 3n;
+
+/**
+ * `cents` of `from` in `to` at `at` (the reader's `fx_rates`), or `null` without a rate. Without
+ * one, legs in two currencies never pair.
+ */
+export type ConvertCents = (cents: Cents, from: string, to: string, instant: Date) => Cents | null;
+
+const NO_CONVERSION: ConvertCents = () => null;
+
+const abs = (cents: Cents) => (cents < 0n ? -cents : cents);
 
 /** The words of a bank's own code that say "a transfer" (ISO 20022 and the banks' own). */
 const TRANSFER_CODE_WORDS = new Set([
@@ -94,8 +111,27 @@ class Work {
   readonly transfers = new Map<string, string | null>();
   readonly ordered: OwnTransferRow[];
 
-  constructor(readonly rows: readonly OwnTransferRow[]) {
+  constructor(
+    readonly rows: readonly OwnTransferRow[],
+    private readonly convert: ConvertCents,
+  ) {
     this.ordered = [...rows].sort(byTime);
+  }
+
+  /**
+   * The two amounts are each other's opposite: equal in one currency; in two, only between an
+   * Investments leg and a movement of another origin, the movement converted into the leg's currency
+   * on its own day and at most {@link FX_GAP_PERCENT} % from the leg.
+   */
+  opposite(one: OwnTransferRow, other: OwnTransferRow): boolean {
+    if (one.currency === other.currency) return other.amountCents === -one.amountCents;
+    if ((one.origin === "investments") === (other.origin === "investments")) return false;
+    const [leg, bank] = one.origin === "investments" ? [one, other] : [other, one];
+    if (leg.amountCents < 0n === bank.amountCents < 0n) return false;
+    const converted = this.convert(-bank.amountCents, bank.currency, leg.currency, bank.occurredAt);
+    return (
+      converted !== null && abs(converted - leg.amountCents) * 100n <= FX_GAP_PERCENT * abs(leg.amountCents)
+    );
   }
 
   groupOf(row: OwnTransferRow): string | null {
@@ -176,8 +212,7 @@ function pairByIban(work: Work, own: readonly OwnIban[]): void {
           other.accountId === target.accountId &&
           work.free(other) &&
           work.accountsFit(leg, other) &&
-          other.currency === leg.currency &&
-          other.amountCents === -leg.amountCents &&
+          work.opposite(leg, other) &&
           distance(other, leg) <= IBAN_DAYS * DAY_MS,
       )
       .sort(
@@ -194,15 +229,27 @@ function pairByIban(work: Work, own: readonly OwnIban[]): void {
 
 type Proposals = Map<string, { outId: string; inId: string }>;
 
-/** The rows of each amount, in order: only the same amount pairs, so a leg looks only there. */
-function byAmount(rows: readonly OwnTransferRow[]): (amount: Cents) => readonly OwnTransferRow[] {
-  const index = new Map<Cents, OwnTransferRow[]>();
+/**
+ * The rows that may be a row's other leg, in order: in its currency only the opposite amount pairs,
+ * so it looks only there; in another currency, only an Investments leg and a movement of another
+ * origin pair, and there are few legs.
+ */
+function partners(rows: readonly OwnTransferRow[]): (row: OwnTransferRow) => readonly OwnTransferRow[] {
+  const index = new Map<string, OwnTransferRow[]>();
+  const keyOf = (currency: string, amount: Cents) => `${currency} ${amount}`;
   for (const row of rows) {
-    const same = index.get(row.amountCents);
+    const key = keyOf(row.currency, row.amountCents);
+    const same = index.get(key);
     if (same) same.push(row);
-    else index.set(row.amountCents, [row]);
+    else index.set(key, [row]);
   }
-  return (amount) => index.get(amount) ?? [];
+  const legs = rows.filter((row) => row.origin === "investments");
+  return (row) => {
+    const same = index.get(keyOf(row.currency, -row.amountCents)) ?? [];
+    const pool = row.origin === "investments" ? rows : legs;
+    const other = pool.filter((one) => one.currency !== row.currency);
+    return other.length === 0 ? same : [...same, ...other];
+  };
 }
 
 /** 3 · Amount and day (rule 3), until a pass pairs nothing more: see {@link planOwnTransfers}. */
@@ -211,27 +258,27 @@ function pairByAmount(work: Work, rejected: ReadonlySet<string>): Proposals {
   const signal = (row: OwnTransferRow) => work.isTransfer(row) || isTransferCode(row.bankTransactionCode);
   const matches = (out: OwnTransferRow, into: OwnTransferRow) =>
     out.amountCents < 0n &&
-    into.amountCents === -out.amountCents &&
+    into.amountCents > 0n &&
     out.accountId !== into.accountId &&
-    out.currency === into.currency &&
+    work.opposite(out, into) &&
     work.free(out) &&
     work.free(into) &&
     work.accountsFit(out, into) &&
     distance(out, into) <= MATCH_DAYS * DAY_MS &&
     (signal(out) || signal(into)) &&
     !rejected.has(proposalKey(out.id, into.id));
-  const ofAmount = byAmount(work.ordered);
+  const partnersOf = partners(work.ordered);
   for (let paired = true; paired;) {
     paired = false;
     for (const out of work.ordered) {
       if (out.amountCents >= 0n || !work.free(out)) continue;
-      const candidates = ofAmount(-out.amountCents).filter((into) => matches(out, into));
+      const candidates = partnersOf(out).filter((into) => matches(out, into));
       if (candidates.length === 0) continue;
       const nearest = Math.min(...candidates.map((into) => distance(out, into)));
       const best = candidates.filter((into) => distance(out, into) === nearest);
       const rivals =
         best.length === 1
-          ? ofAmount(out.amountCents).filter(
+          ? partnersOf(best[0]).filter(
               (other) =>
                 other.id !== out.id && matches(other, best[0]) && distance(other, best[0]) <= nearest,
             )
@@ -261,22 +308,24 @@ function pairByAmount(work: Work, rejected: ReadonlySet<string>): Proposals {
  * 2. IBAN (rule 2): a movement whose text holds the IBAN of *another* of the person's accounts is a
  *    giroconto — an income or a spending too, unless somebody decided its type or a person or a
  *    source chose its category. Its twin is looked for in that account: the opposite amount, same
- *    currency, at most {@link IBAN_DAYS} days apart, preferring one that names this account back,
+ *    currency (or an Investments leg in another: see `Work.opposite`), at most {@link IBAN_DAYS} days apart, preferring one that names this account back,
  *    then the nearest. Without a twin the leg waits with that account named.
- * 3. Amount and day (rule 3): two free legs on two accounts, opposite amounts, same currency, at
+ * 3. Amount and day (rule 3): two free legs on two accounts, opposite amounts (`Work.opposite`), at
  *    most {@link MATCH_DAYS} days apart, with at least one signal (a leg already a giroconto, or a
  *    bank code of a transfer), and not rejected by the person. The nearest day wins; a pair is made
  *    only when it is the only nearest one from both sides. A tie is a proposal, never a decision.
  *
  * A pair's group id is its smaller id. One spending split into several incomes is never paired:
- * only the same amount pairs. Returns only what changes.
+ * only the same amount pairs. `convert` reads the rates for an Investments leg in another currency
+ * than its bank movement (PERS-659). Returns only what changes.
  */
 export function planOwnTransfers(
   own: readonly OwnIban[],
   rows: readonly OwnTransferRow[],
   rejected: ReadonlySet<string> = new Set(),
+  convert: ConvertCents = NO_CONVERSION,
 ): OwnTransferPlan {
-  const work = new Work(rows);
+  const work = new Work(rows, convert);
   leaveBroken(work);
   if (own.length > 0) pairByIban(work, own);
   const proposals = pairByAmount(work, rejected);

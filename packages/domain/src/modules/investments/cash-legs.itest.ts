@@ -7,6 +7,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { readingsAt } from "../accounts";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
+import { saveRates } from "../../platform/fx/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
@@ -223,6 +224,63 @@ describe("the history and a provider's events", () => {
     expect(await linkCashLegs(ctx, broker)).toBeGreaterThan(0);
     expect(await linkCashLegs(ctx, broker)).toBe(0);
     const legs = await legsOf(broker);
+    expect(legs).toHaveLength(1);
+    expect(legs[0].transferGroupId).toBe((await bankRow()).transferGroupId);
+  });
+});
+
+describe("a leg in another currency than the bank's movement (PERS-659)", () => {
+  let usdBroker: string;
+  beforeEach(async () => {
+    ({ accountId: usdBroker } = await createPortfolioWithAccount(ctx, {
+      name: "Broker USD",
+      currency: "USD",
+      url: null,
+    }));
+    // 1 EUR = 1.10 USD: 500.00 EUR are 550.00 USD.
+    await saveRates([{ on: DAY, currency: "USD", eurPerUnit: "0.9090909091" }]);
+  });
+  const depositUsd = (amountCents: bigint) =>
+    recordOperation(ctx, usdBroker, { kind: "deposit", on: DAY, amountCents });
+
+  it("pairs within 3 % of the bank's amount converted on its day", async () => {
+    await readBank(-500_00n);
+    await depositUsd(540_00n);
+    const [leg] = await legsOf(usdBroker);
+    expect(leg).toMatchObject({ currency: "USD", transferOutside: false });
+    expect(leg.transferGroupId).toBe((await bankRow()).transferGroupId);
+  });
+
+  it("comes from an account outside beyond the gap; the bank's movement waits", async () => {
+    await readBank(-500_00n);
+    await depositUsd(520_00n);
+    const [leg] = await legsOf(usdBroker);
+    expect(leg).toMatchObject({ transferOutside: true, transferGroupId: null });
+    expect((await bankRow()).transferGroupId).toBeNull();
+  });
+
+  it("is a proposal with two bank movements that fit", async () => {
+    await readBank(-500_00n, DAY, "Bonifico");
+    await readBank(-500_00n, DAY, "Bonifico bis");
+    await depositUsd(545_00n);
+    expect(await listTransferProposals(ctx)).toHaveLength(2);
+    expect((await legsOf(usdBroker))[0]).toMatchObject({ transferOutside: false, transferGroupId: null });
+  });
+
+  it("links a provider's deposit and the history once", async () => {
+    await readBank(-500_00n);
+    await getDb().transaction(async (trx) => {
+      const investment = await lockInvestmentAccount(ctx, usdBroker, trx);
+      await insertEvent(ctx, trx, investment.id, {
+        on: DAY,
+        occurredAt: new Date(`${DAY}T10:00:00Z`),
+        origin: "provider",
+        legs: [{ leg: "main", kind: "deposit", amountCents: 545_00n }],
+      });
+    });
+    expect(await linkAllCashLegs(ctx)).toBeGreaterThan(0);
+    expect(await linkAllCashLegs(ctx)).toBe(0);
+    const legs = await legsOf(usdBroker);
     expect(legs).toHaveLength(1);
     expect(legs[0].transferGroupId).toBe((await bankRow()).transferGroupId);
   });
