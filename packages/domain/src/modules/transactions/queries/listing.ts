@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ne, sql, sum } from "drizzle-orm";
+import { and, asc, count, eq, inArray, ne, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { type Account, accountNames as namesOf, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -111,6 +111,27 @@ function pageOf(
     .offset(Math.max(0, Math.trunc(filters.offset ?? 0)));
 }
 
+/** The account of each paired row's partner, for the "from → to" of a giroconto. */
+async function partnerAccounts(
+  ctx: Pick<Ctx, "userId">,
+  rows: readonly { id: string; transferGroupId: string | null }[],
+): Promise<Map<string, string>> {
+  const groups = [...new Set(rows.flatMap((row) => (row.transferGroupId ? [row.transferGroupId] : [])))];
+  if (groups.length === 0) return new Map();
+  const legs = await getDb()
+    .select({ id: transactions.id, accountId: transactions.accountId, groupId: transactions.transferGroupId })
+    .from(transactions)
+    .where(and(userScoped(ctx).owns(transactions), inArray(transactions.transferGroupId, groups)))
+    .orderBy(asc(transactions.id));
+  const found = new Map<string, string>();
+  for (const row of rows) {
+    if (row.transferGroupId === null) continue;
+    const partner = legs.find((leg) => leg.groupId === row.transferGroupId && leg.id !== row.id);
+    if (partner) found.set(row.id, partner.accountId);
+  }
+  return found;
+}
+
 /**
  * The filtered list. `limit` is bounded, so a caller cannot ask for the whole table by mistake;
  * `summary` tells the truth about the range whatever the page holds. `reading` is the person's
@@ -129,47 +150,66 @@ export async function listTransactions(
     (sortedByAccount ? reading : Promise.resolve([])).then((ordered) => pageOf(ctx, filters, ordered)),
   ]);
   const accountNames = namesOf(accounts);
-  const chips = await labelsFor(
-    ctx,
-    rows.map((row) => row.transaction.id),
-  );
+  const [chips, partners] = await Promise.all([
+    labelsFor(
+      ctx,
+      rows.map((row) => row.transaction.id),
+    ),
+    partnerAccounts(
+      ctx,
+      rows.map((row) => row.transaction),
+    ),
+  ]);
 
-  return rows.map(({ transaction, categoryName, categoryColor, on }) => {
-    const categoryState = categoryStateOf(transaction);
-    return {
-      id: transaction.id,
-      accountId: transaction.accountId,
-      accountName: accountNames.get(transaction.accountId) ?? null,
-      occurredAt: transaction.occurredAt,
-      on,
-      amountCents: transaction.amountCents,
-      currency: transaction.currency,
-      type: transaction.type,
-      state: transaction.state,
-      categoryId: transaction.categoryId,
-      categoryName,
-      categoryColor,
-      payee: transaction.payee,
-      note: transaction.note,
-      labels: chips.get(transaction.id) ?? [],
-      transferGroupId: transaction.transferGroupId,
-      hiddenAt: transaction.hiddenAt,
-      removedUpstreamAt: transaction.removedUpstreamAt,
-      locallyEdited: transaction.locallyEdited,
-      origin: transaction.origin,
-      sendState: transaction.sendState,
-      categoryState,
-      categoryIsOwn: transaction.categoryKey !== null,
-      categoryReason:
-        (categoryState === "automatic" || categoryState === "suggestion") &&
-        transaction.categoryReason !== null
-          ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
-          : null,
-      suggestedCategoryId: categoryState === "suggestion" ? transaction.suggestedCategoryId : null,
-      hidden: isHidden(transaction),
-      edited: transaction.locallyEdited.length > 0,
-    };
-  });
+  return rows.map((row) => rowOf(row, { accountNames, chips, partners }));
+}
+
+/** One page row as the table reads it: the account's name, the chips and a giroconto's other account. */
+function rowOf(
+  { transaction, categoryName, categoryColor, on }: Awaited<ReturnType<typeof pageOf>>[number],
+  read: {
+    accountNames: ReturnType<typeof namesOf>;
+    chips: Awaited<ReturnType<typeof labelsFor>>;
+    partners: Map<string, string>;
+  },
+): TransactionRow {
+  const { accountNames, chips, partners } = read;
+  const categoryState = categoryStateOf(transaction);
+  return {
+    id: transaction.id,
+    accountId: transaction.accountId,
+    accountName: accountNames.get(transaction.accountId) ?? null,
+    occurredAt: transaction.occurredAt,
+    on,
+    timeKnown: transaction.timeKnown,
+    amountCents: transaction.amountCents,
+    currency: transaction.currency,
+    type: transaction.type,
+    state: transaction.state,
+    categoryId: transaction.categoryId,
+    categoryName,
+    categoryColor,
+    payee: transaction.payee,
+    note: transaction.note,
+    labels: chips.get(transaction.id) ?? [],
+    transferGroupId: transaction.transferGroupId,
+    transferOutside: transaction.transferOutside,
+    transferAccountId: partners.get(transaction.id) ?? transaction.transferAccountId,
+    hiddenAt: transaction.hiddenAt,
+    removedUpstreamAt: transaction.removedUpstreamAt,
+    locallyEdited: transaction.locallyEdited,
+    origin: transaction.origin,
+    sendState: transaction.sendState,
+    categoryState,
+    categoryIsOwn: transaction.categoryKey !== null,
+    categoryReason:
+      (categoryState === "automatic" || categoryState === "suggestion") && transaction.categoryReason !== null
+        ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
+        : null,
+    suggestedCategoryId: categoryState === "suggestion" ? transaction.suggestedCategoryId : null,
+    hidden: isHidden(transaction),
+    edited: transaction.locallyEdited.length > 0,
+  };
 }
 
 /**
@@ -193,7 +233,8 @@ export async function transactionsSummary(
         ),
         netCents: sum(transactions.amountCents),
         transfers: sql<string>`count(*) filter (where ${transactions.type} = 'transfer')`,
-        unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null)`,
+        // The giroconti that wait for the person: no partner, no account named, not outside.
+        unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null and not ${transactions.transferOutside} and ${transactions.transferAccountId} is null)`,
         ...splitColumns(ctx, split),
       })
       .from(transactions)

@@ -31,6 +31,8 @@ export interface IncomingMovement {
   externalId: string;
   counterpartExternalId: string | null;
   occurredAt: Date;
+  /** `occurredAt` carries the source's time of day, not a stand-in for a day without one. */
+  timeKnown: boolean;
   amountCents: Cents;
   currency: string;
   type: Kind;

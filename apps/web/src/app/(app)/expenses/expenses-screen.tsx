@@ -91,6 +91,7 @@ function Expenses({
     query,
     filters,
     locale: prefs.locale,
+    timeZone: prefs.timeZone,
     numberFormat: numberStyle(prefs),
     colorOf,
     categories,
@@ -99,7 +100,6 @@ function Expenses({
     pickerOptions: withMacroTitles(options, {
       income: text("categories.macro.income"),
       expense: text("categories.macro.expense"),
-      transfer: text("categories.macro.transfer"),
     }),
     labels,
   };

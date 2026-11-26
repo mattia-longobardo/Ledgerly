@@ -247,6 +247,23 @@ describe("the measures of a first reading", () => {
     });
   });
 
+  it("counts the movements with the operation's day, earlier than the booking, and with a time", () => {
+    const timed = {
+      accounts: [],
+      transactions: [
+        { ...transaction, transactionDate: "2026-01-08", instant: "2026-01-08T13:32:00.000Z" },
+        { ...transaction, externalId: "ref-3", transactionDate: transaction.bookingDate },
+      ],
+      cursor: null,
+      coverage: { from: null, to: null },
+    };
+    expect(measureReading([], [timed], "2026-01-20")).toMatchObject({
+      withTransactionDate: 2,
+      withEarlierTransactionDate: 1,
+      withInstant: 1,
+    });
+  });
+
   it("carries numbers only: no name, no account number, no amount, no text", () => {
     const text = JSON.stringify(measureReading(accounts, batches, "2026-01-20"));
     for (const secret of ["Conto", "IT60", "12.30", "PAGAMENTO", "Negozio", "ref-1", "u-1"]) {

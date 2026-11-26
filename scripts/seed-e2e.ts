@@ -36,7 +36,7 @@ import { totpCode } from "../tests/e2e/_shared/totp";
 import { cookieHeader, createTestUsers, drawPassword } from "./seed-e2e/users";
 import { seedCurrency, seedSwitching } from "./seed-e2e/accounts";
 import { seedBudgets } from "./seed-e2e/budgets";
-import { seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
+import { seedHistory, seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
 import { seedPreviewPlugins, seedPreviewRates } from "./seed-e2e/common";
 import { seedConnections, seedSchedule } from "./seed-e2e/connections";
 import {
@@ -65,7 +65,7 @@ import {
 import { seedPockets } from "./seed-e2e/pockets";
 import { seedSubscriptions } from "./seed-e2e/subscriptions";
 import { seedTimeOff } from "./seed-e2e/timeoff";
-import { seedExpenses, seedManual, seedSources } from "./seed-e2e/transactions";
+import { seedExpenses, seedGiroconti, seedManual, seedSources } from "./seed-e2e/transactions";
 import { wireDomain } from "../apps/api/src/wiring";
 
 // The ports of the domain, as every process wires them (10-modularity.md §10.3).
@@ -173,6 +173,9 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [[], seedPreviewRates],
   [[], seedPreviewPlugins],
   [["expenses"], seedExpenses],
+  [["giroconti"], seedGiroconti],
+  [["history"], () => seedHistory()],
+  [["suggestions"], () => seedHistory(USERS.suggestions.email)],
   [["budgets"], seedBudgets],
   [["pockets"], seedPockets],
   [["subscriptions"], seedSubscriptions],

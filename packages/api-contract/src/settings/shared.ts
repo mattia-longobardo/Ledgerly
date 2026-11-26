@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { id } from "../primitives";
 
-const CATEGORY_TYPES = ["income", "expense", "transfer"] as const;
+const CATEGORY_TYPES = ["income", "expense"] as const;
 export const categoryType = z.enum(CATEGORY_TYPES);
 export const CATEGORY_ID = "3c2b1a09-8f7e-4d6c-9b5a-4e3d2c1b0a9f";
 /** A refusal of the taxonomy: `duplicate`, `invalid`, `invalid_parent` (`reason` of `invalid`/`conflict`). */

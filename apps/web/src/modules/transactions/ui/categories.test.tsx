@@ -38,6 +38,7 @@ function commandsWith(overrides: Partial<CategoryCommands> = {}): CategoryComman
     choose: vi.fn(async (ids: string[]) => ({ ok: true as const, count: ids.length, undoId: "undo-2" })),
     undo: vi.fn(async () => ({ ok: true as const, count: 1 })),
     similar: vi.fn(async () => ({ text: "", rows: [] })),
+    likely: vi.fn(async () => []),
     ...overrides,
   };
 }
@@ -399,8 +400,8 @@ describe("the groups of To review", () => {
 
 describe("the default groups", () => {
   const groups = [
-    { key: "home", name: "Home", examples: "Rent, bills", color: "#111111" },
-    { key: "groceries", name: "Groceries", examples: "Supermarket", color: "#222222" },
+    { key: "home", name: "Home", children: ["Rent, bills"], color: "#111111" },
+    { key: "groceries", name: "Groceries", children: ["Supermarket", "Market"], color: "#222222" },
   ];
 
   it("creates the groups ticked, and the button says how many", async () => {
@@ -415,6 +416,13 @@ describe("the default groups", () => {
 
     await waitFor(() => expect(onCreate).toHaveBeenCalledWith(["groceries"]));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(1));
+  });
+
+  it("shows the sub-categories of each group under it", () => {
+    render(wrap(<DefaultGroupsForm groups={groups} onCreate={vi.fn()} onCreated={vi.fn()} />));
+    expect(screen.getByRole("checkbox", { name: /Groceries/ })).toHaveAccessibleDescription(
+      "Supermarket · Market",
+    );
   });
 
   it("creates nothing with nothing ticked, and says when it could not create", async () => {

@@ -18,6 +18,8 @@ export interface CategoryCommands {
   choose(ids: string[], categoryId: string | null): Promise<CategoryChangeResult>;
   undo(undoId: string): Promise<{ ok: true; count: number } | { ok: false; error: string }>;
   similar(id: string, categoryId: string): Promise<{ text: string; rows: SimilarRowView[] }>;
+  /** The three likeliest categories of a movement, the likeliest first: the top of its picker. */
+  likely(id: string): Promise<readonly string[]>;
 }
 
 interface CategoryActionsApi {

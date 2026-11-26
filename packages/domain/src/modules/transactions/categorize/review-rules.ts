@@ -3,6 +3,7 @@
  * with no category are grouped, and which categories look like the same one. Pure.
  */
 import type { CivilDate } from "../../../shared/dates";
+import { DEFAULT_CATEGORIES } from "./tables";
 import { normalise } from "./text";
 
 /** A movement that waits for a category, as the review shows it. */
@@ -124,17 +125,36 @@ const FILLER = new Set([
   "other",
 ]);
 
+/** The names of the default tree, in both languages: the tree is one design, never a duplicate of itself. */
+const DEFAULT_NAMES = new Set(DEFAULT_CATEGORIES.flatMap((one) => [normalise(one.en), normalise(one.it)]));
+
 function words(name: string): string[] {
   return normalise(name)
     .split(" ")
     .filter((word) => word.length > 1 && !FILLER.has(word));
 }
 
+/** A pair that is two things whatever its names: two kinds, a group and its own sub-category, two of the default tree, or said so by the person. */
+function neverMerged(
+  one: { category: MergeCategory; isDefault: boolean },
+  other: { category: MergeCategory; isDefault: boolean },
+  dismissed: ReadonlySet<string>,
+): boolean {
+  return (
+    one.category.type !== other.category.type ||
+    one.category.parentId === other.category.id ||
+    other.category.parentId === one.category.id ||
+    (one.isDefault && other.isDefault) ||
+    dismissed.has(pairKey(one.category.id, other.category.id))
+  );
+}
+
 /**
  * The pairs of categories that look like the same one (decision S2b): two categories of one kind
  * whose names are the same words, or where every word of one is among the words of the other —
  * "Tobacco" and "Alcohol, tobacco". Never a group with its own sub-category, never a category a
- * source gives, never a pair the person already said is two things.
+ * source gives, never two categories of the default tree ("Postal services" and "Services"), never a
+ * pair the person already said is two things.
  */
 export function mergeProposals(
   categories: readonly MergeCategory[],
@@ -143,14 +163,16 @@ export function mergeProposals(
   const pairs: [MergeCategory, MergeCategory][] = [];
   const named = categories
     .filter((category) => !category.fromSource)
-    .map((category) => ({ category, words: words(category.name) }));
+    .map((category) => ({
+      category,
+      words: words(category.name),
+      isDefault: DEFAULT_NAMES.has(normalise(category.name)),
+    }));
   for (let i = 0; i < named.length; i += 1) {
     for (let j = i + 1; j < named.length; j += 1) {
       const a = named[i];
       const b = named[j];
-      if (a.category.type !== b.category.type) continue;
-      if (a.category.parentId === b.category.id || b.category.parentId === a.category.id) continue;
-      if (dismissed.has(pairKey(a.category.id, b.category.id))) continue;
+      if (neverMerged(a, b, dismissed)) continue;
       const [few, many] = a.words.length <= b.words.length ? [a.words, b.words] : [b.words, a.words];
       // A name of one short word inside a longer name is too little to go by.
       if (few.length === 0 || (few.length < many.length && few.every((word) => word.length < 4))) continue;

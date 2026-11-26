@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
+  boolean,
   check,
   date,
   index,
@@ -25,6 +26,7 @@ import {
   TRANSACTION_ORIGINS,
   TRANSACTION_STATES,
   TRANSACTION_TYPES,
+  TRANSFER_PROPOSAL_STATES,
 } from "../rules";
 import { categories, categoryRules, labels, sourceCategories } from "./categories";
 import { inList } from "../../../platform/db/checks";
@@ -48,6 +50,9 @@ export const transactions = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     occurredAt: moment("occurred_at").notNull(),
+    // `occurred_at` carries a real time of day. False: it stands in for a day (noon or midnight),
+    // and the interface shows the day alone.
+    timeKnown: boolean("time_known").notNull().default(false),
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull().default("EUR"),
     type: text("type", { enum: TRANSACTION_TYPES }).notNull(),
@@ -83,6 +88,11 @@ export const transactions = pgTable(
     transferGroupId: uuid("transfer_group_id").references((): AnyPgColumn => transactions.id, {
       onDelete: "set null",
     }),
+    // A giroconto with one leg here (giroconti of 2026-11-25): the other account is outside
+    // Ledgerly ("conto esterno"), or one of the person's accounts whose leg has not arrived yet.
+    // Neither: the leg waits for the person ("Scegli il conto").
+    transferOutside: boolean("transfer_outside").notNull().default(false),
+    transferAccountId: uuid("transfer_account_id").references(() => accounts.id, { onDelete: "set null" }),
     // Who wrote the row (rewrite plan N3). The default keeps every row an image without this
     // column writes what it is: a provider's.
     origin: text("origin", { enum: TRANSACTION_ORIGINS }).notNull().default("provider"),
@@ -148,6 +158,47 @@ export const transactions = pgTable(
     check("transactions_currency_ck", sql`${table.currency} ~ '^[A-Z]{3}$'`),
     check("transactions_sign_ck", sql`${table.type} <> 'expense' or ${table.amountCents} <= 0`),
     check("transactions_income_sign_ck", sql`${table.type} <> 'income' or ${table.amountCents} >= 0`),
+    // A giroconto has no category: it has a "from" and a "to" account (2026-11-25, replaces QC7).
+    check(
+      "transactions_transfer_category_ck",
+      sql`${table.type} <> 'transfer' or ${table.categoryId} is null`,
+    ),
+    check(
+      "transactions_transfer_outside_ck",
+      sql`not ${table.transferOutside} or (${table.type} = 'transfer' and ${table.transferGroupId} is null and ${table.transferAccountId} is null)`,
+    ),
+  ],
+);
+
+/**
+ * Two movements that may be the two legs of one giroconto, found by amount and day but not sure
+ * enough to be paired (giroconti of 2026-11-25, rule 3): the person confirms or rejects. A rejected
+ * pair is kept, so the same proposal never comes back.
+ */
+export const girocontoProposals = pgTable(
+  "giroconto_proposals",
+  {
+    id: idColumn(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    outId: uuid("out_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    inId: uuid("in_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    state: text("state", { enum: TRANSFER_PROPOSAL_STATES }).notNull().default("open"),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    unique("giroconto_proposals_pair_uq").on(table.outId, table.inId),
+    index("giroconto_proposals_user_idx").on(table.userId, table.state),
+    index("giroconto_proposals_in_idx").on(table.inId),
+    check(
+      "giroconto_proposals_state_ck",
+      sql`${table.state} in (${sql.raw(inList(TRANSFER_PROPOSAL_STATES))})`,
+    ),
   ],
 );
 

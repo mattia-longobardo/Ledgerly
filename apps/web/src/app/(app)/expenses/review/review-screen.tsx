@@ -10,7 +10,6 @@ import { Check } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
-import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions/client";
 import {
   categories as categoryRoutes,
   labels as labelRoutes,
@@ -45,16 +44,7 @@ type Category = RouteOutput<typeof categoryRoutes.listCategories>["categories"][
 type Label = RouteOutput<typeof labelRoutes.listLabels>["labels"][number];
 type Account = RouteOutput<typeof accountRoutes.listAccounts>["accounts"][number];
 
-/** A default group as the first step of the guided review offers it, in the person's language. */
-interface DefaultGroup {
-  key: string;
-  en: string;
-  it: string;
-  examples: { en: string; it: string };
-}
-
 export function ReviewScreen() {
-  const defaultGroups = DEFAULT_GROUPS;
   const text = useTranslations("expenses");
   const prefs = useApi(profile.getPreferences, {});
   const categoryList = useApi(categoryRoutes.listCategories, { query: {} });
@@ -76,7 +66,6 @@ export function ReviewScreen() {
                         categories={categoryData.categories}
                         labels={labelData.labels}
                         accounts={accountData.accounts}
-                        defaultGroups={defaultGroups}
                       />
                     )}
                   </Loaded>
@@ -95,13 +84,11 @@ function Review({
   categories,
   labels,
   accounts,
-  defaultGroups,
 }: {
   prefs: Preferences;
   categories: readonly Category[];
   labels: readonly Label[];
   accounts: readonly Account[];
-  defaultGroups: readonly DefaultGroup[];
 }) {
   const todayOn = today(prefs.timeZone);
   const query = parseReviewQuery(Object.fromEntries(useSearchParams().entries()), todayOn);
@@ -125,7 +112,6 @@ function Review({
           categories={categories}
           labels={labels}
           accounts={accounts}
-          defaultGroups={defaultGroups}
         />
       )}
     </Loaded>
@@ -140,7 +126,6 @@ interface ViewProps {
   categories: readonly Category[];
   labels: readonly Label[];
   accounts: readonly Account[];
-  defaultGroups: readonly DefaultGroup[];
 }
 
 function ReviewView(props: ViewProps) {
@@ -161,15 +146,7 @@ function ReviewView(props: ViewProps) {
       <>
         {heading}
         {indicator}
-        <GroupsStep
-          groups={props.defaultGroups.map((group, index) => ({
-            key: group.key,
-            name: group[data.locale],
-            examples: group.examples[data.locale],
-            color: categoryColor(null, index),
-          }))}
-          next={data.link({ step: "categories" })}
-        />
+        <GroupsStep locale={data.locale} next={data.link({ step: "categories" })} />
       </>
     );
   if (step === "done")
@@ -210,7 +187,6 @@ function useReviewData({
     {
       income: text("categories.macro.income"),
       expense: text("categories.macro.expense"),
-      transfer: text("categories.macro.transfer"),
     },
   );
   return {
@@ -218,6 +194,7 @@ function useReviewData({
     query,
     todayOn,
     locale: prefs.locale,
+    timeZone: prefs.timeZone,
     numberFormat: numberStyle(prefs),
     labels,
     selected,

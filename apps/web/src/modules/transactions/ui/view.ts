@@ -8,7 +8,13 @@ import type { RowBadge } from "@ledgerly/domain/transactions/client";
 import type { RouteOutput } from "@ledgerly/api-client";
 import type { movements } from "@ledgerly/api-contract/transactions";
 import { parseCents } from "@ledgerly/format/cents";
-import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/format/format";
+import {
+  formatAmountInput,
+  formatClock,
+  formatDate,
+  formatMoney,
+  NULL_DISPLAY,
+} from "@ledgerly/format/format";
 import type { NumberFormat, UiLocale } from "@ledgerly/format/format";
 import type { Tone } from "@ledgerly/ui/tone";
 import type { CategoryOption } from "@ledgerly/ui/category-picker";
@@ -26,9 +32,13 @@ export interface RowView {
   id: string;
   /** The day, formatted; the table shows it and never computes on it. */
   date: string;
+  /** The time of day in the person's zone ("14:32"); `null` when the source gave none (never a noon of convenience). */
+  time?: string | null;
   /** `null` for a movement the provider gave no payee for (spec §4.3: unknown is `null`). */
   payee: string | null;
   account: string;
+  /** The account's id: the choice of a giroconto's other account leaves it out. */
+  accountId?: string;
   categoryId: string | null;
   categoryName: string | null;
   categoryColor: string | null;
@@ -46,8 +56,8 @@ export interface RowView {
   amountTone: Tone;
   /** The macros its category may be chosen in (§3.2, QC2): the picker offers only those. */
   macros?: readonly CategoryType[];
-  /** A leg of a pair: the picker says it is a transfer between the person's accounts. */
-  paired?: boolean;
+  /** A giroconto: it has the other account instead of a category. `null` on an income or a spending. */
+  transfer?: TransferView | null;
   badges: readonly RowBadge[];
   /** Whether the row is out of the totals, which decides between "Hide" and "Restore" (§7.2). */
   hidden: boolean;
@@ -73,11 +83,30 @@ export interface RowView {
   send?: { state: "to_send" | "not_sent"; source: string } | null;
 }
 
+/**
+ * The other side of a giroconto, as the server answers it (decisions 6A–10A of 2026-11-25): paired with
+ * the other leg, with an account outside Ledgerly, waiting for the other leg on the account chosen, or
+ * waiting for the person to choose the account (badge `unpaired`).
+ */
+interface TransferView {
+  state: "paired" | "outside" | "waiting" | "choose";
+  /** The other account's id and name: `null` when it is outside or not chosen yet. */
+  otherId: string | null;
+  other: string | null;
+  /** Money out of this account: it goes from this account to the other, else it comes from it. */
+  out: boolean;
+}
+
 /** What the panel prefills for a movement of a source. */
 interface SourceFieldsView {
   type: TransactionType;
   /** The size of the amount, in the user's number format, ready to be typed over. */
   amount: string;
+}
+
+/** The day and, when the source gave it, the time: «12 nov 2026 · 14:32». */
+export function dateTimeOf(row: Pick<RowView, "date" | "time">): string {
+  return row.time ? `${row.date} · ${row.time}` : row.date;
 }
 
 /**
@@ -128,29 +157,37 @@ export function lineViewOf(
   line: TransactionLine,
   {
     locale,
+    timeZone,
     numberFormat,
     colorOf,
     categories,
+    accounts = [],
   }: {
     locale: UiLocale;
+    /** The person's zone: the time of day is read there. */
+    timeZone: string;
     numberFormat: NumberFormat;
     /** One colour per category, decided once for the screen (`categoryColors`). */
     colorOf: ReadonlyMap<string, string>;
     /** The person's categories as the screen offers them: where a suggestion's name is read. */
     categories: readonly { id: string; name: string; color: string }[];
+    /** The person's accounts, for the other side of a giroconto; left out where none is drawn. */
+    accounts?: readonly { id: string; name: string }[];
   },
 ): RowView {
   const cents = parseCents(line.amount);
   return {
     id: line.id,
     date: formatDate(line.on, "long", locale),
+    time: line.timeKnown ? formatClock(new Date(line.occurredAt), { locale, timeZone }) : null,
     payee: line.payee?.trim() || null,
     account: line.accountName ?? NULL_DISPLAY,
+    accountId: line.accountId,
     ...categoryOf(line, colorOf, categories),
     amount: formatMoney(cents, numberFormat),
     amountTone: amountToneOf({ type: line.type, amountCents: cents }),
     macros: line.macros,
-    paired: line.transferGroupId !== null,
+    transfer: transferOf(line, cents < 0n, accounts),
     badges: line.badges,
     hidden: line.hidden,
     note: line.note,
@@ -175,6 +212,27 @@ function categoryOf(
     categoryReason: line.categoryReason,
     suggestion: suggested ? { id: suggested.id, name: suggested.name, color: suggested.color } : null,
   };
+}
+
+/** The giroconto's state, read from its fields as the API documents them; `null` for any other type. */
+function transferOf(
+  line: TransactionLine,
+  out: boolean,
+  accounts: readonly { id: string; name: string }[],
+): TransferView | null {
+  if (line.type !== "transfer") return null;
+  const otherId = line.transferOutside ? null : line.transferAccountId;
+  const state =
+    line.transferGroupId !== null
+      ? "paired"
+      : line.transferOutside
+        ? "outside"
+        : otherId !== null
+          ? "waiting"
+          : "choose";
+  const other =
+    otherId === null ? null : (accounts.find((account) => account.id === otherId)?.name ?? NULL_DISPLAY);
+  return { state, otherId, other, out };
 }
 
 /** What the panel may change, and where: at the source, in the manual dialog; and the sending. */

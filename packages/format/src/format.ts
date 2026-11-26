@@ -327,11 +327,15 @@ export function plainDecimalOf(input: string, format: NumberFormat): string {
  */
 export function formatInstant(instant: Date, where: { locale: UiLocale; timeZone: string }): string {
   const day = formatDate(civilDateIn(instant, where.timeZone), "long", where.locale);
-  const clock = new Intl.DateTimeFormat(where.locale, {
+  return `${day}, ${formatClock(instant, where)}`;
+}
+
+/** The time of day of an instant in the person's zone, in 24 hours ("14:32"). */
+export function formatClock(instant: Date, where: { locale: UiLocale; timeZone: string }): string {
+  return new Intl.DateTimeFormat(where.locale, {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
     timeZone: where.timeZone,
   }).format(instant);
-  return `${day}, ${clock}`;
 }

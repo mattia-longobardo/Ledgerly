@@ -547,6 +547,34 @@
       "when": 1795650000000,
       "tag": "0077_r5f_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795660000000,
+      "tag": "0078_movement_time_known",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795670000000,
+      "tag": "0079_giroconti_wallet_tree",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795680000000,
+      "tag": "0080_wallet_category_tree",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795690000000,
+      "tag": "0081_category_labels",
+      "breakpoints": true
     }
   ]
 }

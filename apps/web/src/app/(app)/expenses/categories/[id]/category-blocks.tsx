@@ -107,13 +107,7 @@ export function CategoryHeading({ page, source }: { page: CategoryPage; source: 
 export function Tiles({ summary, page }: { summary: Summary; page: CategoryPage }) {
   const text = useTranslations("expenses");
   const type = page.category.type;
-  const kpiLabel = text(
-    type === "income"
-      ? "categories.detail.received"
-      : type === "transfer"
-        ? "categories.detail.moved"
-        : "categories.detail.spent",
-  );
+  const kpiLabel = text(type === "income" ? "categories.detail.received" : "categories.detail.spent");
   const delta =
     summary.change === null
       ? undefined
@@ -234,6 +228,7 @@ export function Movements({ view, page }: { view: ApiState<View>; page: Category
                     rows: data.rows.map((line) =>
                       lineViewOf(line, {
                         locale: page.prefs.locale,
+                        timeZone: page.prefs.timeZone,
                         numberFormat: page.numberFormat,
                         colorOf: page.colorOf,
                         categories: page.options,

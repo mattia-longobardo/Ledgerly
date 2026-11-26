@@ -17,6 +17,7 @@ export function SelectionBar({
   onSetCategory,
   onConfirm,
   onVisibility,
+  onPair,
   onClear,
 }: {
   chosen: readonly RowView[];
@@ -28,13 +29,14 @@ export function SelectionBar({
   /** Where the page set up the automatic categories. */
   onConfirm?: (ids: readonly string[]) => void;
   onVisibility: (ids: readonly string[], hidden: boolean) => void;
+  /** Two movements paired by hand as one giroconto; the server says whether they can be. */
+  onPair?: (ids: readonly [string, string]) => void;
   onClear: () => void;
 }) {
   const text = useTranslations("expenses");
   const ids = chosen.map((row) => row.id);
-  /** The selected rows that carry a suggestion: what "Confirm suggestions" confirms. */
+  // The rows with a suggestion are what "Confirm suggestions" confirms; all hidden, only "Restore" is left.
   const suggested = chosen.filter((row) => row.categoryState === "suggestion");
-  /** Every selected row is already hidden: the only thing left to offer is putting them back. */
   const chosenHidden = chosen.every((row) => row.hidden);
 
   return (
@@ -52,6 +54,9 @@ export function SelectionBar({
           {text("auto.selection.confirm", { count: suggested.length })}
         </Button>
       )}
+      {onPair && chosen.length === 2 && (
+        <PairButton ids={[ids[0], ids[1]]} onPair={onPair} disabled={pending} />
+      )}
       <Button
         size="xs"
         variant={chosenHidden ? "secondary" : "danger"}
@@ -65,6 +70,24 @@ export function SelectionBar({
         {text("selection.clear")}
       </Button>
     </div>
+  );
+}
+
+/** Two selected movements paired by hand as one giroconto. */
+function PairButton({
+  ids,
+  onPair,
+  disabled,
+}: {
+  ids: readonly [string, string];
+  onPair: (ids: readonly [string, string]) => void;
+  disabled: boolean;
+}) {
+  const text = useTranslations("expenses");
+  return (
+    <Button size="xs" disabled={disabled} onClick={() => onPair(ids)}>
+      {text("transfer.pair")}
+    </Button>
   );
 }
 

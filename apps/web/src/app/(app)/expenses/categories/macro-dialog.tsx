@@ -11,7 +11,7 @@ import { Segmented } from "@ledgerly/ui/segmented";
 import { notify } from "@ledgerly/ui/toast";
 import { type MacroMoveFacts, macroMoveFacts, moveToMacro, undoMoveToMacro } from "@/modules/transactions";
 
-const MACROS: readonly CategoryType[] = ["income", "expense", "transfer"];
+const MACROS: readonly CategoryType[] = ["income", "expense"];
 
 /**
  * "Move to another section" (categories-and-rules.md §5.6, N3.3): a group, or a category of
@@ -57,8 +57,8 @@ export function MacroMoveDialog({
 
   const macroName = (key: CategoryType) => t(`macro.${key}`);
   const offered = MACROS.filter((macro) => macro !== line.type);
-  // Transfers has no groups (CR2); a group with categories stays a group (no third level).
-  const groups = to === "transfer" || childCount > 0 ? [] : groupsOf(to);
+  // A group with categories stays a group (no third level).
+  const groups = childCount > 0 ? [] : groupsOf(to);
 
   function submit(parentId: string | null) {
     const moved = line;
@@ -167,9 +167,6 @@ export function MacroMoveDialog({
                     })}
                   </p>
                 ))}
-              {facts.stopsBudget && to === "transfer" && (
-                <p className="text-muted">{t("macroMove.budget")}</p>
-              )}
               {facts.sources.map((provider) => (
                 <p key={provider} className="text-muted">
                   {t("macroMove.sources", { provider })}

@@ -58,11 +58,6 @@ const PAGES: Screen[] = [
   },
   { name: "/expenses/categories (Income)", session: "review", open: go("/expenses/categories?macro=income") },
   {
-    name: "/expenses/categories (Transfers)",
-    session: "review",
-    open: go("/expenses/categories?macro=transfer"),
-  },
-  {
     name: "/expenses/categories/[id]",
     session: "review",
     open: async (page) => {
@@ -85,6 +80,35 @@ const PAGES: Screen[] = [
 ];
 
 const OVERLAYS: Screen[] = [
+  {
+    // Decision 14A: the selector with the three likeliest on top (the route's answer given here).
+    name: "the category selector with the likeliest on top",
+    session: "suggestions",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      const { categories } = await (await page.request.get("/api/v1/categories")).json();
+      const top = categories.slice(1, 4).map((one: { id: string }) => one.id);
+      await page.route("**/api/v1/transactions/*/category-suggestions", (route) =>
+        route.fulfill({ json: { categoryId: null, top } }),
+      );
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page.getByRole("button", { name: "Edit category" }).locator("visible=true").first().click();
+      await page.getByRole("group", { name: "Most likely" }).waitFor();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "a group suggestion and its reason",
+    session: "suggestions",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses?preset=last3Months");
+      await settled(page);
+      await page.getByTestId("suggestion-chip").locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
   {
     name: "the editor of a rule, with its preview",
     session: "rules",

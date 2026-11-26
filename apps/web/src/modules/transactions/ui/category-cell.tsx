@@ -5,10 +5,11 @@ import { Sparkles } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { CategoryPicker } from "@ledgerly/ui/category-picker";
 import { cn } from "@ledgerly/ui/cn";
+import { useCategoryActions } from "./category-actions";
 import type { CategoryOption, RowView } from "./view";
 
 // 24 px, not 22: the category chip is a button, and a button is a target (plan F9 §3.4).
@@ -17,6 +18,7 @@ export const CHIP = "focus-ring inline-flex h-6 items-center gap-1.5 rounded-sm 
 /** The reasons the interface has a sentence for; any other code reads the fallback (ux §2.2). */
 const REASONS = [
   "memory",
+  "group",
   "similar",
   "merchant_type",
   "brand",
@@ -37,7 +39,6 @@ type CellRow = Pick<
   | "categoryReason"
   | "suggestion"
   | "macros"
-  | "paired"
 >;
 
 /**
@@ -74,10 +75,22 @@ export function CategoryCell({
   const t = useTranslations("expenses");
   const [reasonOpen, setReasonOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [likely, setLikely] = useState<readonly string[] | null>(null);
+  const likelyOf = useCategoryActions()?.commands.likely;
+  // Asked each time the picker opens: a correction moves the top for the next movement.
+  useEffect(() => {
+    if (!open || !likelyOf) return;
+    let live = true;
+    likelyOf(row.id).then((ids) => live && setLikely(ids));
+    return () => {
+      live = false;
+      setLikely(null);
+    };
+  }, [open, likelyOf, row.id]);
   const state = onConfirm === undefined ? "chosen" : (row.categoryState ?? "chosen");
   const suggestion = state === "suggestion" ? (row.suggestion ?? null) : null;
 
-  function reasonText(): string {
+  function reasonText(category: { name: string }): string {
     const reason = row.categoryReason;
     const code = REASONS.find((one) => one === reason?.code);
     if (!reason || code === undefined) return t("auto.reason.other");
@@ -85,6 +98,7 @@ export function CategoryCell({
       text: reason.params.text ?? "",
       brand: reason.params.brand ?? "",
       name: reason.params.name ?? "",
+      group: category.name,
     });
   }
 
@@ -117,7 +131,7 @@ export function CategoryCell({
               {category.name}
             </p>
             <p className="text-sm text-muted">
-              {reasonText()}
+              {reasonText(category)}
               {state === "suggestion" && ` ${t("auto.suggestion.notCounted")}`}
             </p>
             {row.categoryReason?.code === "rule" && row.categoryReason.params.ruleId && (
@@ -186,8 +200,8 @@ export function CategoryCell({
         (option) =>
           option.type === undefined || row.macros === undefined || row.macros.some((m) => m === option.type),
       )}
-      note={row.paired === true ? t("row.paired") : undefined}
       currentId={row.categoryId}
+      likely={likelyOf ? { ids: likely, title: t("row.likely") } : undefined}
       open={open}
       onOpenChange={onOpenChange}
       onPick={onPick}

@@ -10,7 +10,6 @@ import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { movements } from "@ledgerly/api-contract/transactions";
 import type { RouteOutput } from "@ledgerly/api-client";
-import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions/client";
 import { today } from "@ledgerly/format/dates";
 import { numberStyle } from "@ledgerly/format/format";
 import { useApi, useLatest } from "@ledgerly/ui/data";
@@ -18,7 +17,6 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
-import { categoryColor } from "@/modules/transactions";
 import {
   AccountsMenu,
   type ExpensesQuery,
@@ -53,16 +51,7 @@ function NoCategories({ prefs }: { prefs: Prefs }) {
     <EmptyState
       title={text("categories.empty.title")}
       description={text("categories.empty.description")}
-      actions={
-        <DefaultGroupsButton
-          groups={DEFAULT_GROUPS.map((group, index) => ({
-            key: group.key,
-            name: group[prefs.locale],
-            examples: group.examples[prefs.locale],
-            color: categoryColor(null, index),
-          }))}
-        />
-      }
+      actions={<DefaultGroupsButton locale={prefs.locale} />}
     />
   );
 }

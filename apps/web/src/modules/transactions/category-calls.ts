@@ -76,6 +76,16 @@ export const CATEGORY_CALLS: CategoryCommands = {
       })),
     };
   },
+
+  async likely(id) {
+    try {
+      const { top } = await call(review.getCategorySuggestions, { params: { id } });
+      return top;
+    } catch {
+      // The top of the picker is a help, never an error: a giroconto or a failure lists none.
+      return [];
+    }
+  },
 };
 
 /** «They are different», and its «Undo». */

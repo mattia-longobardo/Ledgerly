@@ -1,6 +1,7 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export { SinkRefusal } from "./ports";
 export type { BankSink, ReadingMovement } from "./ports";
+export { timeOn } from "./movements/incoming";
 export {
   PluginActionError,
   completeAccess,

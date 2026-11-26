@@ -18,7 +18,16 @@ import {
   type Trial,
 } from "./classifier";
 import { strictMemory } from "./memory";
-import { brandGroup, DEFAULT_GROUPS, merchantTypeGroup, structureOf } from "./tables";
+import {
+  brandGroup,
+  DEFAULT_CATEGORIES,
+  DEFAULT_GROUPS,
+  merchantTypeGroup,
+  STRUCTURE_GROUP,
+  structureOf,
+} from "./tables";
+import brands from "./tables/brands.json";
+import merchantTypes from "./tables/merchant-types.json";
 import { amountBand, FEATURE_DIMENSIONS, featureCounts, featureIndex, memoryKey, normalise } from "./text";
 import { measure, MIN_SUPPORT, thresholdFor, thresholdsFor } from "./thresholds";
 
@@ -139,16 +148,19 @@ describe("the thresholds", () => {
 
 describe("the static tables", () => {
   it("answers for a merchant type, the narrower range first, and for nothing it does not know", () => {
-    expect(merchantTypeGroup("5411")).toEqual({ group: "groceries", ambiguous: false });
-    expect(merchantTypeGroup("5942")).toEqual({ group: "leisure", ambiguous: false });
-    expect(merchantTypeGroup("5945")).toEqual({ group: "leisure", ambiguous: true });
+    expect(merchantTypeGroup("5411")).toEqual({ group: "food_drinks.groceries", ambiguous: false });
+    expect(merchantTypeGroup("5942")).toEqual({
+      group: "life_entertainment.books_subscriptions",
+      ambiguous: false,
+    });
+    expect(merchantTypeGroup("5945")).toEqual({ group: "shopping.leisure_time", ambiguous: true });
     expect(merchantTypeGroup("0001")).toBeNull();
     expect(merchantTypeGroup("54x1")).toBeNull();
     expect(merchantTypeGroup(null)).toBeNull();
   });
 
   it("finds a brand on whole words only", () => {
-    expect(brandGroup("COOP LOMBARDIA 221")?.group).toBe("groceries");
+    expect(brandGroup("COOP LOMBARDIA 221")?.group).toBe("food_drinks.groceries");
     expect(brandGroup("Cooperativa Sociale")).toBeNull();
     expect(brandGroup("AMZN Mktp")).toMatchObject({ brand: "Amazon", ambiguous: true });
   });
@@ -160,37 +172,60 @@ describe("the static tables", () => {
     expect(structureOf(null)).toBeNull();
   });
 
-  // QC7 (categories-and-rules.md §11): 11 of Expenses, 2 of Income, 2 categories of Transfers.
-  it("has fifteen default groups, each with a name and examples in both languages", () => {
-    expect(DEFAULT_GROUPS).toHaveLength(15);
-    expect(DEFAULT_GROUPS.filter((group) => group.type === "expense")).toHaveLength(11);
+  // The tree of 2026-11-25 (replaces QC7): 11 groups, 70 sub-categories, no group of Transfers.
+  it("has eleven default groups and seventy sub-categories, named and keyed in both languages", () => {
+    expect(DEFAULT_GROUPS).toHaveLength(11);
+    expect(DEFAULT_GROUPS.flatMap((group) => group.children)).toHaveLength(70);
     expect(DEFAULT_GROUPS.filter((group) => group.type === "income").map((group) => group.key)).toEqual([
       "income",
-      "other_income",
     ]);
-    expect(DEFAULT_GROUPS.filter((group) => group.type === "transfer").map((group) => group.key)).toEqual([
-      "savings",
-      "credit_card",
-    ]);
+    expect(DEFAULT_CATEGORIES).toHaveLength(81);
+    const keys = DEFAULT_CATEGORIES.map((one) => one.key);
+    expect(new Set(keys).size).toBe(keys.length);
     for (const group of DEFAULT_GROUPS) {
       expect([group.en, group.it, group.examples.en, group.examples.it].every((one) => one.length > 0)).toBe(
         true,
       );
+      expect(group.color).toMatch(/^#[0-9a-f]{6}$/);
+      for (const child of group.children) {
+        expect(child.key.startsWith(`${group.key}.`)).toBe(true);
+        expect(child.en.length > 0 && child.it.length > 0 && child.it.length <= 60).toBe(true);
+      }
+      // Siblings never share a name: the table refuses two of one name under one group.
+      const names = group.children.map((child) => child.it);
+      expect(new Set(names).size).toBe(names.length);
     }
   });
 
-  it("finds a person's category for a group: the one made from it, then one with its name", () => {
-    const categories = [
-      { id: "c1", name: "Food", type: "expense" },
-      { id: "c2", name: "spesa alimentare", type: "expense" },
-      { id: "c3", name: "Trasporti", type: "expense" },
-      { id: "c4", name: "Entrate", type: "expense" },
+  it("points every table at a key of the tree", () => {
+    const keys = new Set(DEFAULT_CATEGORIES.map((one) => one.key));
+    const pointed = [
+      ...merchantTypes.map((one) => one.group),
+      ...brands.map((one) => one.group),
+      ...Object.values(STRUCTURE_GROUP),
     ];
-    const found = groupCategories(DEFAULT_GROUPS, categories, new Map([["c1", "groceries"]]));
-    expect(found.get("groceries")).toBe("c1");
-    expect(found.get("transport")).toBe("c3");
+    expect(pointed.filter((key) => !keys.has(key))).toEqual([]);
+  });
+
+  it("finds a person's category for a key: the one made from it, then one of its name, sign and group", () => {
+    const categories = [
+      { id: "c1", name: "Food", type: "expense", parentId: null },
+      { id: "c2", name: "spesa alimentare", type: "expense", parentId: "c1" },
+      { id: "c3", name: "Trasporti", type: "expense", parentId: null },
+      { id: "c4", name: "Entrate", type: "expense", parentId: null },
+      { id: "c5", name: "Spese finanziarie", type: "expense", parentId: null },
+      { id: "c6", name: "Mantenimento figli", type: "expense", parentId: "c5" },
+      { id: "c7", name: "Mantenimento figli", type: "income", parentId: null },
+    ];
+    const found = groupCategories(DEFAULT_CATEGORIES, categories, new Map([["c1", "food_drinks"]]));
+    expect(found.get("food_drinks")).toBe("c1");
+    expect(found.get("food_drinks.groceries")).toBe("c2");
+    expect(found.get("transportation")).toBe("c3");
     // A category with the group's name and another kind is not that group.
     expect(found.has("income")).toBe(false);
+    // The same name under two groups: the one under its own group only.
+    expect(found.get("financial_expenses.child_support")).toBe("c6");
+    expect(found.has("income.child_support_received")).toBe(false);
   });
 });
 

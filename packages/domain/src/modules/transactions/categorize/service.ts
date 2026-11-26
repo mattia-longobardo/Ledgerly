@@ -10,8 +10,8 @@ import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { categories, categoryGroupMarks, categoryMemory, categoryModels, transactions } from "../schema";
-import { type CascadeMovement, type Decision, decide, groupCategories, type Knowledge } from "./cascade";
+import { categories, categoryMemory, categoryModels, transactions } from "../schema";
+import { type CascadeMovement, type Decision, decide, type Knowledge, topCategories } from "./cascade";
 import {
   loadModel,
   type Model,
@@ -24,10 +24,11 @@ import { type EmbeddedLabel, learnEmbedded, type StoredEmbedded } from "../rules
 import type { Embedder } from "../rules/embedding";
 import { type Measure, measureLabels } from "../rules/categories-measure";
 import { type Confirmation, strictMemory } from "./memory";
-import { DEFAULT_GROUPS } from "./tables";
 import { applyRulesToNew } from "./user-rules-service";
-import { memoryKey } from "./text";
-import { type Thresholds, thresholdsFor } from "./thresholds";
+import { memoryKey, merchantKey } from "./text";
+import { groupThresholdFor, type Thresholds, thresholdsFor } from "./thresholds";
+import { importedLabels } from "../service/category-labels";
+import { categoriesOf } from "../service/own-categories";
 
 type Who = Pick<Ctx, "userId">;
 
@@ -81,6 +82,13 @@ interface Label extends EmbeddedLabel {
 }
 
 async function confirmedLabels(ctx: Who): Promise<Label[]> {
+  const [movements, imported] = await Promise.all([confirmedMovements(ctx), importedLabels(ctx)]);
+  return [...movements, ...imported]
+    .sort((left, right) => right.at.getTime() - left.at.getTime())
+    .slice(0, MAX_EXAMPLES);
+}
+
+async function confirmedMovements(ctx: Who): Promise<Label[]> {
   const rows = await getDb()
     .select({
       ...CASCADE_COLUMNS,
@@ -119,33 +127,6 @@ async function correctionRate(ctx: Who, now: Date): Promise<number> {
     .where(and(userScoped(ctx).owns(transactions), gte(transactions.updatedAt, since)));
   const base = (row?.corrected ?? 0) + (row?.automatic ?? 0);
   return base < MIN_CORRECTIONS_BASE ? 0 : (row?.corrected ?? 0) / base;
-}
-
-/** The person's categories a movement may be given, and their category for each default group. */
-async function categoriesOf(
-  ctx: Who,
-): Promise<Pick<Knowledge, "groupCategory" | "categoryKind"> & { named: { id: string; name: string }[] }> {
-  const [active, marks] = await Promise.all([
-    getDb()
-      .select({ id: categories.id, name: categories.name, type: categories.type })
-      .from(categories)
-      .where(and(userScoped(ctx).owns(categories), isNull(categories.archivedAt)))
-      .orderBy(categories.name, categories.id),
-    getDb()
-      .select({ categoryId: categoryGroupMarks.categoryId, groupKey: categoryGroupMarks.groupKey })
-      .from(categoryGroupMarks)
-      .where(userScoped(ctx).owns(categoryGroupMarks))
-      .orderBy(categoryGroupMarks.groupKey),
-  ]);
-  return {
-    named: active,
-    categoryKind: new Map(active.map((category) => [category.id, category.type])),
-    groupCategory: groupCategories(
-      DEFAULT_GROUPS,
-      active,
-      new Map(marks.map((mark) => [mark.categoryId, mark.groupKey])),
-    ),
-  };
 }
 
 type ModelRow = typeof categoryModels.$inferSelect;
@@ -189,6 +170,8 @@ async function storedKnowledge(ctx: Who): Promise<Knowledge> {
     memory: new Map(memory.map((one) => [one.key, one.categoryId])),
     model: row?.model ? loadModel(row.model as StoredModel) : null,
     thresholds: { automatic: row?.automaticThreshold ?? null, suggestion: row?.suggestionThreshold ?? null },
+    categoryGroup: own.categoryGroup,
+    groupThreshold: row?.groupThreshold ?? null,
   };
 }
 
@@ -204,7 +187,7 @@ async function learn(
 ): Promise<{ knowledge: Knowledge; trained: boolean; examples: number }> {
   const [labels, own, stored] = await Promise.all([confirmedLabels(ctx), categoriesOf(ctx), modelRow(ctx)]);
   const confirmations: Confirmation[] = labels.map((label) => ({
-    key: memoryKey(label),
+    key: merchantKey(label),
     categoryId: label.categoryId,
     at: label.at,
   }));
@@ -221,6 +204,7 @@ async function learn(
     automatic: stored?.automaticThreshold ?? null,
     suggestion: stored?.suggestionThreshold ?? null,
   };
+  let groupThreshold = stored?.groupThreshold ?? null;
   // Not asked to train: the stored model is the one, whatever the labels say now.
   const unchanged =
     !train ||
@@ -231,10 +215,13 @@ async function learn(
       (model !== null || stored.model === null));
   if (!unchanged) {
     model = await trainInTurns(labels);
+    const trials =
+      model === null ? [] : await outOfSampleInTurns(labels, null, (id) => own.categoryGroup.get(id));
     thresholds =
       model === null
         ? { automatic: null, suggestion: null }
-        : thresholdsFor(await outOfSampleInTurns(labels), await correctionRateOnce());
+        : thresholdsFor(trials, await correctionRateOnce());
+    groupThreshold = model === null ? null : groupThresholdFor(trials);
   }
   const embedder = currentEmbedder();
   const embedded =
@@ -269,6 +256,7 @@ async function learn(
         labelledThrough,
         automaticThreshold: thresholds.automatic,
         suggestionThreshold: thresholds.suggestion,
+        groupThreshold,
         model: model === null ? null : storedRow(model, embedded?.store ?? null),
         trainedAt: now,
       };
@@ -286,6 +274,8 @@ async function learn(
       model,
       thresholds,
       embedded: embedded?.knowledge ?? null,
+      categoryGroup: own.categoryGroup,
+      groupThreshold,
     },
     trained: write,
     examples: labels.length,
@@ -454,6 +444,14 @@ async function openMovements(ctx: Who, accountIds: readonly string[]): Promise<C
   return rows.map(({ type, ...row }) => ({ ...row, kind: type === "income" ? "income" : "expense" }));
 }
 
+/** What the selector of a movement's category shows first (PERS-634): the suggestion and the top three. */
+export interface CategorySuggestions {
+  /** The cascade's answer, automatic or suggested; a group when the sub-category is uncertain. */
+  suggestion: { categoryId: string; reason: string } | null;
+  /** The three likeliest categories of the movement's kind, the likeliest first. */
+  top: string[];
+}
+
 /**
  * The category the cascade would give one movement that is not written yet — the dialog of a
  * manual movement — from what is already known, with nothing learnt and nothing written. Automatic
@@ -463,6 +461,29 @@ export async function suggestFor(
   ctx: Who,
   movement: CascadeMovement,
 ): Promise<{ categoryId: string; reason: string } | null> {
-  const decision = decide(movement, await storedKnowledge(ctx));
-  return decision.kind === "none" ? null : { categoryId: decision.categoryId, reason: decision.reason };
+  return (await suggestionsFor(ctx, movement)).suggestion;
+}
+
+/** {@link suggestFor}, and the top three of the selector beside it (PERS-634). */
+export async function suggestionsFor(ctx: Who, movement: CascadeMovement): Promise<CategorySuggestions> {
+  const knowledge = await storedKnowledge(ctx);
+  const decision = decide(movement, knowledge);
+  return {
+    suggestion:
+      decision.kind === "none" ? null : { categoryId: decision.categoryId, reason: decision.reason },
+    top: topCategories(movement, knowledge),
+  };
+}
+
+/**
+ * The same for a movement already written, by its id (PERS-634): what its category selector puts
+ * first. `null` for a movement that is not the person's, or a giroconto — it has no category.
+ */
+export async function suggestionsForMovement(ctx: Who, id: string): Promise<CategorySuggestions | null> {
+  const [row] = await getDb()
+    .select(CASCADE_COLUMNS)
+    .from(transactions)
+    .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
+  if (!row || (row.type !== "income" && row.type !== "expense")) return null;
+  return suggestionsFor(ctx, { ...row, kind: row.type });
 }

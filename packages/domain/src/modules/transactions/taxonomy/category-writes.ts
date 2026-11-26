@@ -29,8 +29,6 @@ import {
 export async function createCategory(ctx: Pick<Ctx, "userId">, input: unknown): Promise<Category> {
   const values = parsed(categoryInputSchema, input);
   const parent = await parentFor(ctx, values.parentId, null);
-  // Transfers has categories and no groups (categories-and-rules.md CR2).
-  if (parent?.type === "transfer") throw new TaxonomyError("invalid");
   try {
     const [row] = await getDb()
       .insert(categories)
@@ -181,7 +179,7 @@ export async function moveCategory(
   const current = await getCategory(ctx, id);
   if (current.parentId === null) throw new TaxonomyError("invalid_parent");
   const target = await categoryById(ctx, parsed(idSchema, parentId));
-  if (!target || target.type !== current.type || target.type === "transfer") {
+  if (!target || target.type !== current.type) {
     throw new TaxonomyError("invalid_parent");
   }
   await updateCategory(ctx, current.id, {
@@ -203,10 +201,10 @@ const macroPlaceSchema = z.object({ type: z.enum(CATEGORY_TYPES), parentId: pare
 
 /**
  * Whether "Move to another section" is offered for a category (categories-and-rules.md §5.6): a
- * group of Income or Expenses, or a category of Transfers. A category in a group moves with it.
+ * group of Income or Expenses. A category in a group moves with it.
  */
 export function movesBetweenMacros(category: Pick<Category, "type" | "parentId">): boolean {
-  return category.parentId === null || category.type === "transfer";
+  return category.parentId === null;
 }
 
 /**
@@ -293,9 +291,8 @@ export async function moveCategoryToMacro(
       .from(categories)
       .where(and(eq(categories.parentId, current.id), userScoped(ctx).owns(categories)))
       .limit(1);
-    // A group of the macro of arrival, never one of Transfers (CR2), and no third level.
-    const refused =
-      options.restoring !== true && (parent?.type === "transfer" || parent?.archivedAt !== null);
+    // A group of the macro of arrival, and no third level.
+    const refused = options.restoring !== true && parent?.archivedAt !== null;
     if (!parent || parent.parentId !== null || parent.type !== place.type || refused || child) {
       throw new TaxonomyError("invalid_parent");
     }

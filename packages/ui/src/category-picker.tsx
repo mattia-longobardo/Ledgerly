@@ -69,6 +69,33 @@ export function searchCategories(items: readonly PickerItem[], query: string): P
   });
 }
 
+/** The likeliest categories under their title, in the server's order; an id the list lacks is left out. */
+function likelyItems(
+  categories: readonly CategoryOption[],
+  likely: { ids: readonly string[] | null; title: string } | undefined,
+): PickerItem[] {
+  return (likely?.ids ?? []).flatMap((id) => {
+    const option = categories.find((one) => one.id === id);
+    return option ? [{ id, name: option.name, color: option.color, section: likely?.title }] : [];
+  });
+}
+
+/**
+ * What the list shows: the likeliest on top while the search is empty, then what the search leaves;
+ * nothing while the likeliest are asked for. `top`: how many of the rows are the likeliest.
+ */
+function listOf(
+  items: readonly PickerItem[],
+  categories: readonly CategoryOption[],
+  likely: { ids: readonly string[] | null; title: string } | undefined,
+  query: string,
+): { shown: PickerItem[]; waiting: boolean; top: number } {
+  const searching = query.trim() !== "";
+  if (!searching && likely?.ids === null) return { shown: [], waiting: true, top: 0 };
+  const top = searching ? [] : likelyItems(categories, likely);
+  return { shown: [...top, ...searchCategories(items, query)], waiting: false, top: top.length };
+}
+
 /** The rows in runs of one title each, in their order: a row with no title is a run of its own. */
 function sectionsOf(items: readonly PickerItem[]): { title?: string; items: PickerItem[] }[] {
   const runs: { title?: string; items: PickerItem[] }[] = [];
@@ -110,6 +137,7 @@ export function CategoryPicker({
   triggerClassName,
   disabled,
   note,
+  likely,
   children,
 }: {
   categories: readonly CategoryOption[];
@@ -130,6 +158,12 @@ export function CategoryPicker({
   disabled?: boolean;
   /** A sentence above the list, about why it offers what it does (`text-sm text-muted`). */
   note?: string;
+  /**
+   * The likeliest categories, the likeliest first, listed again on top under their title while
+   * the search is empty: the ids the server gives, read only, never ranked here. `null` while they
+   * are asked for: the list waits for them rather than jump under the pointer when they arrive.
+   */
+  likely?: { ids: readonly string[] | null; title: string };
   children: ReactNode;
 }) {
   const listId = useId();
@@ -141,19 +175,21 @@ export function CategoryPicker({
       : [{ id: null, name: uncategorisedLabel, color: null, count: uncategorisedCount }];
   const items: PickerItem[] = multiple ? [...categories, ...none] : [...none, ...categories];
   const isSelected = (id: string | null) => (multiple ? multiple.selectedIds.includes(id) : id === currentId);
-  const shown = searchCategories(items, query);
-  const highlighted = Math.min(active, shown.length - 1);
+  const { shown, waiting, top } = listOf(items, categories, likely, query);
+  // -1 until an arrow moves: the likeliest category, else the current one, is where the eye starts.
+  const start =
+    top > 0
+      ? 0
+      : Math.max(
+          0,
+          shown.findIndex((item) => isSelected(item.id)),
+        );
+  const highlighted = Math.min(active < 0 ? start : active, shown.length - 1);
 
   function change(next: boolean) {
     if (next) {
       setQuery("");
-      // The current category is where the eye starts, as in the menu this replaced.
-      setActive(
-        Math.max(
-          0,
-          items.findIndex((item) => isSelected(item.id)),
-        ),
-      );
+      setActive(-1);
     }
     onOpenChange(next);
   }
@@ -233,13 +269,15 @@ export function CategoryPicker({
               aria-multiselectable={multiple ? true : undefined}
               className="max-h-[300px] overflow-y-auto"
             >
-              {shown.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">{noMatchLabel}</li>}
+              {shown.length === 0 && !waiting && (
+                <li className="px-2 py-1.5 text-sm text-muted">{noMatchLabel}</li>
+              )}
               {sectionsOf(shown).map(({ title, items: inSection }) => {
                 const options = inSection.map((item) => {
                   const index = shown.indexOf(item);
                   return (
                     <li
-                      key={item.id ?? "none"}
+                      key={index}
                       id={optionId(index)}
                       role="option"
                       aria-selected={isSelected(item.id)}

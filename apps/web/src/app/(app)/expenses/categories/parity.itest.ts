@@ -172,7 +172,7 @@ describe("the board of the categories, old Server Action = new call", () => {
     );
     await both(() => api.undoMergeOfTwo(old, oldUndo), "/categories/merge/undo", { undo: merged.undo });
 
-    const place = { type: "transfer", parentId: null };
+    const place = { type: "income", parentId: null };
     let macroUndo: unknown = null;
     const movedToMacro = await both(
       async () => (macroUndo = await api.moveToMacro(old, await idOf(old, "Home"), place)),

@@ -14,7 +14,16 @@ export {
   categorisableAccountIds,
   ruleAccountFacts,
 } from "./guards";
-export { upsertFromProvider, linkOwnTransfers } from "./provider";
+export { upsertFromProvider } from "./provider";
+export {
+  linkOwnTransfers,
+  chooseTransferSide,
+  pairByHand,
+  listTransferProposals,
+  answerTransferProposal,
+  transferSideSchema,
+} from "./giroconti";
+export type { TransferSide, TransferProposal } from "./giroconti";
 export {
   updateTransaction,
   releaseLocalEdits,

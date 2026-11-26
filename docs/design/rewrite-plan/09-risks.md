@@ -94,7 +94,7 @@ I15, I16, I17 e I18 (H8-H11). La colonna «Alternativa» elenca le scelte scarta
 | I5 | Dove si costruisce l'app Windows | Su un PC Windows di Mattia, con uno script del repo | Un runner Windows di GitHub Actions che produce un file da scaricare. Nessuna pubblicazione in nessun caso |
 | I6 | N5 (Time Off) prima di N1 | Sì, se l'applicazione Production o l'accesso alla banca ritardano: N5 non dipende da N1-N4 | Ordine fisso N1 → N5 |
 | I8 | Uscita dei plugin verso internet | In N1 libera e dichiarata nel manifest; in R5c limitata agli host dichiarati, se la prova A15 riesce | Limitazione già in N1 |
-| I9 | Categorie predefinite per Mattia | Corrispondenza proposta tra le sue 55 categorie usate e i 12 gruppi predefiniti, da confermare una volta nell'interfaccia | Nessuna corrispondenza: le tabelle statiche valgono solo per gli utenti nuovi |
+| I9 | Categorie predefinite per Mattia | Corrispondenza proposta tra le sue 55 categorie usate e i 12 gruppi predefiniti, da confermare una volta nell'interfaccia | Nessuna corrispondenza: le tabelle statiche valgono solo per gli utenti nuovi. 25/11/2026: i 15 default si spostano nell'albero di Wallet (migrazione `0080`, `categories-and-rules.md` §13) |
 | I10 | Origini CORS degli involucri | I due valori letti nella prova D di C0, scritti come costanti | — |
 | I11 | Contenuto di R5f | L'elenco di [`06-data.md`](06-data.md) §6.1. Ogni voce parte solo con «zero righe, zero usi» | Tenere tutto: nessuna rimozione |
 | I12 | Catalogo ufficiale dei plugin | `plugins/catalog.json` nel repo privato. Basta per l'istanza di Mattia | Un indice pubblico: si decide quando un altro host installa Ledgerly |

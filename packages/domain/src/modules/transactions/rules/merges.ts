@@ -34,11 +34,14 @@ export function toNewTransaction(
   return {
     accountId: resolution.accountId,
     occurredAt: incoming.occurredAt,
+    // Absent: the column's own default, a day without a time.
+    ...(incoming.timeKnown === undefined ? {} : { timeKnown: incoming.timeKnown }),
     amountCents: incoming.amountCents,
     currency: incoming.currency,
     type: resolveType(incoming),
     state: incoming.state,
-    categoryId: resolution.categoryId,
+    // A giroconto has no category, whatever the source files it under.
+    categoryId: resolveType(incoming) === "transfer" ? null : resolution.categoryId,
     payee: displayPayee(incoming.payee),
     note: incoming.note,
     labelIds: resolution.labelIds,
@@ -105,6 +108,11 @@ export function planProviderMerge(
     incoming.occurredAt,
     current.occurredAt.getTime() === incoming.occurredAt.getTime(),
   );
+  // Whether the time is known follows the instant it describes, under the same marker.
+  const timeKnown = incoming.timeKnown ?? false;
+  if (!isLocallyEdited(current.locallyEdited, "occurredAt") && (current.timeKnown ?? false) !== timeKnown) {
+    patch.timeKnown = timeKnown;
+  }
   take("amountCents", "amountCents", incoming.amountCents, current.amountCents === incoming.amountCents);
   take("currency", "currency", incoming.currency, current.currency === incoming.currency);
   const type = resolveType(incoming);
@@ -112,7 +120,12 @@ export function planProviderMerge(
   take("state", "state", incoming.state, current.state === incoming.state);
   const payee = displayPayee(incoming.payee);
   take("payee", "payee", payee, current.payee === payee);
-  take("categoryId", "categoryId", resolution.categoryId, current.categoryId === resolution.categoryId);
+  // A giroconto has no category: the source's category is dropped while the row stays a transfer.
+  const transfer = (isLocallyEdited(current.locallyEdited, "type") ? current.type : type) === "transfer";
+  const categoryId = transfer ? null : resolution.categoryId;
+  take("categoryId", "categoryId", categoryId, current.categoryId === categoryId);
+  // Even a category the person chose: the table refuses a giroconto with one.
+  if (transfer && current.categoryId !== null) patch.categoryId = null;
   take("note", "note", incoming.note, current.note === incoming.note);
   take("labels", "labelIds", resolution.labelIds, sameLabels(current.labelIds, resolution.labelIds));
 

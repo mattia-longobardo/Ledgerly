@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type MergeCategory, mergeProposals, pairKey, reviewGroups, type ReviewRow } from "./review-rules";
+import { DEFAULT_CATEGORIES } from "./tables";
 
 let next = 0;
 function row(key: string, on: string, cents: bigint, suggested: string | null = null): ReviewRow {
@@ -108,6 +109,20 @@ describe("the categories that look like the same one", () => {
         new Set(),
       ),
     ).toEqual([]);
+  });
+
+  it("never proposes two categories of the default tree, in either language", () => {
+    expect(mergeProposals([category("1", "Postal services"), category("2", "Services")], new Set())).toEqual(
+      [],
+    );
+    const tree = DEFAULT_CATEGORIES.flatMap((one) =>
+      [one.en, one.it].map((name) => ({ name, type: one.type })),
+    );
+    const all = tree.map(({ name, type }, index) => category(`${index}`, name, { type }));
+    expect(mergeProposals(all, new Set())).toEqual([]);
+    expect(
+      names(mergeProposals([category("1", "Services"), category("2", "Home services")], new Set())),
+    ).toEqual(["Services + Home services"]);
   });
 
   it("does not go by one short word inside a longer name", () => {

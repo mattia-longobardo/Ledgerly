@@ -7,7 +7,7 @@ import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { Badge, Tag } from "@ledgerly/ui/badge";
 import type { RowBadge } from "@ledgerly/domain/transactions/client";
 import { useSourcesOff } from "./sources-off";
-import type { RowView } from "./view";
+import { dateTimeOf, type RowView } from "./view";
 
 /** Hidden and gone-from-the-provider are facts about the data; "edited here" is one about the user. */
 const BADGE_TONE: Record<RowBadge, "neutral" | "warn" | "accent"> = {
@@ -44,11 +44,14 @@ function RowBadges({ row }: { row: RowView }) {
   const text = useTranslations("expenses");
   return (
     <>
-      {row.badges.map((badge) => (
-        <Badge key={badge} tone={BADGE_TONE[badge]}>
-          {text(`badges.${badge}`)}
-        </Badge>
-      ))}
+      {row.badges
+        // «Choose the account» is the giroconto's own cell: the badge would say it twice.
+        .filter((badge) => !(row.transfer && badge === "unpaired"))
+        .map((badge) => (
+          <Badge key={badge} tone={BADGE_TONE[badge]}>
+            {text(`badges.${badge}`)}
+          </Badge>
+        ))}
       {row.send && <SendBadge send={row.send} />}
     </>
   );
@@ -102,7 +105,7 @@ export function RowCard({
           </span>
         </span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-          <span>{row.date}</span>
+          <span>{dateTimeOf(row)}</span>
           <span aria-hidden>·</span>
           <span className="min-w-0 truncate">{row.account}</span>
           <RowBadges row={row} />
@@ -110,7 +113,8 @@ export function RowCard({
         <RowDetails row={row} />
         <span className="flex items-center justify-between gap-2">
           {category}
-          {menu}
+          {/* A long category or a giroconto's route never squeezes the menu below its 24 px. */}
+          <span className="shrink-0">{menu}</span>
         </span>
       </span>
     </>

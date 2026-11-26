@@ -48,12 +48,12 @@ export const FLOWS: Flow[] = [
   },
   {
     id: "transactions",
-    specs: ["expenses", "manual-movement", "manual-send", "wide"],
+    specs: ["expenses", "giroconti", "manual-movement", "manual-send", "wide"],
     screens: CROSS_CUTTING,
   },
   {
     id: "categories",
-    specs: ["categories", "review", "source-categories", "rules"],
+    specs: ["categories", "review", "source-categories", "rules", "history"],
     screens: ["a11y", "keyboard"],
   },
   { id: "budgets", specs: ["budgets"], screens: ["a11y", "mobile"] },

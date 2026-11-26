@@ -43,13 +43,7 @@ export function categorySummary(input: CategorySummaryInput) {
   const ofMacro = (list: readonly CategoryMacroTotal[]) => list.filter((row) => row.type === category.type);
   const amountOf = (list: readonly CategoryMacroTotal[]) =>
     ofMacro(list).reduce(
-      (sum, row) =>
-        sum +
-        (category.type === "transfer"
-          ? -row.outCents
-          : category.type === "expense"
-            ? -row.totalCents
-            : row.totalCents),
+      (sum, row) => sum + (category.type === "expense" ? -row.totalCents : row.totalCents),
       0n,
     );
   const amountCents = amountOf(input.totals);

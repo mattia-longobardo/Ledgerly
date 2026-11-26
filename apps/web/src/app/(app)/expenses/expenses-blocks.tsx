@@ -40,6 +40,7 @@ import {
   SpendingCard,
   type TransactionLine,
   TransactionsTable,
+  TransferProposals,
   UNCATEGORISED,
 } from "@/modules/transactions/client";
 import { ExpensesTabs } from "./tabs";
@@ -62,6 +63,7 @@ export interface Screen {
   query: ExpensesQuery;
   filters: ReturnType<typeof routeFiltersOf>;
   locale: UiLocale;
+  timeZone: string;
   numberFormat: NumberFormat;
   colorOf: ReadonlyMap<string, string>;
   categories: readonly { id: string; parentId: string | null; depth: 0 | 1 }[];
@@ -91,6 +93,11 @@ export function Movements({ reads, screen }: { reads: Reads; screen: Screen }) {
       />
       <Filters view={view} accounts={reads.accounts} screen={screen} />
       {view.review.count > 0 && <ReviewNotice view={view} screen={screen} />}
+      <TransferProposals
+        accounts={reads.accounts}
+        locale={screen.locale}
+        numberFormat={screen.numberFormat}
+      />
       <SpendingChart series={reads.series} screen={screen} />
       {/* Two columns from a medium width; past the wide threshold the table takes the extra room,
           which is where the long names are (spec §8.2). */}
@@ -106,7 +113,7 @@ export function Movements({ reads, screen }: { reads: Reads; screen: Screen }) {
             }
           />
         ) : (
-          <Table view={view} screen={screen} />
+          <Table view={view} screen={screen} accounts={reads.accounts} />
         )}
         {/* The shortcuts are short and fixed; the card below them grows with the categories. */}
         <div className="flex flex-col gap-4">
@@ -295,15 +302,16 @@ function barsOf(breakdown: Breakdown, screen: Screen, uncategorised: string): Br
   });
 }
 
-function Table({ view, screen }: { view: View; screen: Screen }) {
+function Table({ view, screen, accounts }: { view: View; screen: Screen; accounts: readonly Account[] }) {
   const text = useTranslations("expenses");
   const { query } = screen;
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <Card padded={false} className="overflow-clip">
         <TransactionsTable
-          groups={groupsOf(view, screen)}
+          groups={groupsOf(view, screen, accounts)}
           categories={screen.pickerOptions}
+          accounts={accounts}
           labels={screen.labels}
           params={query.params}
           sort={query.sort}
@@ -323,8 +331,9 @@ function Table({ view, screen }: { view: View; screen: Screen }) {
 }
 
 /** Month headings only mean something in date order; any other sort is one flat list. */
-function groupsOf(view: View, screen: Screen): GroupView[] {
-  const row = (line: TransactionLine) => lineViewOf(line, { ...screen, categories: screen.options });
+function groupsOf(view: View, screen: Screen, accounts: readonly Account[]): GroupView[] {
+  const row = (line: TransactionLine) =>
+    lineViewOf(line, { ...screen, categories: screen.options, accounts });
   if (screen.query.sort !== "date")
     return [
       {

@@ -129,10 +129,10 @@ beforeEach(resetDatabase);
 afterAll(closeDatabase);
 
 describe("a rule on the movements a bank brings", () => {
-  it("gives category and section, marked automatic, before the cascade, and never teaches the model", async () => {
+  it("gives a category, marked automatic, before the cascade, and never teaches the model", async () => {
     const ctx = await newContext();
     const bank = await own(ctx, "Zeta current");
-    const card = await createCategory(ctx, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(ctx, { name: "Prepaid card", type: "expense" });
     const label = await createLabel(ctx, { name: "Card" });
     const rule = await createRule(ctx, { ...topUp(card.id), labelIds: [label.id], note: "Monthly top-up" });
     await upsertFromProvider(ctx, bank, [incoming("TOP-UP card 1234", 1), incoming("Bakery", 2)], {
@@ -148,7 +148,7 @@ describe("a rule on the movements a bank brings", () => {
       categoryRuleId: rule.id,
       categoryReason: "rule",
       categoryReasonParams: { name: "Top-up", ruleId: rule.id },
-      type: "transfer",
+      type: "expense",
       note: "Monthly top-up",
     });
     expect(bread.categoryRuleId).toBeNull();
@@ -195,7 +195,7 @@ describe("a rule on the movements a bank brings", () => {
     const ctx = await newContext();
     const bank = await own(ctx, "Zeta current");
     const wallet = await synced(ctx, GIVES, "Budget app");
-    const card = await createCategory(ctx, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(ctx, { name: "Prepaid card", type: "expense" });
     const food = await createCategory(ctx, { name: "Food", type: "expense" });
     await upsertFromProvider(ctx, bank, [incoming("Top up kiosk", 1)], { provider: BANK });
     await upsertFromProvider(ctx, wallet, [incoming("Top up wallet", 2, -1_000n, "Others")], {
@@ -218,7 +218,7 @@ describe("Apply to existing transactions", () => {
   it("changes the automatic ones only, and Undo gives back the same picture", async () => {
     const ctx = await newContext();
     const bank = await own(ctx, "Zeta current");
-    const card = await createCategory(ctx, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(ctx, { name: "Prepaid card", type: "expense" });
     const food = await createCategory(ctx, { name: "Food", type: "expense" });
     const label = await createLabel(ctx, { name: "Card" });
     await upsertFromProvider(
@@ -240,16 +240,16 @@ describe("Apply to existing transactions", () => {
     const rule = await createRule(ctx, { ...topUp(card.id), labelIds: [label.id], note: "Rule note" });
     const preview = await previewRule(ctx, topUp(card.id), rule.id);
     expect(preview).toMatchObject({ matched: 3, kept: 1, changes: 2 });
-    expect(preview.retyped.count).toBe(2);
-    expect(preview.retyped.fromType).toBe("expense");
+    // A category no longer makes a giroconto: nothing changes section.
+    expect(preview.retyped.count).toBe(0);
 
     const done = await applyRule(ctx, rule.id);
     expect(done.count).toBe(2);
     const after = await rows(ctx);
     expect(after.map((row) => [row.categoryOrigin, row.type])).toEqual([
-      ["rule", "transfer"],
+      ["rule", "expense"],
       ["user", "expense"],
-      ["rule", "transfer"],
+      ["rule", "expense"],
     ]);
     expect(after[0].note).toBe("Rule note");
     expect(after[2].note).toBe("kept");
@@ -265,7 +265,7 @@ describe("Undo of Apply", () => {
   it("leaves a choice the person made after Apply, and a note they wrote", async () => {
     const ctx = await newContext();
     const bank = await own(ctx, "Zeta current");
-    const card = await createCategory(ctx, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(ctx, { name: "Prepaid card", type: "expense" });
     const food = await createCategory(ctx, { name: "Food", type: "expense" });
     await upsertFromProvider(ctx, bank, [incoming("Top up one", 1), incoming("Top up two", 2)], {
       provider: BANK,
@@ -288,7 +288,7 @@ describe("the rules of a person", () => {
     const owner = await newContext();
     const other = await newContext();
     const bank = await own(owner, "Zeta current");
-    const card = await createCategory(owner, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(owner, { name: "Prepaid card", type: "expense" });
     const rule = await createRule(owner, topUp(card.id));
     await upsertFromProvider(owner, bank, [incoming("Top up", 1)], { provider: BANK });
     const otherBank = await own(other, "Other current");
@@ -310,7 +310,7 @@ describe("the rules of a person", () => {
   it("a deletion keeps the movements' category, says so, and Undo brings the rule back", async () => {
     const ctx = await newContext();
     const bank = await own(ctx, "Zeta current");
-    const card = await createCategory(ctx, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(ctx, { name: "Prepaid card", type: "expense" });
     const rule = await createRule(ctx, topUp(card.id));
     await upsertFromProvider(ctx, bank, [incoming("Top up", 1)], { provider: BANK });
     await categorise(ctx, [bank]);
@@ -351,7 +351,7 @@ describe("the rules of a person", () => {
   it("a rule whose category is archived is off by itself", async () => {
     const ctx = await newContext();
     const bank = await own(ctx, "Zeta current");
-    const card = await createCategory(ctx, { name: "Prepaid card", type: "transfer" });
+    const card = await createCategory(ctx, { name: "Prepaid card", type: "expense" });
     await createRule(ctx, topUp(card.id));
     await getDb().update(categories).set({ archivedAt: new Date() }).where(eq(categories.id, card.id));
     await upsertFromProvider(ctx, bank, [incoming("Top up", 1)], { provider: BANK });

@@ -20,7 +20,6 @@ export interface RowContext {
   ids: string;
   renaming: string | null;
   pending: boolean;
-  transfer: boolean;
   childrenOf: (id: string) => BoardLine[];
   setDialog: (dialog: Dialog) => void;
   setRenaming: (id: string | null) => void;
@@ -53,17 +52,17 @@ function liveItems({
   ];
   if (line.parentId === null)
     items.push({ label: text("color"), onSelect: () => board.setDialog({ kind: "color", line }) });
-  if (isGroup && line.type !== "transfer") {
+  if (isGroup) {
     items.push({
       label: text("addCategory"),
       onSelect: () => board.setDialog({ kind: "add", group: line, macro: line.type }),
     });
     items.push({ label: text("openGroup"), onSelect: () => push(line.href) });
   }
-  if (line.parentId !== null && line.type !== "transfer")
+  if (line.parentId !== null)
     items.push({ label: text("move.group"), onSelect: () => board.setDialog({ kind: "move", line }) });
-  // A group, or a category of Transfers (§5.6): its movements count as the macro of arrival.
-  if (line.parentId === null || line.type === "transfer") {
+  // A group (§5.6): its movements count as the macro of arrival.
+  if (line.parentId === null) {
     const count = board.childrenOf(line.id).length;
     items.push({
       label: text("macroMove.open"),
@@ -159,31 +158,6 @@ function LineName({ line, strong, board }: { line: BoardLine; strong: boolean; b
   );
 }
 
-/** Out and in, as Transfers shows a line or the movements between accounts. */
-export function TransferFigures({
-  outTotal,
-  inTotal,
-  muted,
-}: {
-  outTotal: string;
-  inTotal: string;
-  muted: boolean;
-}) {
-  const text = useTranslations("expenses.categories");
-  return (
-    <span className="flex shrink-0 gap-4 text-sm tabular-nums">
-      <span className={cn(muted && "text-muted")}>
-        <span className="text-muted">{text("out")} </span>
-        {outTotal}
-      </span>
-      <span className={cn(muted && "text-muted")}>
-        <span className="text-muted">{text("in")} </span>
-        {inTotal}
-      </span>
-    </span>
-  );
-}
-
 function BudgetMark({ budget }: { budget: NonNullable<BoardLine["budget"]> }) {
   const text = useTranslations("expenses.categories");
   return (
@@ -195,10 +169,9 @@ function BudgetMark({ budget }: { budget: NonNullable<BoardLine["budget"]> }) {
   );
 }
 
-/** Total, share and the budget of a row (§5.2); under Transfers, out and in. */
-function Figures({ line, bar, transfer }: { line: BoardLine; bar: boolean; transfer: boolean }) {
+/** Total, share and the budget of a row (§5.2). */
+function Figures({ line, bar }: { line: BoardLine; bar: boolean }) {
   const text = useTranslations("expenses.categories");
-  if (transfer) return <TransferFigures outTotal={line.outTotal} inTotal={line.inTotal} muted={line.zero} />;
   return (
     <span className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 max-md:order-last max-md:w-full max-md:justify-start max-md:pl-8">
       <span
@@ -226,19 +199,6 @@ function ArchivedBadge({ line }: { line: BoardLine }) {
   return line.archived ? <Badge tone="neutral">{settingsText("archived")}</Badge> : null;
 }
 
-/** A category of Transfers: one flat row (CR2). */
-export function TransferRow({ line, board }: { line: BoardLine; board: RowContext }) {
-  return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2">
-      <ColorDot color={line.color} />
-      <LineName line={line} strong={false} board={board} />
-      <ArchivedBadge line={line} />
-      <Figures line={line} bar={false} transfer />
-      <RowMenu line={line} isGroup={false} board={board} />
-    </li>
-  );
-}
-
 /** A category under its group. */
 export function ChildRow({ line, board }: { line: BoardLine; board: RowContext }) {
   return (
@@ -246,7 +206,7 @@ export function ChildRow({ line, board }: { line: BoardLine; board: RowContext }
       <ColorDot color={line.color} />
       <LineName line={line} strong={false} board={board} />
       <ArchivedBadge line={line} />
-      <Figures line={line} bar={false} transfer={false} />
+      <Figures line={line} bar={false} />
       <span className="inline-grid max-md:size-11 max-md:place-items-center">
         <RowMenu line={line} isGroup={false} board={board} />
       </span>
@@ -289,7 +249,7 @@ export function GroupHeading({
       </button>
       {renaming && <LineName line={group} strong board={board} />}
       <ArchivedBadge line={group} />
-      <Figures line={group} bar transfer={false} />
+      <Figures line={group} bar />
       <span className="inline-grid max-md:size-11 max-md:place-items-center">
         <RowMenu line={group} isGroup board={board} />
       </span>

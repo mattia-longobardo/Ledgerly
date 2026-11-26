@@ -15,8 +15,18 @@ export {
   unmergeCategories,
 } from "./categorize/review";
 export type { MergeProposal, MergeUndo } from "./categorize/review";
-export { categorise, isPreparing, measureCategories, suggestFor } from "./categorize/service";
+export type { TransferProposal, TransferSide } from "./service";
+export {
+  categorise,
+  type CategorySuggestions,
+  isPreparing,
+  measureCategories,
+  suggestFor,
+  suggestionsFor,
+  suggestionsForMovement,
+} from "./categorize/service";
 export { setEmbedder } from "./categorize/service";
+export { importCategoryLabels, type LabelsImport, LabelsImportError } from "./service/category-labels";
 export type { Embedder } from "./rules/embedding";
 export type { Measure, Reach, Tally } from "./rules/categories-measure";
 export type { Diagnosis, TopK } from "./rules/categories-diagnosis";
@@ -102,6 +112,10 @@ export {
   followProviderCategoryName,
   hideTransactions,
   linkOwnTransfers,
+  chooseTransferSide,
+  pairByHand,
+  listTransferProposals,
+  answerTransferProposal,
   linkProviderCategory,
   listProviderCategories,
   markNotSent,

@@ -29,7 +29,7 @@ import { isBankPluginProvider } from "@ledgerly/domain/platform/plugins";
 import { connectionSharing } from "@ledgerly/plugin-host";
 import { exposedAccounts } from "@ledgerly/plugin-host";
 import { parseCents } from "@ledgerly/domain/shared/money";
-import { type BankSink, type ReadingMovement, SinkRefusal } from "@ledgerly/plugin-host";
+import { type BankSink, type ReadingMovement, SinkRefusal, timeOn } from "@ledgerly/plugin-host";
 
 type AccountType = (typeof ACCOUNT_TYPES)[number];
 
@@ -39,17 +39,21 @@ function accountType(value: string): AccountType {
   return type;
 }
 
-/** Noon of the booking day in the person's zone: a movement of a bank has a day and no hour. */
+/** Noon of the day in the person's zone, for a movement whose bank gives no time. */
 const NOON_MINUTES = 12 * 60;
 
 /** A movement of a bank as the transactions module takes one from any provider. */
 function toIncoming(movement: ReadingMovement, timeZone: string): IncomingTransaction {
   const cents = parseCents(movement.amount);
   const credit = movement.direction === "credit";
+  // The day of the operation when the bank gives one (a card payment is booked days later).
+  const day = movement.operationDay ?? movement.day;
+  const timed = timeOn(day, movement.instant, timeZone);
   return {
     externalId: movement.externalId,
     counterpartExternalId: null,
-    occurredAt: wallClockIn(movement.day, NOON_MINUTES, timeZone),
+    occurredAt: timed ?? wallClockIn(day, NOON_MINUTES, timeZone),
+    timeKnown: timed !== null,
     amountCents: credit ? cents : -cents,
     currency: movement.currency,
     type: credit ? "income" : "expense",

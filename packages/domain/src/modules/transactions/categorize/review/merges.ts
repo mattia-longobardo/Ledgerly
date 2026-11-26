@@ -8,6 +8,7 @@ import type { UiLocale } from "../../../../platform/format";
 import {
   categories,
   categoryGroupMarks,
+  categoryLabels,
   categoryMemory,
   categoryMergeDismissals,
   transactions,
@@ -231,6 +232,12 @@ export async function mergeCategories(
     .set({ suggestedCategoryId: keepId })
     .where(and(userScoped(ctx).owns(transactions), eq(transactions.suggestedCategoryId, dropId)))
     .returning({ id: transactions.id });
+  // The labels imported with no movement (PERS-634) follow, or the training would lose them. An undo
+  // of the merge leaves them on the kept category.
+  await tx
+    .update(categoryLabels)
+    .set({ categoryId: keepId })
+    .where(and(userScoped(ctx).owns(categoryLabels), eq(categoryLabels.categoryId, dropId)));
   // The memory is rewritten at the next training; until then what it knew of the one is the other's.
   await tx
     .delete(categoryMemory)
@@ -320,9 +327,10 @@ export async function unmergeCategories(ctx: Who, input: unknown, tx: Tx): Promi
 /* Default groups */
 
 /**
- * Creates the default groups a person chose (decision K4), with their names in the person's
- * language, and marks each so the static tables can point at it. Only for a person with no active
- * category: anybody else already has their own, and gets nothing added.
+ * Creates the default groups a person chose, each with all its sub-categories (decision of
+ * 2026-11-25: the tree of 11 groups), with their names in the person's language and the group's colour,
+ * and marks each so the static tables can point at it. Only for a person with no active category:
+ * anybody else already has their own, and gets nothing added. Returns the categories created.
  */
 export async function createDefaultGroups(
   ctx: Who,
@@ -331,6 +339,7 @@ export async function createDefaultGroups(
 ): Promise<number> {
   const wanted = DEFAULT_GROUPS.filter((group) => keys.includes(group.key));
   if (wanted.length === 0) throw new TransactionError("invalid");
+  const name = (one: { en: string; it: string }) => (locale === "it" ? one.it : one.en);
   return getDb().transaction(async (tx) => {
     const [existing] = await tx
       .select({ id: categories.id })
@@ -338,19 +347,33 @@ export async function createDefaultGroups(
       .where(and(userScoped(ctx).owns(categories), isNull(categories.archivedAt)))
       .limit(1);
     if (existing) throw new TransactionError("invalid");
+    let created = 0;
+    const mark = (categoryId: string, groupKey: string) =>
+      tx
+        .insert(categoryGroupMarks)
+        .values(userScoped(ctx).stamp({ categoryId, groupKey }))
+        .onConflictDoNothing();
     for (const group of wanted) {
       const [row] = await tx
         .insert(categories)
-        .values(userScoped(ctx).stamp({ name: locale === "it" ? group.it : group.en, type: group.type }))
+        .values(userScoped(ctx).stamp({ name: name(group), type: group.type, color: group.color }))
         .onConflictDoNothing()
         .returning({ id: categories.id });
       // An archived category already holds the name: the group is skipped, never resurrected.
       if (!row) continue;
-      await tx
-        .insert(categoryGroupMarks)
-        .values(userScoped(ctx).stamp({ categoryId: row.id, groupKey: group.key }))
-        .onConflictDoNothing();
+      await mark(row.id, group.key);
+      created += 1;
+      for (const child of group.children) {
+        const [sub] = await tx
+          .insert(categories)
+          .values(userScoped(ctx).stamp({ name: name(child), type: group.type, parentId: row.id }))
+          .onConflictDoNothing()
+          .returning({ id: categories.id });
+        if (!sub) continue;
+        await mark(sub.id, child.key);
+        created += 1;
+      }
     }
-    return wanted.length;
+    return created;
   });
 }

@@ -250,12 +250,40 @@ export const createDefaultGroups = defineRoute({
   scope: "write",
   capability: "transactions",
   summary:
-    "The default groups the person chose, in their language, then a pass of the cascade after the answer; " +
-    "answers how many were made.",
+    "The default groups the person chose, each with all its sub-categories, in their language, then a " +
+    "pass of the cascade after the answer; answers how many categories were made.",
   actions: [],
   body: z.object({ keys: z.array(z.string().max(40)).min(1).max(20) }),
   response: changed,
   status: 201,
   errors: TRANSACTION_ERRORS,
-  example: { body: { keys: ["groceries"] }, response: { count: 1 } },
+  example: { body: { keys: ["food_drinks"] }, response: { count: 4 } },
+});
+
+/** The selector of a movement's category (PERS-634, decision 14A): the cascade's answer and the top three. */
+const categorySuggestions = z.object({
+  /** Automatic or suggested; a group — a category with no parent — when the sub-category is uncertain. */
+  categoryId: id().nullable(),
+  /** The three likeliest categories of the movement's kind, the likeliest first: the selector's top. */
+  top: z.array(id()).max(3),
+});
+
+export const getCategorySuggestions = defineRoute({
+  id: "get_category_suggestions",
+  method: "GET",
+  path: "/transactions/{id}/category-suggestions",
+  scope: "read",
+  capability: "transactions",
+  summary:
+    "What the category selector of a movement puts first: the cascade's answer (a group when the " +
+    "sub-category is uncertain) and the three likeliest categories. Nothing is learnt or written. A " +
+    "giroconto, or another person's movement, is `not_found`.",
+  actions: [],
+  params: byTransaction,
+  response: categorySuggestions,
+  errors: ["invalid", "not_found"],
+  example: {
+    params: { id: TRANSACTION_ID },
+    response: { categoryId: CATEGORY_ID, top: [CATEGORY_ID] },
+  },
 });

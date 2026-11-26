@@ -5,7 +5,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { CategoryType } from "@ledgerly/domain/transactions/client";
 
 export type Macro = CategoryType;
-export const MACROS: readonly Macro[] = ["income", "expense", "transfer"];
+export const MACROS: readonly Macro[] = ["income", "expense"];
 
 /** One category, or a group, as the board draws it: every amount already formatted. */
 export interface BoardLine {
@@ -50,7 +50,7 @@ export interface BoardMacro {
 
 export type Dialog =
   | { kind: "group"; macro: "income" | "expense" }
-  | { kind: "add"; group: BoardLine | null; macro: Macro }
+  | { kind: "add"; group: BoardLine; macro: Macro }
   | { kind: "color"; line: BoardLine }
   | { kind: "move"; line: BoardLine }
   | { kind: "macro"; line: BoardLine; children: number }

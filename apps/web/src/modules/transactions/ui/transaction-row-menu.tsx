@@ -9,6 +9,9 @@ import { useCategoryActions } from "./category-actions";
 import { useManualMovement } from "./manual-movement";
 import type { RowView } from "./view";
 
+/** The rule editor, prefilled from a movement. */
+const ruleFrom = (id: string) => `/settings/finance/rules?from=${id}`;
+
 /**
  * The menu of one Expenses row. A manual movement is changed in its own dialog and deleted without
  * being hidden first; any other row opens the details panel, and is deleted only once hidden.
@@ -17,12 +20,15 @@ export function TransactionRowMenu({
   row,
   onEditCategory,
   onOpenDetails,
+  onTransfer,
   onVisibility,
   onDeleteHidden,
 }: {
   row: RowView;
   onEditCategory: () => void;
   onOpenDetails: () => void;
+  /** The choice of the other account: a giroconto's, or one that makes the movement a giroconto. */
+  onTransfer: () => void;
   /** Hides the row, or restores it when it is hidden. */
   onVisibility: () => void;
   onDeleteHidden: () => void;
@@ -33,15 +39,11 @@ export function TransactionRowMenu({
   const automatic = useCategoryActions();
 
   const head = [
-    { label: text("row.editCategory"), onSelect: onEditCategory },
-    ...(automatic
-      ? [
-          {
-            label: text("row.createRule"),
-            onSelect: () => router.push(`/settings/finance/rules?from=${row.id}`),
-          },
-        ]
-      : []),
+    // A giroconto has no category: its other account takes the category's place (decision 10A).
+    row.transfer
+      ? { label: text("transfer.title"), onSelect: onTransfer }
+      : { label: text("row.editCategory"), onSelect: onEditCategory },
+    ...(automatic ? [{ label: text("row.createRule"), onSelect: () => router.push(ruleFrom(row.id)) }] : []),
   ];
   const visibility = {
     label: row.hidden ? text("selection.restore") : text("selection.hide"),
@@ -70,6 +72,7 @@ export function TransactionRowMenu({
       items={[
         ...head,
         { label: text("row.edit"), onSelect: onOpenDetails },
+        ...(row.transfer ? [] : [{ label: text("transfer.make"), onSelect: onTransfer }]),
         { ...visibility, danger: !row.hidden },
         ...(row.hidden ? [{ label: text("selection.delete"), onSelect: onDeleteHidden, danger: true }] : []),
       ]}

@@ -173,13 +173,17 @@ export const suggestManualCategory = defineRoute({
   capability: "transactions",
   summary:
     "The category the cascade would give the movement being written, from what is already known; null " +
-    "for none. Nothing is learnt or written.",
+    "for none, and the three likeliest categories for the selector's top. Nothing is learnt or written.",
   actions: [],
   body: movement.pick({ kind: true, amount: true, accountId: true, payee: true, note: true }),
-  response: z.object({ categoryId: id().nullable() }),
+  response: z.object({
+    categoryId: id().nullable(),
+    /** PERS-634: the three likeliest categories of the movement's kind, for the selector's top. */
+    top: z.array(id()).max(3),
+  }),
   errors: ["invalid"],
   example: {
     body: { kind: "expense", amount: "42.80", accountId: ACCOUNT_ID, payee: "Corner shop", note: "" },
-    response: { categoryId: CATEGORY_ID },
+    response: { categoryId: CATEGORY_ID, top: [CATEGORY_ID] },
   },
 });

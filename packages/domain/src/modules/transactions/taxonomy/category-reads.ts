@@ -233,11 +233,9 @@ export async function alignCategoryTypesToMovements(
   const evidence = new Map<string, Record<CategoryType, number>>();
   for (const row of tally) {
     if (row.categoryId === null) continue;
-    const own = evidence.get(row.categoryId) ?? { income: 0, expense: 0, transfer: 0 };
-    // A movement's type and a category's type share their three names (spec §7.2).
-    if (row.type === "income" || row.type === "expense" || row.type === "transfer") {
-      own[row.type] += Number(row.count);
-    }
+    const own = evidence.get(row.categoryId) ?? { income: 0, expense: 0 };
+    // A giroconto has no category: only an income or a spending says what a category is.
+    if (row.type === "income" || row.type === "expense") own[row.type] += Number(row.count);
     evidence.set(row.categoryId, own);
   }
 
@@ -247,7 +245,7 @@ export async function alignCategoryTypesToMovements(
 
   const moves = new Map<string, CategoryType>();
   for (const row of rows) {
-    const verdict = typeFromMovements(evidence.get(row.id) ?? { income: 0, expense: 0, transfer: 0 });
+    const verdict = typeFromMovements(evidence.get(row.id) ?? { income: 0, expense: 0 });
     if (verdict === null || settled(row.id, verdict)) continue;
     moves.set(row.id, verdict);
   }

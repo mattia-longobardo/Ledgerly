@@ -1,10 +1,11 @@
 export { categories, labels, sourceCategories, sourceCategoryUndos, categoryRules } from "./categories";
 export type { SourceCategoryUndo } from "./categories";
-export { transactions, transactionLabels, recurringPatterns } from "./movements";
+export { transactions, transactionLabels, recurringPatterns, girocontoProposals } from "./movements";
 export {
   categoryMemory,
   categoryModels,
   categoryGroupMarks,
+  categoryLabels,
   categoryMergeDismissals,
   categoryUndos,
   categoryRuleUndos,

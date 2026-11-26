@@ -18,7 +18,7 @@ type Undo = Record<string, unknown>;
 export interface CategoryFormInput {
   name: string;
   parentId: string;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense";
   color: string | null;
 }
 

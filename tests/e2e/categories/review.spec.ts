@@ -41,7 +41,7 @@ test.describe("the automatic categories", () => {
 
     await test.step("the automatic category has a mark that opens its reason, with no number in it", async () => {
       const row = rowOf(page, "TRENITALIA SPA 1021");
-      await expect(row.getByRole("button", { name: "Edit category" })).toHaveText("Transport");
+      await expect(row.getByRole("button", { name: "Edit category" })).toHaveText("Long distance");
       await row.getByTestId("auto-mark").click();
       const popup = page.getByRole("dialog", { name: "Automatic category" });
       await expect(popup).toContainText("“Trenitalia” is a known brand in this category.");
@@ -72,9 +72,9 @@ test.describe("the automatic categories", () => {
         .getByRole("dialog", { name: "Suggestion" })
         .getByRole("button", { name: "Choose another" })
         .click();
-      await page.getByRole("option", { name: "Home", exact: true }).click();
+      await page.getByRole("option", { name: "Housing", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Apply to 2 similar transactions?" });
-      await expect(dialog).toContainText("You put “AMZN Mktp IT 11” in Home.");
+      await expect(dialog).toContainText("You put “AMZN Mktp IT 11” in Housing.");
       await expect(dialog).toContainText("Suggestion: Shopping");
       await dialog.getByRole("button", { name: "Apply to 2" }).click();
       await expect(dialog).toHaveCount(0);
@@ -85,7 +85,7 @@ test.describe("the automatic categories", () => {
       await page.getByRole("button", { name: "Undo" }).click();
       await expect(chips).toHaveCount(2);
       await expect(rowOf(page, "AMZN Mktp IT 11").getByRole("button", { name: "Edit category" })).toHaveText(
-        "Home",
+        "Housing",
       );
     });
   });
@@ -147,8 +147,8 @@ test.describe("the automatic categories", () => {
     await page.goto("/settings/finance");
     const proposal = page.getByTestId("merge-proposal");
     await expect(proposal).toHaveCount(1);
-    await expect(proposal).toContainText("Bars");
-    await expect(proposal).toContainText("Restaurants and bars");
+    await expect(proposal).toContainText("Cafe");
+    await expect(proposal).toContainText("Bar, cafe");
     await proposal.getByRole("button", { name: "Merge…" }).click();
     const dialog = page.getByRole("dialog", { name: "Merge categories" });
     await expect(dialog.getByRole("group", { name: "Which name stays?" })).toBeVisible();
@@ -173,8 +173,16 @@ test.describe("the guided review of a person with no category", () => {
   test("starts from the default groups, then the categories, and can be finished later", async ({ page }) => {
     await page.goto(`${REVIEW}?guide=1&bank=Zeta%20Bank`);
     await expect(page.getByRole("group", { name: "Choose the groups for your spending" })).toBeVisible();
-    await expect(page.getByRole("checkbox")).toHaveCount(15);
-    await page.getByRole("button", { name: "Create 15 groups" }).click();
+    // The 11 groups of Wallet's tree, each with its sub-categories under it (decisions 1A–3A).
+    await expect(page.getByRole("checkbox")).toHaveCount(11);
+    await expect(page.getByRole("checkbox", { name: "Food & Drinks" })).toHaveAccessibleDescription(
+      "Bar, cafe · Restaurant, fast-food · Groceries",
+    );
+    // A group can be left out: the button counts the groups it creates.
+    await page.getByRole("checkbox", { name: "Others" }).click();
+    await expect(page.getByRole("button", { name: "Create 10 groups" })).toBeVisible();
+    await page.getByRole("checkbox", { name: "Others" }).click();
+    await page.getByRole("button", { name: "Create 11 groups" }).click();
 
     // The cascade reads the movements again with the groups: the brand it knows gets its category.
     await expect(page.getByText("First reading of Zeta Bank")).toBeVisible({ timeout: 30_000 });

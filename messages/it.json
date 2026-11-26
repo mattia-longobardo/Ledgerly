@@ -434,8 +434,7 @@
       "noGroup": "Nessun gruppo",
       "types": {
         "income": "Entrata",
-        "expense": "Spesa",
-        "transfer": "Giroconto"
+        "expense": "Spesa"
       },
       "usage": "{count, plural, =0 {non usata} one {# movimento} other {# movimenti}}",
       "rename": "Rinomina",
@@ -1828,8 +1827,8 @@
       "noPayee": "Senza beneficiario",
       "save": "Salva",
       "cancel": "Annulla",
-      "paired": "È un giroconto tra i tuoi conti.",
-      "createRule": "Crea una regola…"
+      "createRule": "Crea una regola…",
+      "likely": "Più probabili"
     },
     "badges": {
       "manual": "A mano",
@@ -1838,7 +1837,7 @@
       "edited": "Modificato qui",
       "transfer": "Giroconto",
       "pending": "In attesa",
-      "unpaired": "Giroconto spaiato"
+      "unpaired": "Scegli il conto"
     },
     "breakdown": {
       "title": "Per categoria",
@@ -1885,7 +1884,7 @@
       "expenses": "Spese",
       "net": "Netto",
       "transfers": "{count, plural, one {# giroconto escluso da entrate e spese, contato nel netto} other {# giroconti esclusi da entrate e spese, contati nel netto}}",
-      "unpaired": "{count, plural, one {# senza l'altra gamba qui} other {# senza l'altra gamba qui}}",
+      "unpaired": "{count, plural, one {# aspetta che tu scelga il conto} other {# aspettano che tu scelga il conto}}",
       "partial": "Totale parziale: {count, plural, one {# movimento in valuta estera senza cambio escluso} other {# movimenti in valuta estera senza cambio esclusi}}"
     },
     "spending": {
@@ -2008,6 +2007,7 @@
       },
       "reason": {
         "memory": "Le ultime 3 volte hai scelto questa categoria per «{text}».",
+        "group": "Probabilmente {group}: scegli la sottocategoria.",
         "similar": "Somiglia ad altri movimenti che hai messo in questa categoria.",
         "merchant_type": "La banca indica un tipo di esercizio che corrisponde a questa categoria.",
         "brand": "«{brand}» è un marchio noto di questa categoria.",
@@ -2131,13 +2131,9 @@
       "macroLabel": "Macro",
       "macro": {
         "income": "Entrate",
-        "expense": "Uscite",
-        "transfer": "Giroconti"
+        "expense": "Uscite"
       },
       "count": "{count, plural, one {# movimento} other {# movimenti}}",
-      "transferSplit": "Entrati {in} · Usciti {out}",
-      "in": "Entrati",
-      "out": "Usciti",
       "shareOf": "Quota di {name}",
       "budget": "Budget {limit}",
       "budgetStatus": {
@@ -2155,7 +2151,6 @@
       "open": "Apri",
       "newGroup": "Nuovo gruppo",
       "addCategory": "Aggiungi una categoria",
-      "addTransferCategory": "Aggiungi una categoria di Giroconti",
       "addIn": "In {macro} › {group}",
       "actions": "Azioni per {name}",
       "rename": "Rinomina",
@@ -2201,12 +2196,6 @@
           "inRange": "ricevuti nel periodo",
           "empty": "Nessuna entrata in questo periodo.",
           "summary": "Ricevuti nel periodo, {total} in tutto."
-        },
-        "transfer": {
-          "title": "Spostati nel tempo",
-          "inRange": "usciti nel periodo",
-          "empty": "Niente spostato in questo periodo.",
-          "summary": "Usciti nel periodo, {total} in tutto."
         }
       },
       "detail": {
@@ -2253,8 +2242,7 @@
       },
       "fromWord": {
         "income": "entrate",
-        "expense": "uscite",
-        "transfer": "giroconti"
+        "expense": "uscite"
       }
     },
     "tabs": {
@@ -2262,6 +2250,38 @@
       "movements": "Movimenti",
       "categories": "Categorie",
       "review": "Da rivedere"
+    },
+    "transfer": {
+      "title": "Altro conto",
+      "make": "Segna come giroconto",
+      "description": "Dove vanno o da dove arrivano i soldi di «{account}». Un giroconto non ha categoria e resta fuori da entrate, uscite e budget.",
+      "other": "Altro conto",
+      "choose": "Scegli il conto",
+      "outside": "Conto esterno",
+      "none": "Non è un giroconto",
+      "noAccount": "—",
+      "route": "Da {from} → a {to}",
+      "change": "{route}: cambia l'altro conto",
+      "waiting": "In attesa dell'altra parte",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "failed": "Non è stato possibile salvare il giroconto.",
+      "pair": "Accoppia come giroconto",
+      "toasts": {
+        "saved": "Giroconto salvato",
+        "none": "Non è più un giroconto",
+        "paired": "Giroconto accoppiato",
+        "rejected": "Proposta rifiutata"
+      },
+      "proposals": {
+        "title": "{count, plural, one {# giroconto da confermare} other {# giroconti da confermare}}",
+        "description": "Stesso importo, giorni vicini, più di una coppia possibile: conferma quella giusta.",
+        "days": "Uscita il {out}, entrata il {in}",
+        "accept": "Conferma",
+        "reject": "Rifiuta",
+        "acceptLabel": "Conferma: {route}",
+        "rejectLabel": "Rifiuta: {route}"
+      }
     }
   },
   "overview": {

@@ -35,7 +35,7 @@ export interface ReviewGroupView {
 /** How many groups a section shows before "Show more", and how many examples a closed group. */
 const PAGE = 20;
 const EXAMPLES = 3;
-const REASONS = ["memory", "similar", "merchant_type", "brand", "salary", "fee"] as const;
+const REASONS = ["memory", "group", "similar", "merchant_type", "brand", "salary", "fee"] as const;
 
 /** A group a person dealt with: the line that takes its card's place, with its "Undo". */
 interface Done {
@@ -73,6 +73,7 @@ function ReviewGroupCard({
     return t(`auto.reason.${code}`, {
       text: group.reason.params.text ?? "",
       brand: group.reason.params.brand ?? "",
+      group: group.suggestion?.name ?? "",
     });
   }
 

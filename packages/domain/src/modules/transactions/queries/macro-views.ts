@@ -95,36 +95,27 @@ export function macroViews(
     const line = (category: MacroCategory, amount: Amount): CategoryLine => ({
       category,
       ...amount,
-      share: macro === "transfer" ? 0 : shareOf(amount.totalCents, whole.totalCents),
+      share: shareOf(amount.totalCents, whole.totalCents),
     });
     const counts = (id: string) => own.has(id);
 
-    let groups: GroupLine[];
-    if (macro === "transfer") {
-      // A flat list (CR2): every category of the macro, a group of it with its children too, and any
-      // other category that has transfers in the period.
-      groups = categories
-        .filter((category) => category.type === "transfer" || counts(category.id))
-        .map((category) => ({ ...line(category, amountOf(category.id)), only: null, children: [] }));
-    } else {
-      groups = categories
-        .filter((category) => category.parentId === null || !byId.has(category.parentId))
-        .filter(
-          (group) =>
-            group.type === macro ||
-            counts(group.id) ||
-            (childrenOf.get(group.id) ?? []).some((child) => counts(child.id)),
-        )
-        .map((group) => {
-          const children = (childrenOf.get(group.id) ?? [])
-            .filter((child) => child.type === macro || counts(child.id))
-            .map((child) => line(child, amountOf(child.id)))
-            .sort(byTotal);
-          const only = counts(group.id) ? amountOf(group.id) : null;
-          const amount = children.reduce<Amount>((sum, child) => add(sum, child), only ?? ZERO);
-          return { ...line(group, amount), only, children };
-        });
-    }
+    const groups: GroupLine[] = categories
+      .filter((category) => category.parentId === null || !byId.has(category.parentId))
+      .filter(
+        (group) =>
+          group.type === macro ||
+          counts(group.id) ||
+          (childrenOf.get(group.id) ?? []).some((child) => counts(child.id)),
+      )
+      .map((group) => {
+        const children = (childrenOf.get(group.id) ?? [])
+          .filter((child) => child.type === macro || counts(child.id))
+          .map((child) => line(child, amountOf(child.id)))
+          .sort(byTotal);
+        const only = counts(group.id) ? amountOf(group.id) : null;
+        const amount = children.reduce<Amount>((sum, child) => add(sum, child), only ?? ZERO);
+        return { ...line(group, amount), only, children };
+      });
     groups.sort(byTotal);
     const rest = own.get(null) ?? null;
     return { macro, ...whole, groups, rest };

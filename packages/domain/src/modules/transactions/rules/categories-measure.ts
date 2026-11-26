@@ -18,7 +18,7 @@ import { type CascadeMovement, decide, type EmbeddedKnowledge, type Knowledge } 
 import { outOfSample, train } from "../categorize/classifier";
 import { strictMemory } from "../categorize/memory";
 import type { GroupKey } from "../categorize/tables";
-import { featureIndex, memoryKey } from "../categorize/text";
+import { featureIndex, memoryKey, merchantKey } from "../categorize/text";
 import { type Thresholds, thresholdsFor } from "../categorize/thresholds";
 import { type Diagnosis, diagnoseFold, emptyDiagnosis } from "./categories-diagnosis";
 import { coldStartOf, type EmbeddedLabel } from "./embedded-learning";
@@ -56,7 +56,7 @@ interface MeasureLabel extends EmbeddedLabel {
 interface Own {
   named: readonly { id: string; name: string }[];
   groupCategory: ReadonlyMap<GroupKey, string>;
-  categoryKind: ReadonlyMap<string, "income" | "expense" | "transfer">;
+  categoryKind: ReadonlyMap<string, "income" | "expense">;
 }
 
 const FOLDS = 5;
@@ -104,7 +104,7 @@ function knowledgeOf(learnt: readonly MeasureLabel[], own: Own, embedder: Embedd
   const todayTrials = model === null ? [] : outOfSample(learnt);
   const today: Knowledge = {
     memory: strictMemory(
-      learnt.map((label) => ({ key: memoryKey(label), categoryId: label.categoryId, at: label.at })),
+      learnt.map((label) => ({ key: merchantKey(label), categoryId: label.categoryId, at: label.at })),
     ),
     model,
     thresholds: model === null ? NO_THRESHOLDS : thresholdsFor(todayTrials),

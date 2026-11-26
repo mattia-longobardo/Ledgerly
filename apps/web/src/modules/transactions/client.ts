@@ -19,6 +19,7 @@ export { ShortcutsCard } from "./ui/shortcuts-card";
 export { useSourcesOff } from "./ui/sources-off";
 export { SpendingCard } from "./ui/spending-card";
 export { TransactionsTable } from "./ui/transactions-table";
+export { TransferProposals } from "./ui/transfer-proposals";
 export {
   type AccountFilterOption,
   type CategoryFilterOption,
