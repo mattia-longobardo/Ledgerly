@@ -16,6 +16,13 @@ describe("the time a bank writes in the text", () => {
     });
   });
 
+  it("reads the wording with more than one space or a line break between its words (transfers)", () => {
+    expect(timeFromText("BONIFICO DA PROVA del 12/11/2026  alle ore 14:32")?.instant).toBe(
+      "2026-11-12T13:32:00.000Z",
+    );
+    expect(timeFromText("del 12/11/2026\nalle  ore 14:32")?.day).toBe("2026-11-12");
+  });
+
   it("gives nothing for a text without the time, without the wording, or empty", () => {
     expect(timeFromText(card("12/11/2026"))).toBeNull();
     expect(timeFromText("BONIFICO A FAVORE DI PROVA")).toBeNull();
