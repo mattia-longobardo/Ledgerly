@@ -94,9 +94,9 @@ describe("a payslip typed by hand (ST-21)", () => {
     expect(year.totals.gross).toBe(610_000n);
     expect(year.totals.taxesTotal).toBe(120_000n);
     expect(year.totals.employeeSocial).toBe(56_000n);
-    expect(view.kpis.net3).toBe(215_000n);
-    // Without a configuration one extra payment in December is expected: 12 mean months and one more.
-    expect(view.kpis.ral).toEqual({ cents: 305_000n * 13n, basis: "estimate", year: 2031 });
+    expect(year.kpis.net3).toBe(215_000n);
+    // No «Retribuzione di fatto» typed: the latest month's gross × 13 (12 and the December default).
+    expect(year.kpis.theoretical).toEqual({ cents: 310_000n * 13n, basis: "gross", from: "2031-04-01", months: 13 });
   });
 
   it("writes the old type beside the kind, and an extra payment of the employer by its number", async () => {

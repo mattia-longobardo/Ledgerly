@@ -1373,23 +1373,22 @@
       "employerFundEffective": "45.00",
       "tfrSelected": "150.00"
      },
-     "hasApplied": true
+     "hasApplied": true,
+     "kpis": {
+      "net3": "1512.50",
+      "taxRate": 0.13949,
+      "theoretical": {
+       "amount": "26000.00",
+       "basis": "contractual",
+       "from": "2031-04-01",
+       "months": 13
+      }
+     }
     }
    ],
    "inbox": [],
    "awaiting": 0,
    "inFlight": false,
-   "kpis": {
-    "net3": "1512.50",
-    "net6": "1512.50",
-    "net12": "1512.50",
-    "taxRate": 0.13949,
-    "ral": {
-     "amount": "26000.00",
-     "basis": "estimate",
-     "year": 2031
-    }
-   },
    "applied": 2,
    "span": {
     "from": "2031-03-01",

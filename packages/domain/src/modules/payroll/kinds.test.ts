@@ -10,10 +10,9 @@ import {
   kindOfType,
   manualPayslipSchema,
   periodOfManual,
-  ralEstimate,
   REGISTER_FIELDS,
-  type RegisterPayslip,
   SUMMED_FIELDS,
+  theoreticalGross,
 } from "./rules";
 
 describe("the kind of a payslip", () => {
@@ -47,48 +46,41 @@ describe("the catalogue of fields (E4)", () => {
   });
 });
 
-describe("ralEstimate with the employer's extra payments (E6)", () => {
-  const month = (period: string, gross: bigint): RegisterPayslip => ({
-    kind: "ordinary",
+describe("theoreticalGross (owner's choice B, fallback C)", () => {
+  const month = (period: string, gross: bigint | null, contractualGross: bigint | null) => ({
+    kind: "ordinary" as const,
     extraNumber: null,
-    year: 2026,
+    year: Number(period.slice(0, 4)),
     period,
     gross,
     taxesTotal: null,
     netPay: null,
+    contractualGross,
   });
-  const months = (count: number) =>
-    Array.from({ length: count }, (_, index) => month(`2026-${String(index + 1).padStart(2, "0")}-01`, 100_000n));
-  const extra = (number: number, gross: bigint): RegisterPayslip => ({
-    kind: "extra",
-    extraNumber: number,
-    year: 2026,
-    period: null,
-    gross,
-    taxesTotal: null,
-    netPay: null,
+  const extra = { ...month("2026-12-01", 999_999n, 999_999n), kind: "extra" as const, extraNumber: 1, period: null };
+  const thirteen = { payFrequency: "monthly" as const, extraMonths: [12] };
+
+  it("is the latest ordinary payslip's contractual pay × (12 + extra payments)", () => {
+    const year = [month("2026-01-01", 210_000n, 200_000n), month("2026-10-01", 230_000n, 220_000n), extra];
+    expect(theoreticalGross(year, thirteen)).toEqual({ cents: 220_000n * 13n, basis: "contractual", from: "2026-10-01", months: 13 });
+    expect(theoreticalGross(year, { payFrequency: "monthly", extraMonths: [12, 6] })?.cents).toBe(220_000n * 14n);
+    expect(theoreticalGross(year, { payFrequency: "monthly", extraMonths: [] })?.cents).toBe(220_000n * 12n);
   });
 
-  it("puts a mean month for every extra payment the employer makes and the year lacks", () => {
-    const employer = { payFrequency: "monthly" as const, extraMonths: [12, 6] };
-    expect(ralEstimate(months(3), employer)).toEqual({ cents: 1_400_000n, basis: "estimate", year: 2026 });
-    expect(ralEstimate([...months(3), extra(2, 90_000n)], employer)?.cents).toBe(1_390_000n);
+  it("falls back to the gross when the latest payslip has no contractual pay", () => {
+    const year = [month("2026-01-01", 210_000n, 200_000n), month("2026-02-01", 205_000n, null)];
+    expect(theoreticalGross(year, thirteen)).toEqual({ cents: 205_000n * 13n, basis: "gross", from: "2026-02-01", months: 13 });
   });
 
-  it("expects no extra payment from an employer without one", () => {
-    const employer = { payFrequency: "monthly" as const, extraMonths: [] };
-    expect(ralEstimate(months(3), employer)?.cents).toBe(1_200_000n);
-    expect(ralEstimate(months(12), employer)).toEqual({ cents: 1_200_000n, basis: "complete_year", year: 2026 });
+  it("reads a past year from its own latest month, never from its 13th", () => {
+    const past = [month("2025-11-01", 190_000n, 180_000n), month("2025-12-01", 190_000n, 185_000n), { ...extra, year: 2025 }];
+    expect(theoreticalGross(past, thirteen)).toMatchObject({ cents: 185_000n * 13n, from: "2025-12-01" });
   });
 
-  it("calls a year complete only with every extra payment the employer makes", () => {
-    const employer = { payFrequency: "monthly" as const, extraMonths: [12, 6] };
-    expect(ralEstimate([...months(12), extra(1, 100_000n)], employer)?.basis).toBe("estimate");
-    expect(ralEstimate([...months(12), extra(1, 100_000n), extra(2, 50_000n)], employer)).toEqual({
-      cents: 1_350_000n,
-      basis: "complete_year",
-      year: 2026,
-    });
+  it("is null without an ordinary payslip, or without any amount on it", () => {
+    expect(theoreticalGross([extra], thirteen)).toBeNull();
+    expect(theoreticalGross([], thirteen)).toBeNull();
+    expect(theoreticalGross([month("2026-03-01", null, null)], thirteen)).toBeNull();
   });
 });
 

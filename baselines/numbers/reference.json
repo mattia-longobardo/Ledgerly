@@ -3049,16 +3049,6 @@
   }
  },
  "payroll": {
-  "kpis": {
-   "net12": "151250",
-   "net3": "151250",
-   "net6": "151250",
-   "ral": {
-    "cents": "2600000",
-    "year": 2031
-   },
-   "taxRate": 0.13949
-  },
   "years": {
    "2031": {
     "averages": {
@@ -3075,6 +3065,15 @@
      "taxesTotal": "27898",
      "tfrSelected": "15000",
      "welfareCash": null
+    },
+    "kpis": {
+     "net3": "151250",
+     "taxRate": 0.13949,
+     "theoretical": {
+      "cents": "2600000",
+      "from": "2031-04-01",
+      "months": 13
+     }
     },
     "totals": {
      "employeeFundEffective": "5000",

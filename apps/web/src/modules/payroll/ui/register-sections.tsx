@@ -1,8 +1,8 @@
 "use client";
 
 // The sections of the Payroll page above the register (spec §7.8 "Registro", D13): the heading with
-// the span and the payslips waiting, the tabs, the KPIs over the applied ordinary payslips and the
-// documents with no payslip to show yet. Every figure is a field of `GET /payroll/payslips`.
+// the year's payslips and those waiting, the tabs, the year's KPIs and the documents with no payslip
+// to show yet. Every figure is a field of `GET /payroll/payslips`.
 import { useTranslations } from "next-intl";
 import { civilDateIn } from "@ledgerly/format/dates";
 import { formatDate, formatPercent, NULL_DISPLAY } from "@ledgerly/format/format";
@@ -18,18 +18,28 @@ interface Props {
   format: Format;
 }
 
-export function RegisterHeader({ view, format }: Props) {
+type Year = Register["years"][number];
+
+/** The applied payslips of a year and the months they span: the heading and the gross earned say it. */
+function appliedSpan(year: Year | undefined): { count: number; from: string; to: string } | null {
+  const applied = year?.rows.filter((row) => row.applied) ?? [];
+  const periods = applied.flatMap((row) => (row.period ? [row.period] : [])).toSorted();
+  return periods.length === 0 ? null : { count: applied.length, from: periods[0], to: periods.at(-1)! };
+}
+
+export function RegisterHeader({ view, year, format }: Props & { year: Year | undefined }) {
   const text = useTranslations("payroll");
+  const span = appliedSpan(year);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-title font-semibold tracking-title max-md:sr-only">{text("title")}</h1>
         <p className="text-muted">
-          {view.span
+          {span
             ? text("summary", {
-                count: view.applied,
-                from: formatDate(view.span.from, "monthShort", format.locale),
-                to: formatDate(view.span.to, "monthShort", format.locale),
+                count: span.count,
+                from: formatDate(span.from, "monthShort", format.locale),
+                to: formatDate(span.to, "monthShort", format.locale),
               })
             : text("summaryEmpty")}
         </p>
@@ -61,28 +71,39 @@ export function PayrollTabs({ active }: { active: "register" | "settings" }) {
   );
 }
 
-export function RegisterKpis({ view, format }: Props) {
+/** The KPIs of the year chosen (owner's choice, 26/11/2026): gross earned and theoretical, net, tax rate. */
+export function RegisterKpis({ year, format }: { year: Year; format: Format }) {
   const text = useTranslations("payroll");
-  const { kpis } = view;
+  const { kpis } = year;
+  const span = appliedSpan(year);
+  const month = (period: string) => formatDate(period, "monthShort", format.locale);
+  const theoretical = kpis.theoretical;
   return (
     <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-5">
-      <KpiTile label={text("kpis.net3")} value={moneyOf(kpis.net3, format)} note={text("kpis.ordinaryOnly")} />
-      <KpiTile label={text("kpis.net6")} value={moneyOf(kpis.net6, format)} />
-      <KpiTile label={text("kpis.net12")} value={moneyOf(kpis.net12, format)} />
       <KpiTile
-        label={text("kpis.taxRate")}
-        value={kpis.taxRate === null ? NULL_DISPLAY : formatPercent(kpis.taxRate, format.numberFormat)}
+        testId="kpi-gross-effective"
+        label={text("kpis.grossEffective", { year: year.year })}
+        value={moneyOf(year.totals.gross, format)}
+        note={span ? text("kpis.grossEffectiveNote", { from: month(span.from), to: month(span.to), count: span.count }) : undefined}
       />
       <KpiTile
-        label={text("kpis.ral")}
-        value={moneyOf(kpis.ral?.amount, format)}
+        testId="kpi-gross-theoretical"
+        label={text("kpis.grossTheoretical", { year: year.year })}
+        value={moneyOf(theoretical?.amount, format)}
         note={
-          kpis.ral
-            ? text(kpis.ral.basis === "complete_year" ? "kpis.ralComplete" : "kpis.ralEstimate", {
-                year: kpis.ral.year,
+          theoretical
+            ? text(theoretical.basis === "contractual" ? "kpis.theoreticalContractual" : "kpis.theoreticalGross", {
+                month: month(theoretical.from),
+                months: theoretical.months,
               })
-            : undefined
+            : text("kpis.theoreticalNone")
         }
+      />
+      <KpiTile label={text("kpis.netMonthly")} value={moneyOf(year.averages.netPay, format)} note={text("kpis.ordinaryOnly")} />
+      <KpiTile label={text("kpis.net3")} value={moneyOf(kpis.net3, format)} note={text("kpis.ordinaryOnly")} />
+      <KpiTile
+        label={text("kpis.taxRate", { year: year.year })}
+        value={kpis.taxRate === null ? NULL_DISPLAY : formatPercent(kpis.taxRate, format.numberFormat)}
       />
     </div>
   );

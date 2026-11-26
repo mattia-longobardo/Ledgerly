@@ -17,7 +17,7 @@ import { deleteManualPayslipAction } from "../manual-calls";
 import { KindBadge, useFieldLabel } from "./labels";
 import { ManualDialog } from "./manual-dialog";
 import { openOriginal, originalLink } from "./original";
-import { type Catalogue, type Format, kindBadge, type ManualPayslip, moneyOf } from "./present";
+import { type Catalogue, type Format, kindBadge, type ManualPayslip, moneyOf, registerHref } from "./present";
 
 function Heading({ payslip, format, onEdit, onDelete }: { payslip: ManualPayslip; format: Format; onEdit: () => void; onDelete: () => void }) {
   const text = useTranslations("payroll.manual");
@@ -116,7 +116,7 @@ export function ManualView({
         return;
       }
       notify(text("deleted"));
-      router.push("/payroll");
+      router.push(registerHref(payslip.year));
     });
   }
 

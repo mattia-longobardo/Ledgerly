@@ -44,6 +44,11 @@ export const STATE_TONE: Record<DocumentState, StatusTone> = {
 
 const DECIMAL = /^-?\d+(\.\d{1,2})?$/;
 
+/** The register at a payslip's year; the year running without one. */
+export function registerHref(year: number | null | undefined): string {
+  return year == null ? "/payroll" : `/payroll?year=${year}`;
+}
+
 /** An amount of the wire, formatted; anything that is not a decimal is the empty mark. */
 export function moneyOf(value: string | null | undefined, format: Format): string {
   return value && DECIMAL.test(value) ? formatMoney(parseCents(value), format.numberFormat) : NULL_DISPLAY;

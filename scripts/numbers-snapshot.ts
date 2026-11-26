@@ -255,8 +255,7 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     },
     timeOff,
     payroll: {
-      years: payroll.years.map(({ year, totals, averages }) => ({ year, totals, averages })),
-      kpis: payroll.kpis,
+      years: payroll.years.map(({ year, totals, averages, kpis }) => ({ year, totals, averages, kpis })),
     },
   };
 }

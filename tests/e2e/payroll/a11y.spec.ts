@@ -2,14 +2,20 @@
 // accessibility check: what is measured, and why, is in tests/e2e/_shared/a11y.ts.
 import { test } from "@playwright/test";
 import { audit, followLink, go, type Screen, settled, settledDialog } from "../_shared/a11y";
+import { LAST_YEAR, TODAY } from "../_shared/helpers";
+
+// The layout's payslips are last year's; the one typed by hand is of last month.
+const PAYSLIPS = `/payroll?year=${LAST_YEAR}`;
+const LAST_MONTH_YEAR = TODAY.slice(5, 7) === "01" ? LAST_YEAR : LAST_YEAR + 1;
 
 const PAGES: Screen[] = [
   { name: "/payroll", session: "layout", smoke: true, open: go("/payroll") },
+  { name: "/payroll?year=", session: "layout", open: go(PAYSLIPS) },
   {
     name: "/payroll/[id]",
     session: "layout",
     open: async (page) => {
-      await page.goto("/payroll");
+      await page.goto(PAYSLIPS);
       await settled(page);
       // Not `…/original`, which is the stored PDF and starts a download rather than a page.
       await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"]):not([href$="/settings"])');
@@ -21,7 +27,7 @@ const PAGES: Screen[] = [
     name: "/payroll/manual/[id]",
     session: "payrollHand",
     open: async (page) => {
-      await page.goto("/payroll");
+      await page.goto(`/payroll?year=${LAST_MONTH_YEAR}`);
       await settled(page);
       await followLink(page, 'main a[href^="/payroll/manual/"]');
     },
@@ -34,7 +40,7 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/payroll");
+      await page.goto(PAYSLIPS);
       await settled(page);
       await followLink(page, 'main a[href^="/payroll/"]:not([href$="/original"]):not([href$="/settings"])');
       await page.getByRole("button", { name: /^(Rename|Rinomina)$/ }).click();

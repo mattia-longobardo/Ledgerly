@@ -36,9 +36,14 @@ function documentOut(document: Document) {
   };
 }
 
+function theoreticalOut(theoretical: RegisterData["years"][number]["kpis"]["theoretical"]) {
+  if (theoretical === null) return null;
+  const { cents, basis, from, months } = theoretical;
+  return { amount: centsToDecimal(cents), basis, from, months };
+}
+
 /** The register of the Payroll page. */
 export function registerOut(view: RegisterData): Register {
-  const { ral } = view.kpis;
   return {
     years: view.years.map((year) => ({
       year: year.year,
@@ -70,17 +75,11 @@ export function registerOut(view: RegisterData): Register {
       totals: amounts(year.totals),
       averages: amounts(year.averages),
       hasApplied: year.rows.some((row) => row.payslip.active),
+      kpis: { net3: money(year.kpis.net3), taxRate: year.kpis.taxRate, theoretical: theoreticalOut(year.kpis.theoretical) },
     })),
     inbox: view.inbox.map(documentOut),
     awaiting: view.awaiting,
     inFlight: view.inFlight,
-    kpis: {
-      net3: money(view.kpis.net3),
-      net6: money(view.kpis.net6),
-      net12: money(view.kpis.net12),
-      taxRate: view.kpis.taxRate,
-      ral: ral === null ? null : { amount: centsToDecimal(ral.cents), basis: ral.basis, year: ral.year },
-    },
     applied: view.applied,
     span: view.span,
   };

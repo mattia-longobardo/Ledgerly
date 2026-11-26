@@ -19079,6 +19079,18 @@
                               }
                             ]
                           },
+                          "legTransactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "note": {
                             "type": [
                               "string",
@@ -19113,6 +19125,7 @@
                           "units",
                           "competence",
                           "transactionId",
+                          "legTransactionId",
                           "note",
                           "gross",
                           "origin"
@@ -19810,6 +19823,18 @@
                               }
                             ]
                           },
+                          "legTransactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "note": {
                             "type": [
                               "string",
@@ -19844,6 +19869,7 @@
                           "units",
                           "competence",
                           "transactionId",
+                          "legTransactionId",
                           "note",
                           "gross",
                           "origin"
@@ -31356,6 +31382,18 @@
                               }
                             ]
                           },
+                          "legTransactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "linked": {
                             "anyOf": [
                               {
@@ -31461,6 +31499,7 @@
                           "leg",
                           "adjustmentClass",
                           "transactionId",
+                          "legTransactionId",
                           "linked",
                           "transfer",
                           "realized",
@@ -32119,6 +32158,18 @@
                                   }
                                 ]
                               },
+                              "legTransactionId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "linked": {
                                 "anyOf": [
                                   {
@@ -32224,6 +32275,7 @@
                               "leg",
                               "adjustmentClass",
                               "transactionId",
+                              "legTransactionId",
                               "linked",
                               "transfer",
                               "realized",
@@ -34859,6 +34911,62 @@
                             "type": "string",
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "counterpart": {
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "account"
+                                  },
+                                  "accountId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "accountId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "outside"
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "none"
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
                           },
                           {
                             "type": "null"
@@ -46087,6 +46195,71 @@
                           },
                           "hasApplied": {
                             "type": "boolean"
+                          },
+                          "kpis": {
+                            "type": "object",
+                            "properties": {
+                              "net3": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "taxRate": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "theoretical": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "basis": {
+                                        "type": "string",
+                                        "enum": [
+                                          "contractual",
+                                          "gross"
+                                        ]
+                                      },
+                                      "from": {
+                                        "type": "string",
+                                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                      },
+                                      "months": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "basis",
+                                      "from",
+                                      "months"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "net3",
+                              "taxRate",
+                              "theoretical"
+                            ]
                           }
                         },
                         "required": [
@@ -46094,7 +46267,8 @@
                           "rows",
                           "totals",
                           "averages",
-                          "hasApplied"
+                          "hasApplied",
+                          "kpis"
                         ]
                       }
                     },
@@ -46159,90 +46333,6 @@
                     "inFlight": {
                       "type": "boolean"
                     },
-                    "kpis": {
-                      "type": "object",
-                      "properties": {
-                        "net3": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "net6": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "net12": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "taxRate": {
-                          "type": [
-                            "number",
-                            "null"
-                          ]
-                        },
-                        "ral": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "amount": {
-                                  "type": "string",
-                                  "pattern": "^-?\\d+\\.\\d{2}$"
-                                },
-                                "basis": {
-                                  "type": "string",
-                                  "enum": [
-                                    "complete_year",
-                                    "estimate"
-                                  ]
-                                },
-                                "year": {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                }
-                              },
-                              "required": [
-                                "amount",
-                                "basis",
-                                "year"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "net3",
-                        "net6",
-                        "net12",
-                        "taxRate",
-                        "ral"
-                      ]
-                    },
                     "applied": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -46278,7 +46368,6 @@
                     "inbox",
                     "awaiting",
                     "inFlight",
-                    "kpis",
                     "applied",
                     "span"
                   ]
@@ -65471,6 +65560,9 @@
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                           },
+                          "timeKnown": {
+                            "type": "boolean"
+                          },
                           "accountId": {
                             "type": "string",
                             "format": "uuid",
@@ -65548,6 +65640,7 @@
                           "id",
                           "on",
                           "occurredAt",
+                          "timeKnown",
                           "accountId",
                           "accountName",
                           "amount",
@@ -65698,6 +65791,9 @@
                       "type": "string",
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "timeKnown": {
+                      "type": "boolean"
                     },
                     "accountId": {
                       "type": "string",
@@ -65873,7 +65969,8 @@
                       "type": "string",
                       "enum": [
                         "provider",
-                        "manual"
+                        "manual",
+                        "investments"
                       ]
                     },
                     "sendState": {
@@ -65935,6 +66032,7 @@
                     "id",
                     "on",
                     "occurredAt",
+                    "timeKnown",
                     "accountId",
                     "accountName",
                     "amount",
@@ -66151,6 +66249,122 @@
           }
         ],
         "x-scope": "write"
+      }
+    },
+    "/transactions/{id}/category-suggestions": {
+      "get": {
+        "operationId": "get_category_suggestions",
+        "summary": "What the category selector of a movement puts first: the cascade's answer (a group when the sub-category is uncertain) and the three likeliest categories. Nothing is learnt or written. A giroconto, or another person's movement, is `not_found`.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categoryId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "top": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    }
+                  },
+                  "required": [
+                    "categoryId",
+                    "top"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
       }
     },
     "/transactions/{id}/similar": {
@@ -68339,7 +68553,7 @@
     "/transactions/manual/suggestion": {
       "post": {
         "operationId": "suggest_manual_category",
-        "summary": "The category the cascade would give the movement being written, from what is already known; null for none. Nothing is learnt or written.",
+        "summary": "The category the cascade would give the movement being written, from what is already known; null for none, and the three likeliest categories for the selector's top. Nothing is learnt or written.",
         "tags": [
           "transactions"
         ],
@@ -68405,10 +68619,20 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "top": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
                     }
                   },
                   "required": [
-                    "categoryId"
+                    "categoryId",
+                    "top"
                   ]
                 }
               }
@@ -70601,6 +70825,9 @@
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                           },
+                          "timeKnown": {
+                            "type": "boolean"
+                          },
                           "accountId": {
                             "type": "string",
                             "format": "uuid",
@@ -70775,7 +71002,8 @@
                             "type": "string",
                             "enum": [
                               "provider",
-                              "manual"
+                              "manual",
+                              "investments"
                             ]
                           },
                           "sendState": {
@@ -70837,6 +71065,7 @@
                           "id",
                           "on",
                           "occurredAt",
+                          "timeKnown",
                           "accountId",
                           "accountName",
                           "amount",

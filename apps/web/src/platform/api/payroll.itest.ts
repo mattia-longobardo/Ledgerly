@@ -137,7 +137,13 @@ describe("the routes of payroll", () => {
     const [year] = register.body.years;
     expect(year.year).toBe(view.years[0].year);
     expect(year.totals.netPay).toBe(centsToDecimal(view.years[0].totals.netPay!));
-    expect(register.body.kpis.net3).toBe(centsToDecimal(view.kpis.net3!));
+    expect(year.kpis.net3).toBe(centsToDecimal(view.years[0].kpis.net3!));
+    expect(year.kpis.theoretical).toMatchObject({
+      basis: view.years[0].kpis.theoretical!.basis,
+      from: "2031-03-01",
+      months: 13,
+    });
+    expect(year.kpis.theoretical.amount).toBe(centsToDecimal(view.years[0].kpis.theoretical!.cents));
     const rows = new Map(year.rows.map((row: { id: string }) => [row.id, row]));
     expect(rows.get(id)).toMatchObject({ applied: true, openWarnings: 0, period: "2031-03-01" });
     expect(rows.get(waiting)).toMatchObject({ applied: false });

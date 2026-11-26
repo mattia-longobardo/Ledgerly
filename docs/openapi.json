@@ -46195,6 +46195,71 @@
                           },
                           "hasApplied": {
                             "type": "boolean"
+                          },
+                          "kpis": {
+                            "type": "object",
+                            "properties": {
+                              "net3": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "taxRate": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "theoretical": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "basis": {
+                                        "type": "string",
+                                        "enum": [
+                                          "contractual",
+                                          "gross"
+                                        ]
+                                      },
+                                      "from": {
+                                        "type": "string",
+                                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                      },
+                                      "months": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "basis",
+                                      "from",
+                                      "months"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "net3",
+                              "taxRate",
+                              "theoretical"
+                            ]
                           }
                         },
                         "required": [
@@ -46202,7 +46267,8 @@
                           "rows",
                           "totals",
                           "averages",
-                          "hasApplied"
+                          "hasApplied",
+                          "kpis"
                         ]
                       }
                     },
@@ -46267,90 +46333,6 @@
                     "inFlight": {
                       "type": "boolean"
                     },
-                    "kpis": {
-                      "type": "object",
-                      "properties": {
-                        "net3": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "net6": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "net12": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "pattern": "^-?\\d+\\.\\d{2}$"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "taxRate": {
-                          "type": [
-                            "number",
-                            "null"
-                          ]
-                        },
-                        "ral": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "amount": {
-                                  "type": "string",
-                                  "pattern": "^-?\\d+\\.\\d{2}$"
-                                },
-                                "basis": {
-                                  "type": "string",
-                                  "enum": [
-                                    "complete_year",
-                                    "estimate"
-                                  ]
-                                },
-                                "year": {
-                                  "type": "integer",
-                                  "minimum": -9007199254740991,
-                                  "maximum": 9007199254740991
-                                }
-                              },
-                              "required": [
-                                "amount",
-                                "basis",
-                                "year"
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "net3",
-                        "net6",
-                        "net12",
-                        "taxRate",
-                        "ral"
-                      ]
-                    },
                     "applied": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -46386,7 +46368,6 @@
                     "inbox",
                     "awaiting",
                     "inFlight",
-                    "kpis",
                     "applied",
                     "span"
                   ]

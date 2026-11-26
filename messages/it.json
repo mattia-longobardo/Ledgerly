@@ -5599,14 +5599,27 @@
     "awaiting": "{count, plural, one {# cedolino da rivedere} other {# cedolini da rivedere}}",
     "add": "Aggiungi cedolino",
     "kpis": {
+      "grossEffective": "Lordo effettivo {year}",
+      "grossEffectiveNote": "{from} – {to} · {count, plural, one {# cedolino} other {# cedolini}}",
+      "grossTheoretical": "Lordo teorico {year}",
+      "theoreticalContractual": "Retribuzione di fatto di {month} × {months}",
+      "theoreticalGross": "Lordo di {month} × {months}",
+      "theoreticalNone": "nessun cedolino ordinario",
+      "netMonthly": "Netto medio mensile",
       "net3": "Netto medio · 3 mesi",
-      "net6": "Netto medio · 6 mesi",
-      "net12": "Netto medio · 12 mesi",
-      "taxRate": "Aliquota media",
-      "ral": "RAL · lordo annuo",
-      "ralComplete": "{year}, anno completo",
-      "ralEstimate": "{year}, stimata",
+      "taxRate": "Aliquota media {year}",
       "ordinaryOnly": "solo cedolini ordinari"
+    },
+    "year": {
+      "label": "Anno",
+      "previous": "Anno precedente",
+      "next": "Anno successivo",
+      "thisYear": "Quest'anno"
+    },
+    "emptyYear": {
+      "title": "Nessun cedolino nel {year}",
+      "description": "Aggiungi un cedolino dell'anno, o scegli un altro anno in alto.",
+      "latest": "Vai al {year}"
     },
     "empty": {
       "title": "Nessun cedolino",

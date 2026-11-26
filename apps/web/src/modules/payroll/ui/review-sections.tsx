@@ -76,6 +76,7 @@ function ReviewHeading({ view, format }: Props) {
       </div>
       <ReviewActions
         documentId={document.id}
+        year={view.payslip?.year ?? null}
         fileName={document.fileName}
         state={document.state}
         blocking={view.blocking}

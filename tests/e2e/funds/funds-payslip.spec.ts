@@ -56,7 +56,8 @@ test.describe("a fund fed by the payslip", () => {
         await expect(page.getByRole("heading", { level: 1 })).toContainText("To review", { timeout: 20_000 });
         await page.getByRole("button", { name: "Verify", exact: true }).click();
         await page.getByRole("button", { name: "Apply to payroll" }).click();
-        await expect(page.getByRole("heading", { level: 1 })).toContainText("Applied", { timeout: 20_000 });
+        // Applying it goes back to the register, at the payslip's year.
+        await expect(page).toHaveURL(new RegExp(`/payroll\\?year=${LAST_YEAR}$`), { timeout: 20_000 });
         await page.goto("/payroll");
       }
     });

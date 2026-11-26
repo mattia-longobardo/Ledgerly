@@ -23,8 +23,8 @@ import {
   groupByYear,
   isOrdinary,
   meanCents,
-  ralEstimate,
-  type RalEstimate,
+  theoreticalGross,
+  type TheoreticalGross,
   isSeededCode,
   SUMMED_FIELDS,
   type SummedField,
@@ -65,8 +65,18 @@ export interface YearSummary {
   totals: Record<SummedField, Cents | null>;
   /** Means over its applied ordinary payslips, 13th and 14th left out. */
   averages: Record<SummedField, Cents | null>;
+  /**
+   * The year's KPIs over its applied payslips: the gross earned is `totals.gross`, the mean monthly
+   * net `averages.netPay`; these are the rest.
+   */
+  kpis: {
+    /** The mean net of the year's last three ordinary payslips. */
+    net3: Cents | null;
+    /** Taxes over gross across the year's ordinary payslips. */
+    taxRate: number | null;
+    theoretical: TheoreticalGross | null;
+  };
 }
-
 
 
 interface RegisterView {
@@ -75,13 +85,6 @@ interface RegisterView {
   inbox: Document[];
   awaiting: number;
   inFlight: boolean;
-  kpis: {
-    net3: Cents | null;
-    net6: Cents | null;
-    net12: Cents | null;
-    taxRate: number | null;
-    ral: RalEstimate | null;
-  };
   applied: number;
   span: { from: string; to: string } | null;
 }
@@ -107,8 +110,7 @@ function sumOf(rows: readonly RegisterRow[], field: SummedField): Cents | null {
 
 /**
  * The Payroll register (spec §7.8 "Registro", D13): every payslip that is applied or waiting for a
- * decision, grouped by year with the year's totals and monthly means over the applied ones; the
- * KPIs over applied ordinary payslips only. Superseded and rejected documents are not in it.
+ * decision, grouped by year with the year's totals, monthly means and KPIs over the applied ones. Superseded and rejected documents are not in it.
  */
 export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterView> {
   const [documents, payslips, employer] = await Promise.all([
@@ -172,7 +174,16 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
       totals[field] = sumOf(applied, field);
       averages[field] = meanCents(ordinary.map((row) => registerAmount(row, field)));
     }
-    return { year: group.year, rows: ofYear, totals, averages };
+    const payslips = applied.map((row) => ({
+      ...row.payslip,
+      contractualGross: row.fields.contractualGross ?? null,
+    }));
+    const kpis = {
+      net3: averageNet(payslips, 3),
+      taxRate: averageTaxRate(payslips),
+      theoretical: theoreticalGross(payslips, employer),
+    };
+    return { year: group.year, rows: ofYear, totals, averages, kpis };
   });
 
   const withPayslip = new Set(payslips.flatMap((payslip) => payslip.documentId ?? []));
@@ -185,13 +196,6 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
     inbox,
     awaiting: documents.filter((document) => AWAITING_REVIEW.includes(document.state)).length,
     inFlight: documents.some((document) => IN_FLIGHT.includes(document.state)),
-    kpis: {
-      net3: averageNet(active, 3),
-      net6: averageNet(active, 6),
-      net12: averageNet(active, 12),
-      taxRate: averageTaxRate(active),
-      ral: ralEstimate(active, employer),
-    },
     applied: active.length,
     span: periods.length === 0 ? null : { from: periods[0], to: periods.at(-1)! },
   };

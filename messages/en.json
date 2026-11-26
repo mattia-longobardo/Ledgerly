@@ -5599,14 +5599,27 @@
     "awaiting": "{count, plural, one {# payslip to review} other {# payslips to review}}",
     "add": "Add payslip",
     "kpis": {
+      "grossEffective": "Gross earned {year}",
+      "grossEffectiveNote": "{from} – {to} · {count, plural, one {# payslip} other {# payslips}}",
+      "grossTheoretical": "Theoretical gross {year}",
+      "theoreticalContractual": "Contractual pay of {month} × {months}",
+      "theoreticalGross": "Gross of {month} × {months}",
+      "theoreticalNone": "no ordinary payslip",
+      "netMonthly": "Avg monthly net",
       "net3": "Avg net · 3 months",
-      "net6": "Avg net · 6 months",
-      "net12": "Avg net · 12 months",
-      "taxRate": "Avg tax rate",
-      "ral": "RAL · gross annual",
-      "ralComplete": "{year}, complete year",
-      "ralEstimate": "{year}, estimated",
+      "taxRate": "Avg tax rate {year}",
       "ordinaryOnly": "ordinary payslips only"
+    },
+    "year": {
+      "label": "Year",
+      "previous": "Previous year",
+      "next": "Next year",
+      "thisYear": "This year"
+    },
+    "emptyYear": {
+      "title": "No payslips in {year}",
+      "description": "Add a payslip of the year, or choose another year above.",
+      "latest": "Go to {year}"
     },
     "empty": {
       "title": "No payslips yet",

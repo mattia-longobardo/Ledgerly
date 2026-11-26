@@ -43,6 +43,8 @@ test("a payslip typed by hand is applied at once, opened, changed and deleted", 
   });
 
   await test.step("an ordinary payslip enters the register at once, typed by hand", async () => {
+    // A year of its own, not the one running: the register shows the year in the URL.
+    await page.goto(`/payroll?year=${YEAR}`);
     const dialog = await typePayslip(page, { when: "March" });
     await expect(dialog).toBeHidden();
     await expect(toast(page, "Payslip saved")).toBeVisible();
@@ -88,7 +90,7 @@ test("a payslip typed by hand is applied at once, opened, changed and deleted", 
   await test.step("deleted, it leaves the register", async () => {
     await page.getByRole("button", { name: "Delete" }).click();
     await page.getByRole("dialog", { name: "Delete this payslip?" }).getByRole("button", { name: "Delete" }).click();
-    await expect(page).toHaveURL(/\/payroll$/);
+    await expect(page).toHaveURL(/\/payroll\?year=2030$/);
     await expect(toast(page, "Payslip deleted")).toBeVisible();
     await expect(table.getByRole("row", { name: /March 2030/ })).toHaveCount(0);
     await expect(table.getByRole("row", { name: /13th/ })).toBeVisible();

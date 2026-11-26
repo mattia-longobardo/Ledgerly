@@ -10,7 +10,6 @@ import {
   medianCents,
   parseItalianDate,
   parsePeriodLabel,
-  ralEstimate,
   type RegisterPayslip,
   usagePeriodOf,
 } from "./rules";
@@ -108,42 +107,6 @@ describe("the register's KPIs (spec §7.8)", () => {
   it("takes the tax rate as taxes over gross of the ordinary payslips", () => {
     expect(averageTaxRate(payslips)).toBeCloseTo(0.2, 6);
     expect(averageTaxRate([ordinary("2026-01-01", null)])).toBeNull();
-  });
-
-  it("estimates the yearly gross from the mean month, the 13th or a mean month in its place", () => {
-    expect(ralEstimate(payslips)).toEqual({ cents: 200_000n * 13n, basis: "estimate", year: 2026 });
-    const withThirteenth = [
-      ...payslips,
-      { ...kindOfType("thirteenth"), year: 2026, period: null, gross: 180_000n, taxesTotal: null, netPay: null },
-    ];
-    expect(ralEstimate(withThirteenth)?.cents).toBe(200_000n * 12n + 180_000n);
-  });
-
-  it("adds the real 14th and 15th, and never estimates a missing one", () => {
-    const extras = [
-      ...payslips,
-      { ...kindOfType("fourteenth"), year: 2026, period: null, gross: 70_000n, taxesTotal: null, netPay: null },
-      { ...kindOfType("fifteenth"), year: 2026, period: null, gross: 30_000n, taxesTotal: null, netPay: null },
-      { ...kindOfType("fifteenth"), year: 2025, period: null, gross: 999_999n, taxesTotal: null, netPay: null },
-    ];
-    expect(ralEstimate(extras)?.cents).toBe(200_000n * 13n + 70_000n + 30_000n);
-  });
-
-  it("does not ask for a 15th to call a year complete, and sums it when there is one", () => {
-    const year = Array.from({ length: 12 }, (_, index) => ordinary(`2025-${String(index + 1).padStart(2, "0")}-01`, 100_000n));
-    const thirteenth = { ...kindOfType("thirteenth"), year: 2025, period: null, gross: 50_000n, taxesTotal: null, netPay: null };
-    const fifteenth = { ...kindOfType("fifteenth"), year: 2025, period: null, gross: 20_000n, taxesTotal: null, netPay: null };
-    expect(ralEstimate([...year, thirteenth])).toEqual({ cents: 1_250_000n, basis: "complete_year", year: 2025 });
-    expect(ralEstimate([...year, thirteenth, fifteenth])).toEqual({ cents: 1_270_000n, basis: "complete_year", year: 2025 });
-    expect(ralEstimate([...year, fifteenth])?.basis).toBe("estimate");
-  });
-
-  it("sums a complete year as it is", () => {
-    const year = Array.from({ length: 12 }, (_, index) =>
-      ordinary(`2025-${String(index + 1).padStart(2, "0")}-01`, 100_000n + BigInt(index)),
-    );
-    const complete = [...year, { ...kindOfType("thirteenth"), year: 2025, period: null, gross: 50_000n, taxesTotal: null, netPay: null }];
-    expect(ralEstimate(complete)).toEqual({ cents: 1_200_066n + 50_000n, basis: "complete_year", year: 2025 });
   });
 
   it("groups by year, newest first, the 13th above its December", () => {

@@ -57,7 +57,8 @@ test("a payslip is uploaded, read, reviewed against its PDF, verified and applie
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.getByRole("link", { name: "Payroll" }).first().click();
-    await expect(page).toHaveURL(/\/payroll$/);
+    // To the payslip's year, once it is read.
+    await expect(page).toHaveURL(/\/payroll(\?year=2031)?$/);
     await expect(page.getByRole("heading", { name: "Payroll", level: 1 })).toBeAttached();
     await expect(page.getByText("Something went wrong")).toHaveCount(0);
     expect(errors).toEqual([]);
@@ -87,17 +88,31 @@ test("a payslip is uploaded, read, reviewed against its PDF, verified and applie
     await page.getByRole("button", { name: "Verify", exact: true }).click();
     await expect(page.getByTestId("review-banner")).toContainText("Verified");
     await page.getByRole("button", { name: "Apply to payroll" }).click();
+    // Applying it goes back to the register, at the payslip's year; its page says what it did.
+    await expect(page).toHaveURL(/\/payroll\?year=2031$/);
+    await page.goto(reviewUrl);
     await expect(page.getByTestId("review-banner")).toContainText("Applied to the register");
     await expect(page.getByTestId("leave-events")).toContainText("8,00 h of holiday used in February 2031");
   });
 
-  await test.step("the register shows it by year, with totals, averages and details", async () => {
+  await test.step("the register opens on the year running, and walks to the payslip's", async () => {
     await page.goto("/payroll");
+    await expect(page.getByRole("navigation", { name: "Year" })).toContainText(String(new Date().getFullYear()));
+    await expect(page.getByRole("heading", { name: /^No payslips in \d{4}$/ })).toBeVisible();
+    await page.getByRole("link", { name: "Go to 2031" }).click();
+    await expect(page).toHaveURL(/\/payroll\?year=2031$/);
+  });
+
+  await test.step("the register shows it by year, with totals, averages, the year's KPIs and details", async () => {
     await expect(page.getByText("1 payslip · Mar 31 – Mar 31")).toBeVisible();
     const table = page.getByRole("table");
     await expect(table.getByRole("rowheader", { name: "March 2031" })).toBeVisible();
     await expect(table.getByRole("row", { name: /Total 2031/ })).toContainText("1.511,00 €");
     await expect(page.getByText("Avg net · 3 months").locator("..")).toContainText("1.511,00 €");
+    await expect(page.getByTestId("kpi-gross-effective")).toContainText("Gross earned 2031");
+    await expect(page.getByTestId("kpi-gross-effective")).toContainText("Mar 31 – Mar 31 · 1 payslip");
+    await expect(page.getByTestId("kpi-gross-theoretical")).toContainText(/(Contractual pay|Gross) of Mar 31 × 13/);
+    await expect(page.getByText("Avg net · 6 months")).toHaveCount(0);
     await page.getByRole("button", { name: "Show details" }).click();
     await expect(table.getByRole("row", { name: /March 2031/ })).toContainText("45,00 h");
   });
@@ -153,7 +168,7 @@ test.describe("at 400 px", () => {
   test.use({ viewport: { width: 400, height: 860 } });
 
   test("the register is a list, and a payslip opens from it", async ({ page }) => {
-    await page.goto("/payroll");
+    await page.goto("/payroll?year=2031");
     const item = page.getByRole("link", { name: /March 2031/ });
     await expect(item).toBeVisible();
     await expect(item).toContainText("1.511,00 €");

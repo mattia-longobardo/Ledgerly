@@ -4,6 +4,17 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · Payroll by year: gross earned and theoretical gross (not additive)
+
+`GET /payroll/payslips` and `get_payroll` give the KPIs of each year, not of the whole register.
+
+- Removed: the top-level `kpis` (`net3`, `net6`, `net12`, `taxRate`, `ral`).
+- Added to each `years[]`: `kpis` with `net3` (the mean net of the year's last three ordinary payslips),
+  `taxRate` (taxes over gross across the year's ordinary payslips) and `theoretical`: the «Retribuzione di
+  fatto» of the year's latest ordinary payslip (`from`) × `months` (12 and the employer's extra payments),
+  its gross when the payslip has no such field (`basis` `gross`, else `contractual`); `null` when the year has
+  no ordinary payslip. The gross earned in the year is `totals.gross`, the mean monthly net `averages.netPay`.
+
 ## Unreleased · Categories learnt from every correction, the top three and the group (additive)
 
 - New: `GET /transactions/{id}/category-suggestions`: `categoryId` (the cascade's answer, or `null`)

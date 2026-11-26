@@ -102,7 +102,8 @@ export const WARNING_CODES = [
   "missing_identity",
   "unknown_layout",
 ] as const;
-export const RAL_BASES = ["complete_year", "estimate"] as const;
+/** Where the theoretical yearly gross comes from: the «Retribuzione di fatto», or the gross without it. */
+export const THEORETICAL_BASES = ["contractual", "gross"] as const;
 /**
  * The kinds of leave a payslip prints (PAY-6): one vocabulary, the one `GET /timeoff/{year}` already
  * speaks for a payslip's month. A `permit` is counted as ROL by time off.
@@ -188,6 +189,21 @@ export const payrollRegister = z.object({
       /** Means over its applied ordinary payslips. */
       averages: amounts(),
       hasApplied: z.boolean(),
+      /** The year's KPIs: the gross earned is `totals.gross`, the mean monthly net `averages.netPay`. */
+      kpis: z.object({
+        /** The mean net of the year's last three ordinary payslips. */
+        net3: money().nullable(),
+        /** Taxes over gross across the year's ordinary payslips, a fraction (0.31 is 31 %). */
+        taxRate: z.number().nullable(),
+        /**
+         * The theoretical yearly gross: the «Retribuzione di fatto» of the year's latest ordinary
+         * payslip (`from`) × `months` (12 and the employer's extra payments), its gross without it
+         * (`basis` `gross`). Null when the year has no ordinary payslip.
+         */
+        theoretical: z
+          .object({ amount: money(), basis: z.enum(THEORETICAL_BASES), from: monthStart(), months: z.number().int() })
+          .nullable(),
+      }),
     }),
   ),
   /** Documents with no payslip to show yet: being read, waiting for OCR, failed, unreadable. */
@@ -195,14 +211,6 @@ export const payrollRegister = z.object({
   awaiting: z.number().int(),
   /** A document is being read: ask again in a while. */
   inFlight: z.boolean(),
-  kpis: z.object({
-    net3: money().nullable(),
-    net6: money().nullable(),
-    net12: money().nullable(),
-    /** Taxes over gross, a fraction (0.31 is 31 %). */
-    taxRate: z.number().nullable(),
-    ral: z.object({ amount: money(), basis: z.enum(RAL_BASES), year: z.number().int() }).nullable(),
-  }),
   applied: z.number().int(),
   span: z.object({ from: monthStart(), to: monthStart() }).nullable(),
 });
@@ -317,12 +325,16 @@ export const REGISTER_EXAMPLE = {
       totals: { ...EMPTY_AMOUNTS, gross: "3000.00", netPay: "2100.00" },
       averages: { ...EMPTY_AMOUNTS, gross: "3000.00", netPay: "2100.00" },
       hasApplied: true,
+      kpis: {
+        net3: "2100.00",
+        taxRate: 0.21,
+        theoretical: { amount: "39000.00", basis: "contractual", from: "2026-03-01", months: 13 },
+      },
     },
   ],
   inbox: [],
   awaiting: 0,
   inFlight: false,
-  kpis: { net3: "2100.00", net6: "2100.00", net12: "2100.00", taxRate: 0.21, ral: null },
   applied: 1,
   span: { from: "2026-03-01", to: "2026-03-01" },
 };

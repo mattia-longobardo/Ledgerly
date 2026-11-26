@@ -18,7 +18,7 @@ import {
   retryPayslipAction,
   verifyPayslipAction,
 } from "../calls";
-import type { DocumentState } from "./present";
+import { type DocumentState, registerHref } from "./present";
 
 type Failed = { ok: false; error: string };
 
@@ -29,12 +29,15 @@ type Failed = { ok: false; error: string };
  */
 export function ReviewActions({
   documentId,
+  year,
   fileName,
   state,
   blocking,
   llm,
 }: {
   documentId: string;
+  /** The payslip's year, once read: applying or deleting it goes back to that year's register. */
+  year: number | null;
   fileName: string;
   state: DocumentState;
   blocking: boolean;
@@ -62,7 +65,7 @@ export function ReviewActions({
       }
       setError(null);
       notify(typeof toast === "string" ? toast : toast(result));
-      // The calls read the payslip again; deleting it leaves its page.
+      // The calls read the payslip again; applying or deleting it leaves its page.
       then?.();
     });
   }
@@ -136,7 +139,13 @@ export function ReviewActions({
         {state === "verified" && (
           <Button
             variant="primary"
-            onClick={() => run(() => applyPayslipAction(documentId), t("review.toasts.applied"))}
+            onClick={() =>
+              run(
+                () => applyPayslipAction(documentId),
+                t("review.toasts.applied"),
+                () => router.push(registerHref(year)),
+              )
+            }
             disabled={pending}
           >
             {t("review.actions.apply")}
@@ -185,7 +194,7 @@ export function ReviewActions({
                           ? "review.toasts.deletedUnapplied"
                           : "review.toasts.deleted",
                     ),
-                  () => router.push("/payroll"),
+                  () => router.push(registerHref(year)),
                 )
               }
               disabled={pending}

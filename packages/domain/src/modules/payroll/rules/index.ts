@@ -222,45 +222,33 @@ export function averageTaxRate(payslips: readonly RegisterPayslip[]): number | n
   return gross > 0n ? Number(taxes) / Number(gross) : null;
 }
 
-export interface RalEstimate {
+export interface TheoreticalGross {
   cents: Cents;
-  basis: "complete_year" | "estimate";
-  year: number;
+  /** `contractual`: the payslip's «Retribuzione di fatto»; `gross`: its gross, when it does not have one. */
+  basis: "contractual" | "gross";
+  /** The ordinary payslip it is read from: the latest one of the payslips given. */
+  from: MonthKey;
+  /** How many times the month counts: twelve, and one for each extra payment of the employer. */
+  months: number;
 }
 
 /**
- * The yearly gross (spec §7.8 "Stima RAL"): the year's gross when its twelve ordinary months and
- * every extra payment the employer makes are all there; otherwise the mean ordinary gross × 12, plus
- * each extra payment the employer makes — the real one or one mean month in its place — plus any
- * other extra payment the year has. The year is the latest one with an ordinary payslip.
+ * The theoretical yearly gross (owner's choice B, 26/11/2026): the «Retribuzione di fatto»
+ * (`contractualGross`) of the latest ordinary payslip × (12 + the employer's extra payments); its
+ * gross in the same way when the field is missing (choice C, a payslip typed by hand). Null without
+ * an ordinary payslip. The caller gives one year's applied payslips.
  */
-export function ralEstimate(payslips: readonly RegisterPayslip[], employer: Employer = DEFAULT_EMPLOYER): RalEstimate | null {
+export function theoreticalGross(
+  payslips: readonly (RegisterPayslip & { contractualGross: Cents | null })[],
+  employer: Employer = DEFAULT_EMPLOYER,
+): TheoreticalGross | null {
   const latest = ordinariesNewestFirst(payslips)[0];
-  if (!latest) return null;
-  const year = latest.year;
-  const ofYear = payslips.filter((payslip) => payslip.year === year);
-  const ordinary = ofYear.filter(isOrdinary);
-  const extras = new Map(ofYear.filter(isExtra).map((payslip) => [kindOf(payslip).extraNumber, payslip]));
-  const expected = [...employer.extraMonths.keys()].map((index) => index + 1);
-  const months = new Set(ordinary.map((payslip) => payslip.period));
-  if (
-    months.size === 12 &&
-    expected.every((number) => extras.has(number)) &&
-    ofYear.every((payslip) => payslip.gross !== null)
-  ) {
-    return {
-      cents: ofYear.reduce((sum, payslip) => sum + (payslip.gross ?? 0n), 0n),
-      basis: "complete_year",
-      year,
-    };
-  }
-  const mean = meanCents(ordinary.map((payslip) => payslip.gross));
-  if (mean === null) return null;
-  const expectedCents = expected.reduce((sum, number) => sum + (extras.get(number)?.gross ?? mean), 0n);
-  const otherCents = [...extras]
-    .filter(([number]) => number === null || !expected.includes(number))
-    .reduce((sum, [, payslip]) => sum + (payslip.gross ?? 0n), 0n);
-  return { cents: mean * 12n + expectedCents + otherCents, basis: "estimate", year };
+  if (!latest?.period) return null;
+  // shortcut: counts monthly pay only (12 a year); a weekly or biweekly employer needs its own count.
+  const months = 12 + employer.extraMonths.length;
+  const [basis, monthly] =
+    latest.contractualGross !== null ? (["contractual", latest.contractualGross] as const) : (["gross", latest.gross] as const);
+  return monthly === null ? null : { cents: monthly * BigInt(months), basis, from: latest.period, months };
 }
 
 interface YearGroup<P extends RegisterPayslip> {
