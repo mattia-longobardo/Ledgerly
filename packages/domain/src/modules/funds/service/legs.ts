@@ -7,6 +7,7 @@ import { and, asc, eq } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
+import { wantedLegOf } from "../../../shared/cash-legs";
 import { getAccount } from "../../accounts";
 import { fundLegs } from "../ports";
 import { fundOperations, funds } from "../schema";
@@ -42,13 +43,7 @@ export async function linkFundLegs(ctx: Pick<Ctx, "userId" | "timeZone">, fundId
       trx,
       ctx,
       { id: fund.accountId, currency },
-      operations.map((operation) => ({
-        legId: operation.legTransactionId,
-        on: operation.on,
-        amountCents: operation.amountCents,
-        note: operation.note,
-        pairWith: operation.transactionId,
-      })),
+      operations.map(wantedLegOf),
     );
     for (const [index, operation] of operations.entries()) {
       if (legs.legIds[index] === operation.legTransactionId) continue;

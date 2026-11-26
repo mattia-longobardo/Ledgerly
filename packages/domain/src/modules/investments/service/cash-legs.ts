@@ -6,7 +6,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { getAccount } from "../../accounts";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { WrittenLegs } from "../../../shared/cash-legs";
+import { wantedLegOf, type WrittenLegs } from "../../../shared/cash-legs";
 import { MANUAL_PROVIDER } from "../catalog";
 import { cashLegs } from "../ports";
 import { investmentAccounts, investmentEvents, investmentOperations } from "../schema";
@@ -53,13 +53,7 @@ export async function writeCashLegs(
     trx,
     ctx,
     { id: investment.accountId, currency },
-    events.map((event) => ({
-      legId: event.legTransactionId,
-      on: event.on,
-      amountCents: event.amountCents,
-      note: event.note,
-      pairWith: event.transactionId,
-    })),
+    events.map(wantedLegOf),
   );
   const legOf = new Map<string, string>();
   for (const [index, event] of events.entries()) {
