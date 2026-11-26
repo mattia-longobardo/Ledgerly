@@ -82,6 +82,7 @@ function activityRowOut(
     },
     adjustmentClass: row.adjustmentClass,
     transactionId: row.transactionId,
+    legTransactionId: row.legTransactionId,
     linked: row.linked === null ? null : { payee: row.linked.payee, amount: money(row.linked.cents) },
     transfer: row.transfer,
     realized: maybe(realized.get(row.id) ?? null),

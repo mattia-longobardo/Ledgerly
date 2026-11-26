@@ -153,6 +153,7 @@ async function writePlan(
       ...NO_CATEGORY,
       type: "transfer",
       transferAccountId: one.transferAccountId,
+      transferOutside: false,
       locallyEdited: withMarkers(byId.get(one.id)!.locallyEdited, "type"),
     });
   }
@@ -161,7 +162,13 @@ async function writePlan(
       one.id,
       one.transferGroupId === null
         ? { transferGroupId: null }
-        : { ...NO_CATEGORY, type: "transfer", transferGroupId: one.transferGroupId, transferAccountId: null },
+        : {
+            ...NO_CATEGORY,
+            type: "transfer",
+            transferGroupId: one.transferGroupId,
+            transferAccountId: null,
+            transferOutside: false,
+          },
     );
   }
 }
@@ -235,7 +242,7 @@ export const transferSideSchema = z.discriminatedUnion("kind", [
 export type TransferSide = z.infer<typeof transferSideSchema>;
 
 /** Takes the row and its partner out of their pair; the partner stays a giroconto to choose for. Returns the legs. */
-async function unpair(trx: Tx, ctx: Who, groupId: string | null): Promise<string[]> {
+export async function unpair(trx: Tx, ctx: Who, groupId: string | null): Promise<string[]> {
   if (groupId === null) return [];
   const legs = await trx
     .select({ id: transactions.id, locallyEdited: transactions.locallyEdited })

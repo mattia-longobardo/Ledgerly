@@ -137,12 +137,24 @@ export const operationBody = z.discriminatedUnion("kind", [
   /**
    * Money in and out of a manual portfolio (R5d): its day, its amount and, when one documents it,
    * the bank movement. On any other service they come from Accounts or the provider: `not_editable`.
+   * Each one has a leg in the account (PERS-651), a giroconto of origin `investments`: paired with
+   * `transactionId` when given; else with `counterpart`, as the person chose it — one of their
+   * accounts, an account `outside`, or `none` (an income or a spending); else with the one bank
+   * movement that matches (several: a proposal), else a giroconto from an account outside.
    */
   z.looseObject({
     kind: z.enum(["deposit", "withdrawal"]),
     on: civilDate().optional(),
     amount: amountInput().optional(),
     transactionId: id().nullable().optional(),
+    counterpart: z
+      .discriminatedUnion("kind", [
+        z.object({ kind: z.literal("account"), accountId: id() }).strict(),
+        z.object({ kind: z.literal("outside") }).strict(),
+        z.object({ kind: z.literal("none") }).strict(),
+      ])
+      .nullable()
+      .optional(),
     note: z.string().max(200).nullable().optional(),
   }),
   /** The value and a correction come from Accounts or the provider: always `not_editable`. */

@@ -42,6 +42,7 @@ export {
   deleteContribution,
   deleteValuation,
   fundsOnAccount,
+  linkAllFundLegs,
   matchDebits,
   moveFundAccount,
   moveFundSourceAccount,

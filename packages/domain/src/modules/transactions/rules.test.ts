@@ -747,6 +747,20 @@ describe("planOwnTransfers", () => {
     ]);
   });
 
+  it("pairs an Investments leg Ledgerly put outside, never one the person put there (PERS-651)", () => {
+    const bank = row({ id: "t1", accountId: "ing", type: "expense" });
+    const leg = { id: "t2", accountId: "fin", amountCents: 50_000n, origin: "investments" as const };
+    expect(planOwnTransfers(own, [bank, row({ ...leg, transferOutside: true })]).groups).toEqual([
+      { id: "t1", transferGroupId: "t1" },
+      { id: "t2", transferGroupId: "t1" },
+    ]);
+    const chosen = row({ ...leg, transferOutside: true, locallyEdited: ["type"] });
+    expect(planOwnTransfers(own, [bank, chosen])).toEqual(nothing);
+    expect(planOwnTransfers(own, [bank, row({ ...leg, origin: "provider", transferOutside: true })])).toEqual(
+      nothing,
+    );
+  });
+
   it("makes a giroconto of an income or a spending that names another account's IBAN (8A)", () => {
     const rows = [
       row({ id: "t1", accountId: "ing", note: IBAN_B, type: "expense" }),

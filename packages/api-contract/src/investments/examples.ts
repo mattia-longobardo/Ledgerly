@@ -154,6 +154,7 @@ export const ACTIVITY_ROW_EXAMPLE = {
   },
   adjustmentClass: null,
   transactionId: null,
+  legTransactionId: null,
   linked: null,
   transfer: null,
   realized: "21.00",

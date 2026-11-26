@@ -3,6 +3,8 @@
 // accounts that hold a fund's value, which no service may use; declared here and realised by funds,
 // so this module never imports funds (R5b, INV-9). The application wires both (`wireDomain`).
 import type { Ctx } from "../../platform/context";
+import type { Tx } from "../../platform/db/client";
+import type { WantedLeg, WrittenLegs } from "../../shared/cash-legs";
 import type { CivilDate } from "../../shared/dates";
 import { managedSinceOf, serviceAccountIds } from "./managed";
 
@@ -54,14 +56,31 @@ interface MarketPrices {
   isStale(lastOn: CivilDate | null, today: CivilDate): boolean;
 }
 
+/**
+ * The account's legs of the deposits and withdrawals (PERS-651), as investments writes them: declared here and realised by
+ * transactions, so this module never imports it. `writeLegs` runs in the caller's transaction,
+ * `settleLegs` after it.
+ */
+interface CashLegs {
+  writeLegs(
+    tx: Tx,
+    ctx: Pick<Ctx, "userId" | "timeZone">,
+    account: { id: string; currency: string },
+    wanted: readonly WantedLeg[],
+  ): Promise<WrittenLegs>;
+  settleLegs(ctx: Pick<Ctx, "userId">, written: Pick<WrittenLegs, "touched" | "choices">): Promise<void>;
+}
+
 declare global {
+  var ledgerlyInvestmentLegs: CashLegs | undefined;
   var ledgerlyFundAccounts: FundAccounts | undefined;
   var ledgerlyMarketPrices: MarketPrices | undefined;
 }
 
 /** Wires the ports; the application calls it once per process, before any request or job. */
-export function wireInvestments(ports: { funds: FundAccounts; prices: MarketPrices }): void {
+export function wireInvestments(ports: { funds: FundAccounts; prices: MarketPrices; legs: CashLegs }): void {
   globalThis.ledgerlyFundAccounts = ports.funds;
+  globalThis.ledgerlyInvestmentLegs = ports.legs;
   globalThis.ledgerlyMarketPrices = ports.prices;
 }
 
@@ -73,6 +92,12 @@ export function marketPrices(): MarketPrices {
 
 export function fundAccounts(): FundAccounts {
   const wired = globalThis.ledgerlyFundAccounts;
+  if (!wired) throw new Error("investments: the ports are not wired (wireDomain of @ledgerly/api)");
+  return wired;
+}
+
+export function cashLegs(): CashLegs {
+  const wired = globalThis.ledgerlyInvestmentLegs;
   if (!wired) throw new Error("investments: the ports are not wired (wireDomain of @ledgerly/api)");
   return wired;
 }

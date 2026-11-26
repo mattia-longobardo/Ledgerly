@@ -113,9 +113,12 @@ class Work {
   /**
    * A leg that may still be paired: alone, not to an account outside, and a giroconto already or a
    * movement nobody filed — a type decided here, or a category a person or a source chose, stays.
+   * The leg of an Investments deposit is "outside" only until its bank movement arrives (PERS-651):
+   * free while nobody chose its side.
    */
   free(row: OwnTransferRow): boolean {
-    if (this.groupOf(row) !== null || row.transferOutside) return false;
+    if (this.groupOf(row) !== null) return false;
+    if (row.transferOutside) return row.origin === "investments" && !row.locallyEdited.includes("type");
     if (this.isTransfer(row)) return true;
     return (
       row.origin === "provider" &&

@@ -5,6 +5,7 @@ import type { Ctx } from "../../platform/context";
 import { duplicatesOf, markDuplicate, twinOf } from "./service/duplicates";
 import { dailyNetByAccount, manualMovementsByAccount, transactionIdsOfAccount } from "./queries/movements";
 import { linkOwnTransfers } from "./service/giroconti";
+import { settleLegs, writeLegs } from "./service/legs";
 
 export const movementsOfAccounts = {
   dailyNetByAccount,
@@ -15,6 +16,12 @@ export const movementsOfAccounts = {
   markDuplicate,
   duplicatesOf,
 };
+
+/**
+ * The adapter of the ports `CashLegs` of investments and funds (PERS-651): the account's leg of a
+ * deposit, a withdrawal or a voluntary contribution, written and paired here.
+ */
+export const cashLegsOfTransactions = { writeLegs, settleLegs };
 
 /**
  * A source of movements as transactions sees it (audit TRX-6): the provider id its movements and

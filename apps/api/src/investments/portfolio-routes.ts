@@ -51,6 +51,7 @@ function moneyOf(body: MoneyBody) {
     on: body.on,
     amountCents: parseCents(body.amount),
     transactionId: body.transactionId ?? null,
+    counterpart: body.counterpart ?? null,
     note: body.note ?? null,
   };
 }

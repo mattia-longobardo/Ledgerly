@@ -220,12 +220,15 @@ export const investmentEvents = pgTable(
     origin: text("origin", { enum: EVENT_ORIGINS }).notNull(),
     transferGroupId: uuid("transfer_group_id"),
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    /** The account's leg of a deposit or a withdrawal (PERS-651): a giroconto of origin `investments`. */
+    legTransactionId: uuid("leg_transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     note: text("note"),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("investment_events_transaction_uq").on(table.transactionId),
+    unique("investment_events_leg_transaction_uq").on(table.legTransactionId),
     index("investment_events_account_on_idx").on(table.investmentAccountId, table.on),
     index("investment_events_user_idx").on(table.userId),
     checkIn("investment_events_origin_ck", table.origin, EVENT_ORIGINS),

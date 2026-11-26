@@ -20,7 +20,7 @@ import { wireTimeoff } from "@ledgerly/domain/timeoff";
 import { wireAuth } from "@ledgerly/domain/platform/auth";
 import { startOnboarding } from "@ledgerly/domain/users";
 import { addonOn } from "@ledgerly/domain/platform/context";
-import { movementsOfAccounts } from "@ledgerly/domain/transactions";
+import { cashLegsOfTransactions, movementsOfAccounts } from "@ledgerly/domain/transactions";
 import {
   leaveCalendar,
   openCalendar,
@@ -51,10 +51,11 @@ export function wireDomain(): void {
   wireSinks({ movements: movementsSink, leave: leaveSink });
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });
   wirePayroll({ listeners: [payrollSource] });
-  wireFunds({ payslips });
+  wireFunds({ payslips, legs: cashLegsOfTransactions });
   wireSubscriptions({ linked: { payeeKeys: linkedPayeeKeys } });
   wireInvestments({
     funds: { accountIds: valuationAccountIds },
+    legs: cashLegsOfTransactions,
     prices: {
       fallbackMic: FALLBACK_MIC,
       instrumentById,

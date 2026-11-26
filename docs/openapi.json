@@ -19079,6 +19079,18 @@
                               }
                             ]
                           },
+                          "legTransactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "note": {
                             "type": [
                               "string",
@@ -19113,6 +19125,7 @@
                           "units",
                           "competence",
                           "transactionId",
+                          "legTransactionId",
                           "note",
                           "gross",
                           "origin"
@@ -19810,6 +19823,18 @@
                               }
                             ]
                           },
+                          "legTransactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "note": {
                             "type": [
                               "string",
@@ -19844,6 +19869,7 @@
                           "units",
                           "competence",
                           "transactionId",
+                          "legTransactionId",
                           "note",
                           "gross",
                           "origin"
@@ -31356,6 +31382,18 @@
                               }
                             ]
                           },
+                          "legTransactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "linked": {
                             "anyOf": [
                               {
@@ -31461,6 +31499,7 @@
                           "leg",
                           "adjustmentClass",
                           "transactionId",
+                          "legTransactionId",
                           "linked",
                           "transfer",
                           "realized",
@@ -32119,6 +32158,18 @@
                                   }
                                 ]
                               },
+                              "legTransactionId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "linked": {
                                 "anyOf": [
                                   {
@@ -32224,6 +32275,7 @@
                               "leg",
                               "adjustmentClass",
                               "transactionId",
+                              "legTransactionId",
                               "linked",
                               "transfer",
                               "realized",
@@ -34859,6 +34911,62 @@
                             "type": "string",
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "counterpart": {
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "account"
+                                  },
+                                  "accountId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "accountId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "outside"
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "none"
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
                           },
                           {
                             "type": "null"
@@ -65880,7 +65988,8 @@
                       "type": "string",
                       "enum": [
                         "provider",
-                        "manual"
+                        "manual",
+                        "investments"
                       ]
                     },
                     "sendState": {
@@ -70912,7 +71021,8 @@
                             "type": "string",
                             "enum": [
                               "provider",
-                              "manual"
+                              "manual",
+                              "investments"
                             ]
                           },
                           "sendState": {

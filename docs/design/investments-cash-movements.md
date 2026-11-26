@@ -1,6 +1,7 @@
 # Versamenti e prelievi di Investments come movimenti nei conti (PERS-651)
 
-Stato: **proposta, da approvare da Mattia.** Stage 1 di PERS-651 (PERS-652). Nessun codice in questo documento.
+Stato: **approvata da Mattia il 26/11/2026 (§5, decisioni), parte server implementata (PERS-655).** Stage 1 di
+PERS-651 (PERS-652): proposta; stage 2 (PERS-655): server; stage 3: client.
 Base: `main` a `cee7a120` (`v0.78.1`), produzione `v0.78.0`. Dati di produzione: solo conteggi, nessun importo o nome.
 
 Decisioni precedenti che questa proposta rispetta:
@@ -177,7 +178,7 @@ In produzione: 1 deposit, 0 withdrawal, 0 operazioni di fondi.
 | Export | Le gambe compaiono nell'export dei movimenti, con l'origine nuova |
 | `/api/v1` | Campi additivi: sul movimento `investmentEventId` (o `linkedOperation`); sul corpo di deposit/withdrawal `from`/`to` (id del movimento, id del conto, `outside`, `income`/`expense`). `transactionId` esistente resta valido |
 | MCP | `list_transactions` mostra le gambe con l'origine; nessun tool nuovo |
-| Servizi sincronizzati (eToro, Binance) | Fuori da questa proposta: i deposit sono del provider. Stessa regola applicabile in seguito (domanda 4) |
+| Servizi sincronizzati (eToro, Binance) | Stessa regola dei portafogli manuali (decisione 4, §5.2) |
 
 ### 3.7 Divisione del lavoro per lo stage 2
 
@@ -219,3 +220,70 @@ Solo le domande che cambiano il risultato. Ognuna ha il default raccomandato.
    con il passaggio una tantum di §3.5.**
 4. **Servizi sincronizzati (eToro, Binance).** Anche i loro deposit e withdrawal devono avere una gamba nei conti?
    **Default: no per ora**; oggi non ce ne sono in produzione. Si aggiunge con la stessa regola quando serve.
+
+## 5. Decisioni
+
+Risposta di Mattia su PERS-651 (26/11/2026): «ok default per tutti tranne 4».
+
+| # | Decisione |
+|---|---|
+| 1 | Versamento senza movimento della banca corrispondente: **giroconto da «conto esterno»**. Mattia cambia il tipo dopo, nel dialog di modifica (PERS-627) |
+| 2 | Un solo movimento della banca corrispondente: **abbinamento automatico**. Più candidati: **proposta** |
+| 3 | Il deposit già presente in produzione **riceve** la gamba, con un passaggio una tantum e la stessa regola |
+| 4 | **Cambiato rispetto al default:** la stessa regola vale **anche per i servizi sincronizzati** (eToro, Binance) |
+
+### 5.1 Come funziona (implementazione, PERS-655)
+
+- **Gamba.** Ogni deposit/withdrawal (gamba `main` di `investment_events` con `kind` `deposit`/`withdrawal`) ha
+  un movimento in `transactions` sul conto del servizio: `origin = investments`, `type = transfer`, importo con
+  segno (deposit `+`, withdrawal `−`), giorno del deposit a mezzogiorno. Il collegamento è
+  `investment_events.leg_transaction_id` (unico, `on delete set null`). Un servizio manuale (PERS-342) non
+  scrive gambe.
+- **Saldo.** L'origine `investments` è fuori dai punti dei movimenti a mano e dai movimenti del provider
+  (`dailyNetByAccount` e `manualMovementsByAccount` filtrano `provider`/`manual`): patrimonio, Overview, P&L e
+  Net deposits non cambiano. Una lettura della sorgente non tocca mai la gamba.
+- **Abbinamento.** Dopo ogni scrittura, la gamba passa per le regole dei giroconti (`linkOwnTransfers`, nessuna
+  regola duplicata): candidato unico → coppia; più candidati → proposta. Nessun candidato e nessuna proposta →
+  giroconto da «conto esterno» (decisione 1). Una gamba «esterna» scelta da Ledgerly (senza il marcatore `type`)
+  resta **libera**: quando il movimento della banca arriva con una sincronizzazione successiva, la regola la
+  abbina. Una scelta della persona (marcatore `type`) non cambia più.
+- **Scelta nel dialog.** Corpo di deposit/withdrawal: `transactionId` (movimento della banca, abbinamento a mano)
+  oppure `counterpart` (`account`, `outside`, `none`). Senza i due: regola automatica.
+- **Modifica.** Nuovo importo: la coppia si scioglie, il movimento della banca torna «in attesa», la gamba torna
+  alla regola. Stesso importo, altro giorno: la coppia resta. Le scelte della persona restano.
+- **Cancellazione.** Il deposit cancellato cancella la gamba nella stessa transazione; il movimento della banca
+  resta e torna «in attesa».
+- **Expenses.** Tipo, categoria, nota e visibilità: sì. Importo, data, conto: no (solo i movimenti `manual` si
+  modificano). Cancellazione di una gamba nascosta: rifiutata (resta finché c'è il deposit).
+- **Fondi (eccezione payroll per operazione).** Un versamento `voluntary` (a mano, da addebito `bank_debit` o da
+  documento) ha la gamba sul conto del fondo (`fund_operations.leg_transaction_id`), abbinata al movimento che lo
+  ha pagato (`transaction_id`) quando c'è. Un contributo da busta paga (`contribution`) non ha gamba. Le altre
+  operazioni (adesione, trasferimento in entrata, switch, riscatto) non hanno gamba: fuori da questa decisione.
+- **Moduli.** Investments e Funds non importano transactions: scrivono le gambe con la porta `CashLegs`,
+  realizzata da transactions (`cashLegsOfTransactions`) e collegata in `wireDomain` (10-modularity.md §10.3).
+
+### 5.2 Servizi sincronizzati (decisione 4)
+
+| Domanda | Risposta |
+|---|---|
+| Dove salvano depositi e prelievi | `investment_events` con `origin = provider` e la gamba `main` con `kind` `deposit`/`withdrawal`, importo convertito nella valuta del conto (`sync/events.ts`, `writeEvents`). L'id del provider è in `provider_links` (`entity_type = investment_event`) |
+| Come si legano | Dopo ogni passaggio dei flussi (`runFlows`) e dopo il primo collegamento (`connect.ts`), `linkCashLegs` scrive la gamba degli eventi che non ce l'hanno e le abbina con la stessa regola |
+| Come si evita il doppio conteggio | Un evento già visto (stesso id del provider) non si scrive una seconda volta (`writeEvents` salta gli id noti). Una gamba per evento (`leg_transaction_id` unico); `linkCashLegs` scrive solo le gambe mancanti o cambiate: un passaggio che rilegge gli stessi eventi non scrive niente |
+| Taglio dei 12 mesi (PERS-145) | Un evento cancellato dal taglio perde la gamba al passaggio successivo (le gambe senza evento vanno via, il movimento della banca torna «in attesa») |
+| Scollegamento | Il servizio torna manuale (PERS-342): le gambe già scritte restano come sono, nessuna gamba nuova |
+
+### 5.3 Storico (decisione 3)
+
+`node /app/worker.mjs --link-investment-legs`, una volta dopo il deploy: per ogni persona, ogni servizio
+(`linkAllCashLegs`) e ogni fondo (`linkAllFundLegs`). Stampa solo conteggi. Idempotente: un secondo passaggio
+scrive 0 righe. Prima del deploy: prova sui conteggi (in produzione 1 deposit, 1 abbinamento certo atteso).
+
+### 5.4 Contratto per il client (stage 3)
+
+| Dove | Campo |
+|---|---|
+| `POST /investments/{accountId}/operations`, deposit/withdrawal | `transactionId` (esistente) o `counterpart`: `{ kind: "account", accountId }`, `{ kind: "outside" }`, `{ kind: "none" }`, nullable, opzionale |
+| Activity (`activityRow`) | `legTransactionId`: id della gamba in Expenses, nullable |
+| Registro del fondo (`operationRow`) | `legTransactionId`: id della gamba, nullable |
+| Movimenti (`transactionLine.origin`) | valore nuovo `investments`: la gamba. Il client mostra «Investments» e blocca importo, data, conto e cancellazione |
+| Cambio di tipo della gamba | `PUT /transactions/{id}/transfer` e `POST /transactions/transfer-pairs` (esistenti, PERS-627) |

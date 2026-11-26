@@ -348,6 +348,8 @@ export const operationRow = z.object({
   /** The period the operation is for, counted as the payslip source counts it. */
   competence: z.object({ year: z.number().int(), index: z.number().int() }).nullable(),
   transactionId: id().nullable(),
+  /** A voluntary contribution's leg in the fund's account, a giroconto of origin `investments` (PERS-651). */
+  legTransactionId: id().nullable(),
   note: z.string().nullable(),
 });
 

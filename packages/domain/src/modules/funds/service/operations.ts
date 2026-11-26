@@ -12,6 +12,7 @@ import { isFutureDate } from "../../accounts";
 import { getTransaction } from "../../transactions/queries";
 import { fundOperations } from "../schema";
 import { periodsPerYear } from "../sources";
+import { linkFundLegs } from "./legs";
 import { type Fund, FundError, type FundOperation } from "./model";
 import { requireOpenFund, sourcesOf } from "./reads";
 
@@ -179,6 +180,7 @@ export async function addContribution(
     )
     .returning()
     .catch(movementTaken);
+  await linkFundLegs(ctx, fundId);
   return row;
 }
 
@@ -219,6 +221,7 @@ export async function updateContribution(
     .where(and(eq(fundOperations.id, operationId), userScoped(ctx).owns(fundOperations)))
     .returning()
     .catch(movementTaken);
+  await linkFundLegs(ctx, current.fundId);
   return row;
 }
 
@@ -227,11 +230,16 @@ export async function updateContribution(
  * straight back — the movement is hidden in Expenses instead, and hidden movements are never
  * matched. One read from a document before release N6 stays: it is the fund's history.
  */
-export async function deleteContribution(ctx: Pick<Ctx, "userId">, operationId: string): Promise<void> {
+export async function deleteContribution(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  operationId: string,
+): Promise<void> {
   const current = await requireOperation(ctx, operationId);
   if (current.source === "import") throw new FundError("linked");
   if (current.source === "rule" && current.transactionId !== null) throw new FundError("linked");
   await getDb()
     .delete(fundOperations)
     .where(and(eq(fundOperations.id, operationId), userScoped(ctx).owns(fundOperations)));
+  // Its leg in the account goes too; the bank's movement waits again.
+  if (current.legTransactionId !== null) await linkFundLegs(ctx, current.fundId);
 }

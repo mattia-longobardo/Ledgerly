@@ -81,6 +81,7 @@ export {
   setPriceMode,
   deleteOperation,
   ensureAssetSeed,
+  linkAllCashLegs,
   linkTransfer,
   listInvestmentAccounts,
   reconcileHolding,

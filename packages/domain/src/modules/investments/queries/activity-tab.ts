@@ -78,6 +78,8 @@ export interface ActivityRow {
   leg: DescribedLeg & { holdingId: string | null; amountCents: Cents; validUntil: CivilDate | null };
   adjustmentClass: AdjustmentClass | null;
   transactionId: string | null;
+  /** The deposit's or the withdrawal's leg in the account (PERS-651). */
+  legTransactionId: string | null;
   linked: { payee: string | null; cents: Cents } | null;
   /** The other service of a transfer between the person's accounts (§4.9), if this is one leg. */
   transfer: { accountId: string; accountName: string } | null;
@@ -287,6 +289,7 @@ export async function serviceActivity(
         },
         adjustmentClass: op.adjustmentClass,
         transactionId: event.transactionId,
+        legTransactionId: event.legTransactionId,
         linked: transaction ? { payee: transaction.payee, cents: transaction.amountCents } : null,
         transfer: partner
           ? { accountId: partner.accountId, accountName: accountNames.get(partner.accountId) ?? "" }

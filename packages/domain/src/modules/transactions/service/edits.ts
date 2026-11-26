@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
@@ -205,7 +205,9 @@ export async function deleteHiddenTransactions(
   ids: readonly string[],
 ): Promise<number> {
   const wanted = parseIds(ids);
-  return (await deleteRows(ctx, wanted, isNotNull(transactions.hiddenAt))).length;
+  // The leg of an Investments operation goes with its operation only (PERS-651).
+  const deletable = and(isNotNull(transactions.hiddenAt), ne(transactions.origin, "investments"))!;
+  return (await deleteRows(ctx, wanted, deletable)).length;
 }
 
 /**
