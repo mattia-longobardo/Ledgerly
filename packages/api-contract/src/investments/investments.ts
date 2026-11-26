@@ -24,7 +24,7 @@ import {
 import { ACCOUNT_ID, ACTIVITY_FAMILIES, byService, holdingsList, investmentsList } from "./shared";
 import { investmentActivity, investmentOverview, investmentsCatalog, investmentsHome } from "./views";
 import { investmentConnection, investmentPositions } from "./tabs";
-import { FUND_ID, PORTFOLIO_EXAMPLE, portfolioParts } from "./portfolio";
+import { FUND_ID, PORTFOLIO_EXAMPLE, PORTFOLIO_GROUPS, portfolioParts } from "./portfolio";
 
 const civilDateArgument = civilDate("A date as YYYY-MM-DD");
 const accountArgument = z.uuid().describe("The service's accountId, from list_investments.");
@@ -155,6 +155,13 @@ export const getInvestmentHoldings = defineRoute({
   },
 });
 
+/**
+ * The home's query: the period, and `group`, the chip the chart draws (`all`, `stocks_crypto`,
+ * `pension_funds`): its layers (`chart.services`, `chart.funds`), its first day and its Return scale.
+ * Without `group`, the chart of before: the services only.
+ */
+const homeQuery = periodQuery.extend({ group: z.enum(["all", ...PORTFOLIO_GROUPS]).optional() });
+
 export const getInvestmentsHome = defineRoute({
   id: "get_investments_home",
   method: "GET",
@@ -165,7 +172,7 @@ export const getInvestmentsHome = defineRoute({
     "The home of a period: today's totals and allocation by class, service and currency, the pension " +
     "funds, each service with its P&L of the period, contribution and alerts, the parts and the charts.",
   actions: [],
-  query: periodQuery,
+  query: homeQuery,
   response: investmentsHome,
   errors: ["invalid"],
   example: {

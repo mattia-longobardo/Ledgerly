@@ -6,6 +6,7 @@ import {
   firstDataOn,
   gainBars,
   gainGrain,
+  heldValues,
   type HomeFund,
   homeSummary,
   isFutureYear,
@@ -15,6 +16,7 @@ import {
   valueToday,
   yearRows,
 } from "./home";
+import { barIntervals } from "../../shared/period";
 import { allPeriod, describedDay, type FundFlow, yearPeriod } from "./period";
 
 const TODAY = "2028-06-15";
@@ -486,6 +488,45 @@ describe("the chart", () => {
     });
     const series = valueSeries(summaryOf([one], year(2028)).lines);
     expect(series[0]).toEqual({ on: "2028-01-31", valueCents: 500_00n, paidCents: 500_00n });
+  });
+});
+
+describe("the chart on bars another chart drew", () => {
+  // Investments' bars of 2028 so far: by month, the last one cut to today.
+  const { intervals } = barIntervals("2028-01-01", TODAY);
+  const span = { from: "2028-01-01", to: TODAY };
+
+  it("puts each stretch in the bar of the day its reading describes, and a bar with none is empty", () => {
+    const { lines } = summaryOf([PAC, PENSION], year(2028));
+    const bars = gainBars(lines, span, intervals);
+    expect(bars.map((bar) => [bar.from, bar.to])).toEqual(intervals.map((one) => [one.from, one.to]));
+    // PAC's reading of 1 March describes February, PENSION's of 29 February too.
+    expect(bars.map((bar) => bar.totalCents === null)).toEqual([true, false, true, true, true, true]);
+    expect([...bars[1].byFund.keys()].sort()).toEqual(["pac", "pension"]);
+  });
+
+  it("adds up to the gain of the period, on weeks as on months", () => {
+    for (const period of [year(2028), { from: "2028-02-01", to: "2028-03-31" }]) {
+      const { lines, gainCents } = summaryOf([PAC, PENSION], period);
+      const drawn = barIntervals(period.from!, period.to);
+      const bars = gainBars(lines, { from: period.from!, to: period.to }, drawn.intervals);
+      expect(bars.reduce<Cents>((sum, bar) => sum + (bar.totalCents ?? 0n), 0n)).toBe(gainCents);
+      expect(bars.some((bar) => bar.totalCents === 0n && bar.stretches.length === 0)).toBe(false);
+    }
+  });
+
+  it("has no bar to fill when the other chart drew none", () => {
+    expect(gainBars(summaryOf([PAC], year(2028)).lines, span, [])).toEqual([]);
+  });
+
+  it("holds each value until the next reading, and has none before the first", () => {
+    expect(heldValues(PENSION, ["2027-09-29", "2027-09-30", "2028-01-31", "2028-02-29", TODAY])).toEqual([
+      null,
+      500_00n,
+      500_00n,
+      780_00n,
+      780_00n,
+    ]);
   });
 });
 

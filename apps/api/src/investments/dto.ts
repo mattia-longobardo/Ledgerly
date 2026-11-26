@@ -289,13 +289,29 @@ function returnScale(totalCents: Cents | null, rate: number | null): number | nu
   return rate / Number(totalCents);
 }
 
+/** A pension fund's layer of the home's chart, in the display currency: as a service's. */
+export interface FundLayer {
+  accountId: string;
+  fundId: string;
+  bars: (Cents | null)[];
+  values: (Cents | null)[];
+}
+
 /**
- * The charts of the period, with the sums the page draws: each bar of the services, its running total, each
- * day's value, and both as returns over `totalCents`, the P&L whose return `rate` is.
+ * The charts of the period, with the sums the page draws: each bar of the layers, its running total, each
+ * day's value, and both as returns over `totalCents`, the gain whose return `rate` is. Without `group`,
+ * the services' layers only; with it, the services' when `services` and the funds' `funds` (a chip of the home).
  */
-export function chartOut(view: View, totalCents: Cents | null, rate: number | null) {
+export function chartOut(
+  view: View,
+  totalCents: Cents | null,
+  rate: number | null,
+  group?: { services: boolean; funds: readonly FundLayer[] },
+) {
+  const services = group?.services === false ? [] : view.chart;
+  const layers = [...services, ...(group?.funds ?? [])];
   const bars = view.intervals.map((_interval, index) => {
-    const known = view.chart.map((one) => one.bars[index]).filter((cents) => cents !== null);
+    const known = layers.map((one) => one.bars[index]).filter((cents) => cents !== null);
     return known.length === 0 ? null : known.reduce<Cents>((sum, cents) => sum + cents!, 0n);
   });
   const cumulative = runningTotal(bars);
@@ -307,16 +323,25 @@ export function chartOut(view: View, totalCents: Cents | null, rate: number | nu
     intervals: view.intervals,
     valueGrain: view.valueGrain,
     valueDays: view.valueDays,
-    services: view.chart.map((one) => ({
+    services: services.map((one) => ({
       accountId: one.accountId,
       bars: one.bars.map(maybe),
       values: one.values.map(maybe),
       returns: asReturns(one.bars),
     })),
+    ...(group && {
+      funds: group.funds.map((one) => ({
+        accountId: one.accountId,
+        fundId: one.fundId,
+        bars: one.bars.map(maybe),
+        values: one.values.map(maybe),
+        returns: asReturns(one.bars),
+      })),
+    }),
     bars: bars.map(maybe),
     cumulative: cumulative.map(maybe),
     values: view.valueDays.map((_day, index) =>
-      maybe(sumCents(view.chart.map((one) => one.values[index])).total),
+      maybe(sumCents(layers.map((one) => one.values[index])).total),
     ),
     returns: asReturns(bars),
     cumulativeReturns: asReturns(cumulative),

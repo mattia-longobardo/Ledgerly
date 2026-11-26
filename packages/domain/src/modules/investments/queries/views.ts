@@ -148,6 +148,12 @@ export interface PnlChartService {
   values: (Cents | null)[];
 }
 
+/**
+ * The chart's first day from the services' own: the application's, when the chart draws other groups
+ * too (the pension funds of the home) and starts at the first data of any of them.
+ */
+type FirstOf = (services: CivilDate | null) => CivilDate | null;
+
 export interface InvestmentsPnlView extends InvestmentsPnl {
   /** The first day with data: where "All" starts and the stepper stops (§2.1). */
   firstOn: CivilDate | null;
@@ -174,8 +180,9 @@ export async function investmentsPnlView(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   params: PeriodParams | PnlPeriod,
   source: Date | InvestmentsSnapshot = new Date(),
+  firstOf?: FirstOf,
 ): Promise<InvestmentsPnlView> {
-  return pnlView(ctx, params, await snapshotOf(ctx, source));
+  return pnlView(ctx, params, await snapshotOf(ctx, source), { firstOf });
 }
 
 /**
@@ -189,7 +196,7 @@ export async function servicePnlView(
   params: PeriodParams | PnlPeriod,
   source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<InvestmentsPnlView | null> {
-  const view = await pnlView(ctx, params, await snapshotOf(ctx, source, accountId), accountId);
+  const view = await pnlView(ctx, params, await snapshotOf(ctx, source, accountId), { only: accountId });
   return view.portfolio.services.length === 0 ? null : view;
 }
 
@@ -269,7 +276,7 @@ async function pnlView(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   params: PeriodParams | PnlPeriod,
   snapshot: InvestmentsSnapshot,
-  only?: string,
+  { only, firstOf = (services) => services }: { only?: string; firstOf?: FirstOf } = {},
 ): Promise<InvestmentsPnlView> {
   const { todayOn, accounts } = snapshot;
   const period = "kind" in params ? params : periodOf(params, todayOn);
@@ -280,7 +287,7 @@ async function pnlView(
   const measured = services.map((one) => pnlOf(one, period.from, period.to, display));
   const portfolio = portfolioPnl(measured, display.currency);
 
-  const firstOn = firstDayOfAll(live);
+  const firstOn = firstOf(firstDayOfAll(live));
   const span = periodSpan(period, firstOn);
   const { grain: barGrain, intervals } = barIntervals(span.from, span.to);
   const { grain: valueGrain, days } = valueDays(span.from, span.to);

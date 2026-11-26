@@ -10,6 +10,7 @@ export {
   firstDataOn,
   gainBars,
   gainGrain,
+  heldValues,
   homeSummary,
   isFutureYear,
   lineValue,
