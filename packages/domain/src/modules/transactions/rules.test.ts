@@ -17,6 +17,7 @@ import {
   pairTransfers,
   payeeKeyOf,
   normalizeIban,
+  type ConvertCents,
   type OwnTransferRow,
   planOwnTransfers,
   proposalKey,
@@ -745,6 +746,76 @@ describe("planOwnTransfers", () => {
       { id: "t1", transferGroupId: "t1" },
       { id: "t2", transferGroupId: "t1" },
     ]);
+  });
+
+  it("pairs an Investments leg Ledgerly put outside, never one the person put there (PERS-651)", () => {
+    const bank = row({ id: "t1", accountId: "ing", type: "expense" });
+    const leg = { id: "t2", accountId: "fin", amountCents: 50_000n, origin: "investments" as const };
+    expect(planOwnTransfers(own, [bank, row({ ...leg, transferOutside: true })]).groups).toEqual([
+      { id: "t1", transferGroupId: "t1" },
+      { id: "t2", transferGroupId: "t1" },
+    ]);
+    const chosen = row({ ...leg, transferOutside: true, locallyEdited: ["type"] });
+    expect(planOwnTransfers(own, [bank, chosen])).toEqual(nothing);
+    expect(planOwnTransfers(own, [bank, row({ ...leg, origin: "provider", transferOutside: true })])).toEqual(
+      nothing,
+    );
+  });
+
+  describe("an Investments leg in another currency than its bank movement (PERS-659)", () => {
+    // 1 EUR = 1.10 USD on every day; no other pair has a rate.
+    const usd: ConvertCents = (cents, from, to) =>
+      from === "EUR" && to === "USD"
+        ? (cents * 110n) / 100n
+        : from === "USD" && to === "EUR"
+          ? (cents * 100n) / 110n
+          : null;
+    const bank = row({ id: "t1", accountId: "ing", type: "expense" });
+    const leg = (over: Partial<OwnTransferRow> = {}) =>
+      row({
+        id: "t2",
+        accountId: "etoro",
+        currency: "USD",
+        amountCents: 54_000n,
+        origin: "investments",
+        transferOutside: true,
+        ...over,
+      });
+
+    it("pairs within the gap: 500 EUR are 550 USD, the broker credits 540", () => {
+      expect(planOwnTransfers(own, [bank, leg()], new Set(), usd).groups).toEqual([
+        { id: "t1", transferGroupId: "t1" },
+        { id: "t2", transferGroupId: "t1" },
+      ]);
+    });
+
+    it("pairs a withdrawal the same way, the bank's day converted", () => {
+      const into = row({ id: "t1", accountId: "ing", amountCents: 50_000n, type: "income" });
+      expect(
+        planOwnTransfers(own, [into, leg({ amountCents: -55_500n })], new Set(), usd).groups,
+      ).toHaveLength(2);
+    });
+
+    it("leaves it outside beyond the gap, or without a rate", () => {
+      expect(planOwnTransfers(own, [bank, leg({ amountCents: 53_000n })], new Set(), usd)).toEqual(nothing);
+      expect(planOwnTransfers(own, [bank, leg()])).toEqual(nothing);
+    });
+
+    it("proposes two bank movements at the same distance, never decides", () => {
+      const twin = row({ id: "t3", accountId: "rev", type: "expense" });
+      expect(planOwnTransfers(own, [bank, twin, leg()], new Set(), usd)).toEqual({
+        ...nothing,
+        proposals: [
+          { outId: "t1", inId: "t2" },
+          { outId: "t3", inId: "t2" },
+        ],
+      });
+    });
+
+    it("never pairs two bank movements in two currencies", () => {
+      const into = row({ id: "t2", accountId: "rev", currency: "USD", amountCents: 55_000n });
+      expect(planOwnTransfers(own, [bank, into], new Set(), usd)).toEqual(nothing);
+    });
   });
 
   it("makes a giroconto of an income or a spending that names another account's IBAN (8A)", () => {

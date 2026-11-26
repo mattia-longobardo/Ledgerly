@@ -195,6 +195,7 @@ export const operationOut = (detail: Detail) => (one: Detail["operations"][numbe
       ? null
       : { year: one.competenceYear, index: one.competenceQuarter },
   transactionId: one.transactionId,
+  legTransactionId: one.legTransactionId,
   note: one.note,
   gross: money(operationGross(one)),
   origin: operationOrigin(one, detail.sources),

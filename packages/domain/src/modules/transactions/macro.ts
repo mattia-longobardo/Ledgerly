@@ -14,7 +14,7 @@ type Executor = Pick<Tx, "execute">;
 const TYPE_SQL = `case
   when t.transfer_group_id is not null or t.transfer_outside then 'transfer'
   when 'type' = any(t.locally_edited) then t.type
-  when t.type = 'transfer' and t.origin = 'provider' then 'transfer'
+  when t.type = 'transfer' and t.origin <> 'manual' then 'transfer'
   when t.amount_cents > 0 then 'income'
   when t.amount_cents < 0 then 'expense'
   when t.type = 'transfer' then 'income'

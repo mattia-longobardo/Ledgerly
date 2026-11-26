@@ -29,7 +29,14 @@ import {
   investmentReadingPositions,
   investmentReadings,
 } from "../schema";
-import { insertEvent, loadBook, lockInvestmentAccount, rebuild, type WriteCtx } from "../service";
+import {
+  insertEvent,
+  linkCashLegs,
+  loadBook,
+  lockInvestmentAccount,
+  rebuild,
+  type WriteCtx,
+} from "../service";
 import { estimateHistoryOf, syncFlows } from "./history";
 import { noteFailure, todayLookup, type Linked } from "./quantities";
 import { insertKeyCheck, statusOf, writeReading } from "./readings";
@@ -230,6 +237,11 @@ export async function runFlows(ctx: WriteCtx, linked: Linked, now: Date): Promis
     // The 12 months, settled (PERS-145): a failure waits for the next pass, and changes nothing.
     await settleCutoff(ctx, linked.investment.accountId).catch((error: unknown) => {
       console.error("[investments] cut-off not settled", sourceErrorLog(linked.connection.provider, error));
+    });
+    // The deposits and withdrawals as giroconti in the accounts (PERS-651): only what changed is
+    // written, so a pass that reads the same events again adds nothing.
+    await linkCashLegs(ctx, linked.investment.accountId).catch((error: unknown) => {
+      console.error("[investments] legs not linked", sourceErrorLog(linked.connection.provider, error));
     });
     await finishRun(ctx, run.id, { counts: estimated > 0 ? { created, estimated } : { created } }, now);
     return true;

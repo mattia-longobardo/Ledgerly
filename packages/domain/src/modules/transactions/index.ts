@@ -192,5 +192,5 @@ export {
   updateLabel,
 } from "./taxonomy";
 export type { MacroPlace } from "./taxonomy";
-export { movementsOfAccounts } from "./ports";
+export { cashLegsOfTransactions, movementsOfAccounts } from "./ports";
 export type { TransactionsProvider } from "./ports";

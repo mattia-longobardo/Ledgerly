@@ -9,6 +9,7 @@ import { payeeKeyOf } from "../../transactions/rules";
 import { carriesKey, type Detection, recurrenceKeyOf, summarise } from "../detect";
 import { contributionFee } from "../fees";
 import { fundContributionSources, fundOperations, funds } from "../schema";
+import { linkFundLegs } from "./legs";
 import { feesOf, requireFund } from "./reads";
 
 // ——— The recurring debits found among the movements ——————————————————————————————————————————
@@ -61,6 +62,7 @@ export async function matchDebits(
   if (sources.length === 0) return { written: 0 };
   const fees = await feesOf(ctx, [...new Set(sources.map(({ fund }) => fund.id))]);
   let written = 0;
+  const changed = new Set<string>();
   const todayOn = today(ctx.timeZone);
   for (const { source, fund } of sources) {
     const needle = source.payeeMatch === null ? null : payeeKeyOf(source.payeeMatch);
@@ -134,6 +136,7 @@ export async function matchDebits(
         continue;
       }
       orphans.splice(orphans.indexOf(nearest), 1);
+      changed.add(fund.id);
       await getDb()
         .update(fundOperations)
         .set({ transactionId: candidate.id, sourceId: source.id })
@@ -170,7 +173,9 @@ export async function matchDebits(
       .onConflictDoNothing()
       .returning({ id: fundOperations.id });
     written += rows.length;
+    if (rows.length > 0) changed.add(fund.id);
   }
+  for (const fundId of changed) await linkFundLegs(ctx, fundId);
   return { written };
 }
 

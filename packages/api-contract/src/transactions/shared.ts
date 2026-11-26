@@ -9,7 +9,7 @@ import { categoryType } from "../settings/shared";
 // (10-modularity.md §10.2), so `tools/contract.test.ts` holds the lists equal.
 export const TRANSACTION_TYPES = ["income", "expense", "transfer"] as const;
 export const TRANSACTION_STATES = ["cleared", "pending"] as const;
-export const TRANSACTION_ORIGINS = ["provider", "manual"] as const;
+export const TRANSACTION_ORIGINS = ["provider", "manual", "investments"] as const;
 export const SEND_STATES = ["to_send", "not_sent"] as const;
 export const CATEGORY_STATES = ["chosen", "automatic", "suggestion", "none"] as const;
 /** The markers of a row (spec §7.2), in the order the row shows them. */

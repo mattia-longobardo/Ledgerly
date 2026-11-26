@@ -5,10 +5,12 @@ export const CATEGORY_TYPES = ["income", "expense"] as const;
 /** A proposed giroconto waits for the person, or they said the two are not one. */
 export const TRANSFER_PROPOSAL_STATES = ["open", "rejected"] as const;
 /**
- * Who wrote a movement (rewrite plan, 04-now.md §4.5): a provider's reading, or the person, by
- * hand. A reading never changes, removes or declares gone a `manual` movement.
+ * Who wrote a movement (rewrite plan, 04-now.md §4.5): a provider's reading, the person, by hand,
+ * or Investments: the account's leg of a deposit, a withdrawal or a contribution (PERS-651), which
+ * follows its operation and never moves the balance. A reading never changes, removes or declares
+ * gone a `manual` or an `investments` movement.
  */
-export const TRANSACTION_ORIGINS = ["provider", "manual"] as const;
+export const TRANSACTION_ORIGINS = ["provider", "manual", "investments"] as const;
 
 /**
  * Where a manual movement of a "read and write" account stands with its source (rewrite plan N3.1,

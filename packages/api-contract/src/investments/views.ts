@@ -196,6 +196,8 @@ const activityRow = z.object({
   }),
   adjustmentClass: z.enum(ADJUSTMENT_CLASSES).nullable(),
   transactionId: id().nullable(),
+  /** The deposit's or the withdrawal's leg in the account, a giroconto of origin `investments` (PERS-651). */
+  legTransactionId: id().nullable(),
   /** The bank movement that documents it. */
   linked: z.object({ payee: z.string().nullable(), amount: money() }).nullable(),
   /** The other service of a transfer between the person's accounts. */

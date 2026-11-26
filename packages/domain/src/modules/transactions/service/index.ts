@@ -24,6 +24,7 @@ export {
   transferSideSchema,
 } from "./giroconti";
 export type { TransferSide, TransferProposal } from "./giroconti";
+export { settleLegs, writeLegs } from "./legs";
 export {
   updateTransaction,
   releaseLocalEdits,

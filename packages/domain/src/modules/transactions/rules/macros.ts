@@ -16,7 +16,7 @@ export interface TypedMovement {
 /**
  * The type a movement counts as, in this order: a leg of a pair, or a leg to an account outside, is
  * a transfer; a type somebody decided here (`type` in `locally_edited`: the person, or the IBAN of
- * one of their accounts) stays; a source's own transfer stays one; otherwise the sign decides. A
+ * one of their accounts) stays; a source's own transfer, or the leg Investments wrote, stays one; otherwise the sign decides. A
  * zero keeps what it was (spec §4.3), a transfer excepted. A giroconto has no category: the
  * category never makes a transfer any more. `macro.ts` holds the same rule in SQL;
  * `macro.itest.ts` keeps the two equal.
@@ -24,7 +24,7 @@ export interface TypedMovement {
 export function typeByMacro(row: TypedMovement): TransactionType {
   if (row.transferGroupId !== null || row.transferOutside) return "transfer";
   if (row.locallyEdited.includes("type")) return row.type;
-  if (row.type === "transfer" && row.origin === "provider") return "transfer";
+  if (row.type === "transfer" && row.origin !== "manual") return "transfer";
   if (row.amountCents > 0n) return "income";
   if (row.amountCents < 0n) return "expense";
   return row.type === "transfer" ? "income" : row.type;

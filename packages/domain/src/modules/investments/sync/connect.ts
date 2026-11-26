@@ -28,6 +28,7 @@ import {
 import { investmentAccountPeriods, investmentAccounts, investmentSupersededEntries } from "../schema";
 import {
   eligibleAccounts,
+  linkCashLegs,
   type InvestmentAccount,
   loadBook,
   lockInvestmentAccount,
@@ -294,6 +295,9 @@ export async function readFirstFlows(
       });
       await settleCutoff(ctx, accountId).catch((error: unknown) => {
         console.error("[investments] cut-off not settled", sourceErrorLog(connection.provider, error));
+      });
+      await linkCashLegs(ctx, accountId).catch((error: unknown) => {
+        console.error("[investments] legs not linked", sourceErrorLog(connection.provider, error));
       });
     }
   }).catch((error: unknown) => {

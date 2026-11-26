@@ -8,6 +8,7 @@ import { type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { MANUAL_PROVIDER } from "../catalog";
+import { cashLegs } from "../ports";
 import { ADJUSTMENT_CLASSES, oldestDay, positionCents } from "../rules";
 import {
   investmentAccounts,
@@ -18,6 +19,7 @@ import {
 } from "../schema";
 import { civilDate } from "../../../shared/inputs";
 import { currencyOf, loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
+import { writeCashLegs } from "./cash-legs";
 import { insertEvent, insertLegs, type LegInput, optionalNote, periodOn, positive, rateOf } from "./events";
 import { checkPortfolio } from "./guards";
 import { clearTransferGroup } from "./transfers";
@@ -31,12 +33,25 @@ import {
 } from "./types";
 import { startPortfolioBy } from "./periods";
 
+/** The other side of a deposit's leg, as the person chose it (PERS-651). */
+const counterpartSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("account"), accountId: z.uuid() }),
+  z.object({ kind: z.literal("outside") }),
+  z.object({ kind: z.literal("none") }),
+]);
+
 export const operationInputSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.enum(["deposit", "withdrawal"]),
     on: civilDate(),
     amountCents: positive,
     transactionId: z.uuid().nullable().default(null),
+    /**
+     * The other side of the account's leg (PERS-651), as the person chose it: one of their accounts,
+     * one outside, or "not a giroconto". `null`: the bank movement `transactionId` names, else the
+     * rules of the giroconti, else an account outside.
+     */
+    counterpart: counterpartSchema.nullable().default(null),
     note: optionalNote,
   }),
   z.object({
@@ -227,7 +242,7 @@ export async function recordOperation(
   notFuture(ctx, parsed.on);
   const account = await getAccount(ctx, accountId);
   if (!account) throw new InvestmentError("not_found");
-  return getDb().transaction(async (tx) => {
+  const { eventId, cash } = await getDb().transaction(async (tx) => {
     const locked = await lockInvestmentAccount(ctx, accountId, tx);
     refuseValueChange(locked);
     const investment = await startPortfolioBy(ctx, locked, parsed.on, tx);
@@ -243,8 +258,30 @@ export async function recordOperation(
     });
     await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, parsed.on, tx);
-    return { eventId: event.id };
+    return {
+      eventId: event.id,
+      cash: await cashLegsOf(ctx, tx, parsed, { investment, currency: account.currency, eventId: event.id }),
+    };
   });
+  if (cash) await cashLegs().settleLegs(ctx, cash);
+  return { eventId };
+}
+
+/**
+ * The account's legs after a deposit or a withdrawal changed, in its transaction (PERS-651), with
+ * the side the person chose for the leg of `eventId`; `null` for any other operation.
+ */
+async function cashLegsOf(
+  ctx: WriteCtx,
+  trx: Tx,
+  parsed: z.output<typeof operationInputSchema>,
+  target: { investment: InvestmentAccount; currency: string; eventId: string },
+) {
+  if (parsed.kind !== "deposit" && parsed.kind !== "withdrawal") return null;
+  const { written, legOf } = await writeCashLegs(ctx, trx, target.investment, target.currency);
+  const legId = legOf.get(target.eventId);
+  if (legId !== undefined && parsed.counterpart !== null) written.choices.set(legId, parsed.counterpart);
+  return written;
 }
 
 /** The person's event, of the service `ofAccount` when given: otherwise `not_found`. */
@@ -306,7 +343,7 @@ async function keepRevisions(
 export async function updateOperation(ctx: WriteCtx, eventId: string, input: OperationInput): Promise<void> {
   const parsed = operationInputSchema.parse(input);
   notFuture(ctx, parsed.on);
-  await getDb().transaction(async (tx) => {
+  const cash = await getDb().transaction(async (tx) => {
     const { event, accountId } = await requireEvent(ctx, eventId, tx);
     if (event.origin !== "manual") throw new InvestmentError("not_editable");
     const account = await getAccount(ctx, accountId);
@@ -333,7 +370,9 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
     await insertLegs(ctx, tx, eventId, legs);
     await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, oldestDay(event.on, parsed.on) as CivilDate, tx);
+    return cashLegsOf(ctx, tx, parsed, { investment, currency: account.currency, eventId });
   });
+  if (cash) await cashLegs().settleLegs(ctx, cash);
 }
 
 /**
@@ -341,7 +380,7 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
  * `ofAccount`, an event of another service is `not_found` (a route names the service in its path).
  */
 export async function deleteOperation(ctx: WriteCtx, eventId: string, ofAccount?: string): Promise<void> {
-  await getDb().transaction(async (tx) => {
+  const cash = await getDb().transaction(async (tx) => {
     const { event, accountId } = await requireEvent(ctx, eventId, tx, ofAccount);
     if (event.origin !== "manual") throw new InvestmentError("not_editable");
     const investment = await lockInvestmentAccount(ctx, accountId, tx);
@@ -372,5 +411,10 @@ export async function deleteOperation(ctx: WriteCtx, eventId: string, ofAccount?
     const currency = await currencyOf(ctx, accountId);
     await checkPortfolio(ctx, investment, currency, tx);
     await rebuild(ctx, investment, currency, event.on, tx);
+    // Its leg in the account goes too; the bank's movement waits again (PERS-651).
+    return event.legTransactionId === null
+      ? null
+      : (await writeCashLegs(ctx, tx, investment, currency)).written;
   });
+  if (cash) await cashLegs().settleLegs(ctx, cash);
 }

@@ -43,8 +43,8 @@ export {
 export type { IncomingTransaction, ProviderResolution, StoredTransaction, TransactionPatch } from "./records";
 export { transferPairKey, pairTransfers } from "./transfers";
 export type { TransferLeg } from "./transfers";
-export { planOwnTransfers, proposalKey, isTransferCode } from "./giroconti";
-export type { OwnIban, OwnTransferRow, OwnTransferPlan } from "./giroconti";
+export { IBAN_DAYS, planOwnTransfers, proposalKey, isTransferCode } from "./giroconti";
+export type { ConvertCents, OwnIban, OwnTransferRow, OwnTransferPlan } from "./giroconti";
 export {
   resolveType,
   toNewTransaction,

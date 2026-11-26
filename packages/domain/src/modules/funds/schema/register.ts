@@ -58,6 +58,8 @@ export const fundOperations = pgTable(
     employerTaxCode: text("employer_tax_code"),
     employerName: text("employer_name"),
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    /** The leg of a voluntary contribution on the fund's account (PERS-651): a giroconto of origin `investments`. */
+    legTransactionId: uuid("leg_transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     source: text("source", { enum: OPERATION_SOURCES }).notNull(),
     /** The contribution source the operation belongs to; `null` for one that belongs to none. */
     sourceId: uuid("source_id").references(() => fundContributionSources.id, { onDelete: "set null" }),
@@ -69,6 +71,7 @@ export const fundOperations = pgTable(
   (table) => [
     unique("fund_operations_origin_uq").on(table.fundId, table.originKey),
     unique("fund_operations_transaction_uq").on(table.transactionId),
+    unique("fund_operations_leg_transaction_uq").on(table.legTransactionId),
     index("fund_operations_fund_idx").on(table.fundId, table.operationDate),
     index("fund_operations_source_idx").on(table.sourceId),
     check(

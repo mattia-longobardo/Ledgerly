@@ -6,6 +6,7 @@ import { hasPgError, UNIQUE_VIOLATION } from "../../../platform/db/errors";
 import { userScoped } from "../../../platform/db/scope";
 import { fundContributionSources, funds } from "../schema";
 import { matchDebits } from "./debits";
+import { linkFundLegs } from "./legs";
 import { FundError } from "./model";
 import { requireAccount } from "./reads";
 
@@ -39,7 +40,7 @@ export async function fundsOnAccount(
  * (`account_taken`): a fund's value is its account's balance, and two funds cannot share one.
  */
 export async function moveFundAccount(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   fundId: string,
   accountId: string,
 ): Promise<void> {
@@ -56,6 +57,8 @@ export async function moveFundAccount(
       throw new FundError("account_taken");
     throw error;
   }
+  // The legs of its contributions move with the value: written again on the new account.
+  await linkFundLegs(ctx, fundId);
 }
 
 /** A debit source that leaves another account; its debits are matched again, as after an edit. */
