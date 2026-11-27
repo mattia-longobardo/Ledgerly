@@ -49,6 +49,8 @@ export {
   updateOperation,
 } from "./operations";
 export { linkAllCashLegs, linkCashLegs } from "./cash-legs";
+export { isEditable, readOperation } from "./operation-read";
+export type { OperationForEdit } from "./operation-read";
 export type { OperationInput } from "./operations";
 export { confirmZeroReading, reconcileHolding, reconciliationInputSchema, saveReading } from "./readings";
 export type { ReadingInput, ReconciliationInput } from "./readings";

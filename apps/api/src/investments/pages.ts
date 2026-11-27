@@ -87,6 +87,7 @@ function activityRowOut(
     transfer: row.transfer,
     realized: maybe(realized.get(row.id) ?? null),
     plan: plans.get(row.id) ?? null,
+    editable: row.editable,
   };
 }
 

@@ -31488,6 +31488,9 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "editable": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -31503,7 +31506,8 @@
                           "linked",
                           "transfer",
                           "realized",
-                          "plan"
+                          "plan",
+                          "editable"
                         ]
                       }
                     }
@@ -32264,6 +32268,9 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "editable": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -32279,7 +32286,8 @@
                               "linked",
                               "transfer",
                               "realized",
-                              "plan"
+                              "plan",
+                              "editable"
                             ]
                           }
                         },
@@ -35212,6 +35220,598 @@
           }
         ],
         "x-scope": "write",
+        "x-addon": "investments"
+      },
+      "get": {
+        "operationId": "get_investment_operation",
+        "summary": "An operation of a manual portfolio as «Edit» shows it (PERS-695): `body` is the body of PATCH /investments/{accountId}/operations/{eventId} for its `kind`, and sent back unchanged it changes nothing. A deposit or a withdrawal names its bank movement (`transactionId`) or, without one, the side of its leg in the account as `counterpart` (`null` while the rules decide it). `404` for an event of another service; `409` `not_editable` where the edit refuses it, as the PATCH does.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "buy",
+                        "deposit",
+                        "withdrawal",
+                        "fee",
+                        "valuation",
+                        "sell",
+                        "close",
+                        "income"
+                      ]
+                    },
+                    "body": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "buy"
+                            },
+                            "instrumentId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "mic": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^[A-Z0-9]{4}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "on": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "unitPrice": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "amount": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "fee": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "fxRate": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "note": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "instrumentId",
+                            "mic",
+                            "on",
+                            "quantity",
+                            "unitPrice",
+                            "amount",
+                            "fee",
+                            "fxRate",
+                            "note"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "valuation"
+                            },
+                            "holdingId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "on": {
+                              "type": "string"
+                            },
+                            "unitPrice": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "amount": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "note": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "holdingId",
+                            "on",
+                            "unitPrice",
+                            "amount",
+                            "note"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "sell",
+                                "close"
+                              ]
+                            },
+                            "holdingId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "on": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "unitPrice": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "amount": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "fee": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "note": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "holdingId",
+                            "on",
+                            "quantity",
+                            "unitPrice",
+                            "amount",
+                            "fee",
+                            "note"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "income"
+                            },
+                            "holdingId": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "on": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                            },
+                            "note": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "holdingId",
+                            "on",
+                            "amount",
+                            "note"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "fee"
+                            },
+                            "on": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                            },
+                            "note": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "on",
+                            "amount",
+                            "note"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "deposit",
+                                "withdrawal"
+                              ]
+                            },
+                            "on": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                            },
+                            "transactionId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "counterpart": {
+                              "anyOf": [
+                                {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "account"
+                                        },
+                                        "accountId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        }
+                                      },
+                                      "required": [
+                                        "kind",
+                                        "accountId"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "outside"
+                                        }
+                                      },
+                                      "required": [
+                                        "kind"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "none"
+                                        }
+                                      },
+                                      "required": [
+                                        "kind"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "note": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "account_valuation",
+                                "adjustment"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "body"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "investments:read",
         "x-addon": "investments"
       },
       "patch": {

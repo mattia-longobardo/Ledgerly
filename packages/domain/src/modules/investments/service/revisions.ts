@@ -14,7 +14,12 @@ import {
 import { InvestmentError, type InvestmentEvent, type WriteCtx } from "./types";
 
 /** The person's event, of the service `ofAccount` when given: otherwise `not_found`. */
-export async function requireEvent(ctx: Pick<Ctx, "userId">, eventId: string, trx: Tx, ofAccount?: string) {
+export async function requireEvent(
+  ctx: Pick<Ctx, "userId">,
+  eventId: string,
+  trx: Pick<Tx, "select">,
+  ofAccount?: string,
+) {
   const [row] = await trx
     .select({ event: investmentEvents, accountId: investmentAccounts.accountId })
     .from(investmentEvents)

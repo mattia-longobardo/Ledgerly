@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "../../accounts";
-import { getTransaction } from "../../transactions/queries";
+import { getTransaction, transferSideOf } from "../../transactions/queries";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
@@ -296,7 +296,7 @@ export async function updateOperation(
   input: OperationInput,
   ofAccount?: string,
 ): Promise<void> {
-  const parsed = operationInputSchema.parse(input);
+  const parsed = await keepingSide(ctx, eventId, operationInputSchema.parse(input));
   const cash = await rewriteEvent(
     ctx,
     { eventId, ofAccount, kind: parsed.kind, on: parsed.on },
@@ -310,6 +310,30 @@ export async function updateOperation(
     },
   );
   if (cash) await cashLegs().settleLegs(ctx, cash);
+}
+
+/**
+ * The side a deposit's leg has already is no new choice (PERS-695): sent back as «Edit» read it, it
+ * leaves the leg's pair alone instead of choosing it again.
+ */
+async function keepingSide(
+  ctx: WriteCtx,
+  eventId: string,
+  parsed: z.output<typeof operationInputSchema>,
+): Promise<z.output<typeof operationInputSchema>> {
+  if ((parsed.kind !== "deposit" && parsed.kind !== "withdrawal") || parsed.counterpart === null)
+    return parsed;
+  const [event] = await getDb()
+    .select({ legTransactionId: investmentEvents.legTransactionId })
+    .from(investmentEvents)
+    .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents)));
+  if (!event?.legTransactionId) return parsed;
+  const side = await transferSideOf(ctx, event.legTransactionId);
+  const chosen = parsed.counterpart;
+  const same =
+    side?.kind === chosen.kind &&
+    (side.kind !== "account" || (chosen.kind === "account" && side.accountId === chosen.accountId));
+  return same ? { ...parsed, counterpart: null } : parsed;
 }
 
 /**

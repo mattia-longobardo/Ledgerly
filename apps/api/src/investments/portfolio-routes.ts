@@ -8,9 +8,11 @@ import {
   addAsset,
   convertToPortfolio,
   isPortfolio,
+  type OperationForEdit,
   PRICE_SCALE,
   QUANTITY_SCALE,
   RATE_SCALE,
+  readOperation,
   recordOperation,
   setPriceMode,
   updateBuy,
@@ -18,8 +20,9 @@ import {
 } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { pricesPlugin } from "@ledgerly/domain/platform/plugins";
-import { parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
+import { formatDecimal, parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
+import { maybe, money } from "./dto";
 import { cents, decimal, refusing } from "./refusals";
 
 const { register, instruments } = INVESTMENTS;
@@ -27,6 +30,7 @@ const { register, instruments } = INVESTMENTS;
 type OperationBody = z.output<typeof register.recordOperation.body>;
 type BuyBody = Extract<OperationBody, { kind: "buy" }>;
 type MoneyBody = Extract<OperationBody, { kind: "deposit" | "withdrawal" }>;
+type ReadBody = z.input<typeof register.getOperation.response>["body"];
 
 /** The money in and out of the account a service reads or a provider writes: not the person's to type. */
 const NOT_TYPED = new Set(["account_valuation", "adjustment"]);
@@ -154,6 +158,62 @@ async function editOperation(
   return updateOperation(ctx, eventId, operationInput(body), accountId);
 }
 
+const plain = (value: bigint | null, scale: number) => (value === null ? null : formatDecimal(value, scale));
+
+/** The body of the edit an operation is (PERS-695): what `editOperation` takes back unchanged. */
+function bodyOf(found: OperationForEdit): ReadBody {
+  const { on, note } = found;
+  switch (found.kind) {
+    case "buy":
+      return {
+        kind: "buy",
+        instrumentId: found.instrumentId,
+        mic: found.mic,
+        on,
+        quantity: plain(found.quantity, QUANTITY_SCALE),
+        unitPrice: plain(found.unitPrice, PRICE_SCALE),
+        amount: maybe(found.totalCents),
+        fee: found.feeCents === 0n ? null : money(found.feeCents),
+        fxRate: plain(found.fxRate, RATE_SCALE),
+        note,
+      };
+    case "deposit":
+    case "withdrawal":
+      return {
+        kind: found.kind,
+        on,
+        amount: money(found.amountCents),
+        transactionId: found.transactionId,
+        counterpart: found.counterpart,
+        note,
+      };
+    case "fee":
+      return { kind: "fee", on, amount: money(found.amountCents), note };
+    case "income":
+      return { kind: "income", holdingId: found.holdingId, on, amount: money(found.amountCents), note };
+    case "valuation":
+      return {
+        kind: "valuation",
+        holdingId: found.holdingId,
+        on,
+        unitPrice: plain(found.unitPrice, PRICE_SCALE),
+        amount: maybe(found.amountCents),
+        note,
+      };
+    default:
+      return {
+        kind: found.kind,
+        holdingId: found.holdingId,
+        on,
+        quantity: plain(found.quantity, QUANTITY_SCALE),
+        unitPrice: plain(found.unitPrice, PRICE_SCALE),
+        amount: maybe(found.amountCents),
+        fee: found.feeCents === 0n ? null : money(found.feeCents),
+        note,
+      };
+  }
+}
+
 export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, instruments.searchInstruments, async ({ query }) => {
     // A new market is read by the instance's prices plugin, when it has one.
@@ -166,6 +226,10 @@ export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
       })),
       complete: found.complete,
     };
+  });
+  serve(app, guard, register.getOperation, async ({ ctx, params }) => {
+    const found = await refusing(() => readOperation(ctx, params.accountId, params.eventId));
+    return { kind: found.kind, body: bodyOf(found) };
   });
   serve(app, guard, register.updateOperation, async ({ ctx, params, body }) => {
     await refusing(() => editOperation(ctx, params, body));

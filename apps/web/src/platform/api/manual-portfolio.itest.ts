@@ -191,6 +191,144 @@ describe("a manual portfolio on /api/v1", () => {
     expect(await cash()).toBe("119.00");
   });
 
+  it("reads each operation as the body of its edit, and that body sent back changes nothing (PERS-695)", async () => {
+    const accountId = await portfolio();
+    const bank = await createAccount(alice, { name: "Bank", type: "checking", currency: "EUR" });
+    const ops = `/investments/${accountId}/operations`;
+    const write = async (body: Json) => {
+      const made = await send(alice, "POST", ops, body);
+      expect(made.status).toBe(201);
+      return made.body.id as string;
+    };
+    const deposit = await write({
+      kind: "deposit",
+      on: todayOn,
+      amount: "1500.00",
+      counterpart: { kind: "account", accountId: bank.id },
+      note: "Top up",
+    });
+    const withdrawal = await write({
+      kind: "withdrawal",
+      on: todayOn,
+      amount: "10.00",
+      counterpart: { kind: "none" },
+    });
+    const bought = await write(buy("10", "100"));
+    const holdingId = await holdingIdOf(accountId);
+    const others = [
+      await write({ kind: "fee", on: todayOn, amount: "1.50" }),
+      await write({ kind: "income", holdingId, on: todayOn, amount: "3.00" }),
+      await write({ kind: "valuation", holdingId, on: todayOn, unitPrice: "101.5" }),
+      await write({ kind: "sell", holdingId, on: todayOn, quantity: "2", unitPrice: "105", fee: "1.00" }),
+    ];
+    const read = (eventId: string) => send(alice, "GET", `${ops}/${eventId}`);
+    expect(await read(deposit)).toEqual({
+      status: 200,
+      body: {
+        kind: "deposit",
+        body: {
+          kind: "deposit",
+          on: todayOn,
+          amount: "1500.00",
+          transactionId: null,
+          counterpart: { kind: "account", accountId: bank.id },
+          note: "Top up",
+        },
+      },
+    });
+    expect((await read(withdrawal)).body.body.counterpart).toEqual({ kind: "none" });
+    expect((await read(bought)).body).toEqual({
+      kind: "buy",
+      body: {
+        kind: "buy",
+        instrumentId,
+        mic: "XMIL",
+        on: todayOn,
+        quantity: "10",
+        unitPrice: "100",
+        amount: null,
+        fee: "2.00",
+        fxRate: null,
+        note: null,
+      },
+    });
+    expect((await read(others[3])).body.body).toMatchObject({ quantity: "2", unitPrice: "105", fee: "1.00" });
+
+    const state = async () => ({
+      holdings: (await send(alice, "GET", `/investments/${accountId}/holdings`)).body,
+      rows: (await send(alice, "GET", `/investments/${accountId}/activity?period=all`)).body.rows,
+      movements: (await send(alice, "GET", "/transactions")).body,
+    });
+    const before = await state();
+    expect(before.rows.every((row: Json) => row.editable)).toBe(true);
+    for (const eventId of [deposit, withdrawal, bought, ...others]) {
+      const { body } = await read(eventId);
+      expect(await send(alice, "PATCH", `${ops}/${eventId}`, body.body)).toEqual({ status: 204, body: null });
+      expect((await read(eventId)).body).toEqual(body);
+    }
+    expect(await state()).toEqual(before);
+  });
+
+  it("reads a purchase's fee in the instrument's currency, at the rate typed (PERS-695)", async () => {
+    const made = await send(alice, "POST", "/investments", {
+      kind: "portfolio",
+      name: "Dollars",
+      currency: "USD",
+    });
+    const ops = `/investments/${made.body.accountId}/operations`;
+    expect((await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1000.00" })).status).toBe(
+      201,
+    );
+    const bought = await send(alice, "POST", ops, { ...buy("1", "100"), fxRate: "1.1" });
+    const cash = async () =>
+      (await send(alice, "GET", `/investments/${made.body.accountId}/holdings`)).body.cash;
+    // 1,000 − 110 − 2.20, in dollars.
+    expect(await cash()).toBe("887.80");
+    const { body } = await send(alice, "GET", `${ops}/${bought.body.id}`);
+    expect(body.body).toMatchObject({ quantity: "1", unitPrice: "100", fee: "2.00", fxRate: "1.1" });
+    expect((await send(alice, "PATCH", `${ops}/${bought.body.id}`, body.body)).status).toBe(204);
+    expect(await cash()).toBe("887.80");
+  });
+
+  it("refuses the read where the edit is refused, and another's operation is not found (PERS-695)", async () => {
+    const account = await createAccount(alice, {
+      name: "Titles",
+      type: "investment",
+      currency: "EUR",
+      openingBalance: { on: "2026-01-01", cents: 3_000_00n },
+    });
+    await send(alice, "POST", "/investments", { accountId: account.id, category: "broker" });
+    const position = { instrumentId, mic: "XMIL", quantity: "10", unitPrice: "100", fxRate: null };
+    await send(alice, "POST", `/investments/${account.id}/conversion`, {
+      on: todayOn,
+      positions: [position],
+      note: null,
+    });
+    // What «Switch to positions» wrote is no operation the person typed.
+    const rows = (await send(alice, "GET", `/investments/${account.id}/activity?period=all`)).body.rows;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row: Json) => !row.editable)).toBe(true);
+    expect(await send(alice, "GET", `/investments/${account.id}/operations/${rows[0].id}`)).toMatchObject({
+      status: 409,
+      body: { error: "conflict", reason: "not_editable" },
+    });
+
+    const accountId = await portfolio();
+    const deposit = await send(alice, "POST", `/investments/${accountId}/operations`, {
+      kind: "deposit",
+      on: todayOn,
+      amount: "10.00",
+    });
+    const path = `/investments/${accountId}/operations/${deposit.body.id}`;
+    expect((await send(alice, "GET", path)).status).toBe(200);
+    expect(
+      (await send(alice, "GET", `/investments/${account.id}/operations/${deposit.body.id}`)).status,
+    ).toBe(404);
+    expect((await send(alice, "GET", `/investments/${accountId}/operations/${rows[0].id}`)).status).toBe(404);
+    const bob = contextFor((await createTestUser()).id);
+    expect((await send(bob, "GET", path)).status).toBe(404);
+  });
+
   it("refuses the money in and out and a purchase on a service that is not a portfolio", async () => {
     const made = await send(alice, "POST", "/investments", {
       name: "Bank",

@@ -10,7 +10,7 @@ import { type Cents } from "../../../shared/money";
 import { ACTIVITY_FAMILIES, type ActivityFamily, type DescribedLeg, familyOf, kindsOf } from "../activity";
 import { type AdjustmentClass, type OperationKind } from "../rules";
 import { investmentAssets, investmentEvents, investmentHoldings, investmentOperations } from "../schema";
-import { type InvestmentEvent, listInvestmentAccounts, loadBook, transferLegs } from "../service";
+import { type InvestmentEvent, isEditable, listInvestmentAccounts, loadBook, transferLegs } from "../service";
 
 // ——— The Activity tab (docs/design/investments-ux.md §3.5, U3) ————————————————————————————————————
 
@@ -83,6 +83,8 @@ export interface ActivityRow {
   linked: { payee: string | null; cents: Cents } | null;
   /** The other service of a transfer between the person's accounts (§4.9), if this is one leg. */
   transfer: { accountId: string; accountName: string } | null;
+  /** «Edit» rewrites it (PERS-695): the rule of the edit, `isEditable`. */
+  editable: boolean;
 }
 
 export interface ServiceActivity {
@@ -106,8 +108,9 @@ const describingLeg = sql`case ${investmentOperations.leg} when 'main' then 0 wh
 
 /**
  * One page of a service's events (§3.5) and what the tab says about them: paged in the database,
- * newest first by `occurred_at` then `id` — the same order on every page, so a row never shows
- * twice or goes missing between two of them — with the counts of every chip in the period.
+ * newest first by the day of the operation, then the last written (`occurred_at`, `seq`, PERS-695) —
+ * the same order on every page, so a row never shows twice or goes missing between two of them —
+ * with the counts of every chip in the period.
  */
 export async function serviceActivity(
   ctx: Pick<Ctx, "userId">,
@@ -232,7 +235,7 @@ export async function serviceActivity(
     .select()
     .from(events)
     .where(filtered)
-    .orderBy(desc(events.occurredAt), desc(events.id))
+    .orderBy(desc(events.on), desc(events.occurredAt), desc(events.seq))
     .limit(ACTIVITY_PAGE_SIZE)
     .offset((page - 1) * ACTIVITY_PAGE_SIZE);
   const ids = pageRows.map((row) => row.id);
@@ -294,6 +297,11 @@ export async function serviceActivity(
         transfer: partner
           ? { accountId: partner.accountId, accountName: accountNames.get(partner.accountId) ?? "" }
           : null,
+        editable: isEditable(investment.provider, {
+          origin: event.origin,
+          kind: op.kind,
+          instrumentId: asset?.instrumentId ?? null,
+        }),
       },
     ];
   });

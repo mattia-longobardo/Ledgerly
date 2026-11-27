@@ -29,6 +29,7 @@ import {
   linkAllCashLegs,
   linkCashLegs,
   lockInvestmentAccount,
+  readOperation,
   recordOperation,
   updateOperation,
 } from "./service";
@@ -219,6 +220,32 @@ describe("the leg follows its deposit", () => {
     await updateOperation(ctx, eventId, { kind: "deposit", on: DAY, amountCents: 300_00n }, broker);
     expect((await legsOf(broker))[0].amountCents).toBe(300_00n);
     expect((await readingsAt(ctx, [broker], DAY)).get(broker)).toBe(300_00n);
+  });
+
+  it("reads the side the rules paired as the deposit's counterpart, and the side sent back keeps the pair (PERS-695)", async () => {
+    await readBank(-400_00n);
+    const { eventId } = await deposit(400_00n);
+    const pair = (await bankRow()).transferGroupId;
+    expect(pair).not.toBeNull();
+    const [legBefore] = await legsOf(broker);
+    const read = await readOperation(ctx, broker, eventId);
+    expect(read).toMatchObject({
+      kind: "deposit",
+      amountCents: 400_00n,
+      transactionId: null,
+      counterpart: { kind: "account", accountId: bank },
+    });
+    if (read.kind !== "deposit") throw new Error("a deposit");
+    await updateOperation(
+      ctx,
+      eventId,
+      { kind: "deposit", on: read.on, amountCents: read.amountCents, counterpart: read.counterpart },
+      broker,
+    );
+    // The side read sent back is no new choice: the pair stays…
+    expect((await bankRow()).transferGroupId).toBe(pair);
+    // …and the leg stays the rules' own, with no choice of the person on it.
+    expect((await legsOf(broker))[0]).toEqual(legBefore);
   });
 
   it("goes with its deposit; the bank's movement stays and waits", async () => {

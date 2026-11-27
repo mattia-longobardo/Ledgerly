@@ -1,6 +1,7 @@
 // The writes of a service's register (rewrite plan R2, 05-refactor.md §5.5 «investments»): a manual
 // service, its address and its value, the operations a person writes on a holding, the decisions on
-// a provider's reading, and the transfers between two services. Refusals: `INVESTMENT_REFUSALS`.
+// a provider's reading, and the transfers between two services; an operation read back for its edit.
+// Refusals: `INVESTMENT_REFUSALS`.
 import { z } from "zod";
 import { id } from "../primitives";
 import { defineRoute } from "../route";
@@ -208,6 +209,45 @@ export const updateOperation = defineRoute({
       fee: "2.95",
       fxRate: null,
       note: null,
+    },
+  },
+});
+
+export const getOperation = defineRoute({
+  id: "get_investment_operation",
+  method: "GET",
+  path: "/investments/{accountId}/operations/{eventId}",
+  scope: "investments:read",
+  capability: "investments",
+  summary:
+    "An operation of a manual portfolio as «Edit» shows it (PERS-695): `body` is the body of PATCH " +
+    "/investments/{accountId}/operations/{eventId} for its `kind`, and sent back unchanged it changes " +
+    "nothing. A deposit or a withdrawal names its bank movement (`transactionId`) or, without one, the " +
+    "side of its leg in the account as `counterpart` (`null` while the rules decide it). `404` for an " +
+    "event of another service; `409` `not_editable` where the edit refuses it, as the PATCH does.",
+  actions: [],
+  params: byEvent,
+  response: z.object({
+    kind: z.enum(["buy", "deposit", "withdrawal", "fee", "valuation", "sell", "close", "income"]),
+    body: operationBody,
+  }),
+  errors: INVESTMENT_ERRORS,
+  example: {
+    params: { accountId: ACCOUNT_ID, eventId: EVENT_ID },
+    response: {
+      kind: "buy",
+      body: {
+        kind: "buy",
+        instrumentId: INSTRUMENT_ID,
+        mic: "XMIL",
+        on: "2026-11-03",
+        quantity: "3",
+        unitPrice: "61.2",
+        amount: null,
+        fee: "2.95",
+        fxRate: null,
+        note: null,
+      },
     },
   },
 });
