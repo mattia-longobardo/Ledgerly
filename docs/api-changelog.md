@@ -4,6 +4,13 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · «Try the reading again» says when the reading is refused (additive)
+
+- Changed: `POST /connections/{id}/read` answers `204` only when the reading ran. A reading the server
+  refuses is `409` with a `reason` of the closed list of a run (`busy` when a reading of the connection is
+  already in progress, `not_active`, `pending`, `unavailable`, `auth`, `consent_expired`, `rate_limited`,
+  `provider_down`, `invalid_data`, `failed`); before, it was `204` and nothing happened.
+
 ## Unreleased · The home's chart by chip, with the pension funds (additive)
 
 - Added to `GET /investments/home`: the query `group` (`all`, `stocks_crypto`, `pension_funds`), the chip

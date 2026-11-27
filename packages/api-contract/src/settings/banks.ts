@@ -72,7 +72,12 @@ export const readBankNow = defineRoute({
   path: "/connections/{id}/read",
   scope: "write",
   capability: "connections",
-  summary: "Tries the first reading of a bank again, now, after a refusal.",
+  summary:
+    "Tries the first reading of a bank again, now, after a refusal. `204` only when the reading ran. " +
+    "A reading refused is `409` with a `reason` of the closed list of a run: `busy` (a reading of this " +
+    "connection is already in progress), `not_active`, `pending` (the accounts are not chosen yet), " +
+    "`unavailable` (the plugin does not answer), `auth`, `consent_expired`, `rate_limited`, " +
+    "`provider_down`, `invalid_data`, `failed`.",
   actions: [],
   params: byId,
   response: null,
