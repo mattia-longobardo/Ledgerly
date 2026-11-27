@@ -6496,6 +6496,7 @@
         "syncFailed": "The accounts are connected, but the transactions were not read. Try again now: a bank gives its full history only in the first minutes.",
         "retryNow": "Try again now",
         "retrying": "Reading in progress…",
+        "readingBusy": "A reading is already running. Reload the page in a few minutes to see its result.",
         "rateLimited": "The bank reached its reading limit. The next reading starts by itself at {time}.",
         "partial": "Some accounts were not read. Ledgerly tries again at the next automatic reading.",
         "accountGone": "The bank no longer shares this account. It stays in Ledgerly and is no longer updated.",

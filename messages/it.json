@@ -6496,6 +6496,7 @@
         "syncFailed": "I conti sono collegati, ma i movimenti non sono stati letti. Riprova ora: una banca dà lo storico completo solo nei primi minuti.",
         "retryNow": "Riprova ora",
         "retrying": "Lettura in corso…",
+        "readingBusy": "Una lettura è già in corso. Ricarica la pagina tra qualche minuto per vederne il risultato.",
         "rateLimited": "La banca ha raggiunto il limite di letture. La prossima lettura parte da sola alle {time}.",
         "partial": "Alcuni conti non sono stati letti. Ledgerly riprova alla prossima lettura automatica.",
         "accountGone": "La banca non condivide più questo conto. Resta in Ledgerly e non viene più aggiornato.",

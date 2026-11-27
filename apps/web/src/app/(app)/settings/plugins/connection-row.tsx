@@ -5,9 +5,9 @@
 // sentences the row shows.
 import { useTranslations } from "next-intl";
 import type { ComponentProps } from "react";
-import { codeKey } from "@ledgerly/domain/platform/integrations/client";
 import { ConnectionRow as Row } from "@ledgerly/ui/connection-row";
 import { isConnectionKind, runConnectionCall } from "./connection-calls";
+import { useRefusalText } from "./connection-refusal";
 
 export {
   type ActionKind,
@@ -35,6 +35,7 @@ const TOAST = {
  */
 export function useRunConnection() {
   const text = useTranslations("settings.connections");
+  const refusal = useRefusalText();
   // `months` is for "history" only: the row passes no third argument, and none is forwarded.
   return async (connectionId: string, kind: string, ...months: [months?: number]): Promise<RunResult> => {
     const failed: RunResult = { ok: false, message: text("codes.failed") };
@@ -43,12 +44,7 @@ export function useRunConnection() {
     if (result.ok) return { ok: true, toast: text(TOAST[kind], result.names) };
     const { refusal: code, names } = result;
     if (names === null) return failed;
-    /** One branch per code so the catalogue keys stay literal. */
-    if (code === "busy") return { ok: false, message: text("codes.busy") };
-    if (code === "unavailable") return { ok: false, message: text("codes.unavailable") };
-    if (code === "not_active") return { ok: false, message: text("text.pausedProvider", names) };
-    if (code === "pending") return { ok: false, message: text("text.pending") };
-    return { ok: false, message: text(`codes.${codeKey(code)}`, names) };
+    return { ok: false, message: refusal(code, names) };
   };
 }
 

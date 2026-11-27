@@ -161,3 +161,60 @@ test("the outcome of «Choose accounts» is true with the recommended schedule t
   await expect(page.getByText(OUTCOME_SCHEDULE)).toBeVisible();
   await expect(page.getByText(/times a day/)).toHaveCount(0);
 });
+
+/**
+ * «Try again now» on Gamma Bank, whose first reading failed (scripts/seed-e2e/plugins.ts). The answer of
+ * the reading is the browser's: the route answers it, so nothing reads a bank here.
+ */
+test.describe("«Try again now» on a failed first reading", () => {
+  const GAMMA = "Gamma Bank";
+
+  async function retry(page: Page, answer: { status: number; reason?: string }) {
+    const list = await page.request.get("/api/v1/connections");
+    const { connections }: { connections: { id: string; name: string }[] } = await list.json();
+    const id = connections.find((one) => one.name === GAMMA)?.id;
+    expect(id, GAMMA).toBeTruthy();
+    let reads = 0;
+    await page.route(`**/api/v1/connections/${id}/read`, (route) => {
+      reads += 1;
+      return answer.status === 204
+        ? route.fulfill({ status: 204 })
+        : route.fulfill({ status: answer.status, json: { error: "conflict", reason: answer.reason } });
+    });
+    await page.goto(`/banks/connect?step=done&c=${id}`);
+    await expect(page.getByRole("heading", { level: 1, name: `${GAMMA} is connected` })).toBeVisible();
+    const button = page.getByRole("button", { name: "Try again now" });
+    await hydrated(button);
+    return { button, reads: () => reads };
+  }
+
+  test("a reading already running is said, and nothing reads as done", async ({ page }) => {
+    const { button, reads } = await retry(page, { status: 409, reason: "busy" });
+    await button.click();
+    await expect(page.getByRole("alert").filter({ hasText: "A reading is already running." })).toBeVisible();
+    expect(reads()).toBe(1);
+    // The outcome stays the failed one: no way on to the accounts, «Try again now» still there.
+    await expect(
+      page.getByText("The accounts are connected, but the transactions were not read."),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Go to accounts" })).toHaveCount(0);
+    await expect(button).toBeEnabled();
+  });
+
+  test("another refusal says its own reason", async ({ page }) => {
+    const { button } = await retry(page, { status: 409, reason: "provider_down" });
+    await button.click();
+    await expect(page.getByRole("alert").filter({ hasText: `${GAMMA} is not responding.` })).toBeVisible();
+    await expect(page.getByText("A reading is already running.")).toHaveCount(0);
+  });
+
+  test("a reading that ran reads the outcome again, with no refusal", async ({ page }) => {
+    const { button, reads } = await retry(page, { status: 204 });
+    const refreshed = page.waitForRequest((request) => request.headers()["rsc"] === "1");
+    await button.click();
+    await refreshed;
+    expect(reads()).toBe(1);
+    await expect(page.getByText("A reading is already running.")).toHaveCount(0);
+    await expect(page.getByText(`${GAMMA} is not responding.`)).toHaveCount(0);
+  });
+});

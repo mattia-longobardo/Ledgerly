@@ -4,33 +4,49 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
+import { useRefusalText } from "../../settings/plugins/connection-refusal";
 import { isBankPage } from "./bank-page";
 import { renewBankAccessAction, retryBankReadingAction } from "./calls";
 
-/** "Try again now" on the outcome of a first reading that failed (ux/n1-plugin-bank.md §6.6). */
-export function RetryReading({ connectionId }: { connectionId: string }) {
+/**
+ * "Try again now" on the outcome of a first reading that failed (ux/n1-plugin-bank.md §6.6). A reading
+ * refused (`409` with its `reason`) is said in place: nothing ran, so the page is not read again.
+ */
+export function RetryReading({ connectionId, bank }: { connectionId: string; bank: string }) {
   const t = useTranslations("banks.connect");
+  const refusalText = useRefusalText();
   const router = useRouter();
+  const [refusal, setRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   return (
-    <Button
-      variant="primary"
-      disabled={pending}
-      aria-busy={pending}
-      onClick={() =>
-        startTransition(async () => {
-          try {
-            await retryBankReadingAction(connectionId);
-          } finally {
+    <>
+      {refusal !== null && (
+        <p role="alert" className="rounded-ctl bg-neg-bg px-3 py-2 text-sm text-neg">
+          {refusal}
+        </p>
+      )}
+      <Button
+        variant="primary"
+        disabled={pending}
+        aria-busy={pending}
+        onClick={() => {
+          setRefusal(null);
+          startTransition(async () => {
+            const result = await retryBankReadingAction(connectionId);
             // The page reads the outcome again: it says what this reading did.
-            router.refresh();
-          }
-        })
-      }
-    >
-      {pending ? t("done.retrying") : t("done.retryNow")}
-    </Button>
+            if (result.ok) return router.refresh();
+            setRefusal(
+              result.error === "busy"
+                ? t("done.readingBusy")
+                : refusalText(result.error, { name: bank, provider: bank }),
+            );
+          });
+        }}
+      >
+        {pending ? t("done.retrying") : t("done.retryNow")}
+      </Button>
+    </>
   );
 }
 

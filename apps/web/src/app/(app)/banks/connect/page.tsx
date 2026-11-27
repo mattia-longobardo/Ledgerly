@@ -221,7 +221,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
         <div className="flex flex-wrap justify-end gap-2 max-[480px]:flex-col-reverse">
           <ButtonLink href={SETTINGS}>{t("done.toSettings")}</ButtonLink>
           {reading.failed && wait === null ? (
-            <RetryReading connectionId={connectionId} />
+            <RetryReading connectionId={connectionId} bank={bank} />
           ) : (
             <>
               <ButtonLink

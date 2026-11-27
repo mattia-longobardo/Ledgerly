@@ -73,11 +73,14 @@ async function bankCredentials(ctx: Ctx): Promise<void> {
     });
 }
 
-/** One bank of the bank plugin, with its account, its health and a reading that runs since `running`. */
+/**
+ * One bank of the bank plugin, with its account, its health and a reading that runs since `running`,
+ * or that failed at `failed`.
+ */
 async function bank(
   ctx: Ctx,
   name: string,
-  facts: { expiresAt?: Date; health?: Health; running?: Date } = {},
+  facts: { expiresAt?: Date; health?: Health; running?: Date; failed?: Date } = {},
 ): Promise<string> {
   const now = new Date();
   const slug = name.toLowerCase().replaceAll(" ", "-");
@@ -109,6 +112,20 @@ async function bank(
       state: "running",
       startedAt: facts.running,
       finishedAt: null,
+      counts: {},
+      origin: "auto",
+      appVersion: "e2e",
+    });
+  }
+  if (facts.failed) {
+    await getDb().insert(syncRuns).values({
+      userId: ctx.userId,
+      connectionId: connection.id,
+      kind: "transactions",
+      state: "failed",
+      error: "provider_down",
+      startedAt: facts.failed,
+      finishedAt: facts.failed,
       counts: {},
       origin: "auto",
       appVersion: "e2e",
@@ -149,13 +166,16 @@ export async function seedPluginsLive(): Promise<void> {
 
 /**
  * One bank on the recommended schedule, for the schedule editor of a bank's connection: its current
- * account chosen, and a savings account left out, so «Choose accounts» has one to offer again.
+ * account chosen, and a savings account left out, so «Choose accounts» has one to offer again. A
+ * second bank, whose last reading failed, for «Try again now» on the outcome.
  */
 export async function seedBankSchedule(): Promise<void> {
   const ctx = await contextOf(USERS.bankSchedule.email);
   if (!(await activatePlugin(ctx, BANK_PLUGIN))) return;
   await bankCredentials(ctx);
   await bank(ctx, "Beta Bank");
+  // A first reading that failed: its outcome offers «Try again now».
+  await bank(ctx, "Gamma Bank", { failed: hoursFrom(new Date(), -1) });
   const account = (id: string, name: string, kind: string) => ({
     externalId: `e2e-${id}`,
     stableId: `e2e-stable-${id}`,
