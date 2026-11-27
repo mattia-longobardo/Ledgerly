@@ -199,7 +199,7 @@ export function lineViewOf(
     labels: line.labels,
     labelIds: line.labelIds,
     investments: line.origin === "investments",
-    ...editableOf(line, formatAmountInput(cents < 0n ? -cents : cents, numberFormat)),
+    ...editableOf(line, formatAmountInput(cents < 0n ? -cents : cents, numberFormat), cents < 0n),
   };
 }
 
@@ -241,17 +241,32 @@ function transferOf(
   return { state, otherId, other, out };
 }
 
+/** The fields the manual dialog opens with; a giroconto only with one of the person's accounts on the other side. */
+function manualOf(line: TransactionLine, size: string, out: boolean): ManualFieldsView | null {
+  if (line.origin !== "manual") return null;
+  const otherId = line.type === "transfer" && !line.transferOutside ? line.transferAccountId : null;
+  if (line.type === "transfer" && otherId === null) return null;
+  return {
+    kind: line.type === "transfer" ? (out ? "expense" : "income") : line.type,
+    amount: size,
+    on: line.on,
+    accountId: line.accountId,
+    payee: line.payee ?? "",
+    transferAccountId: otherId,
+  };
+}
+
 /** What the panel may change, and where: at the source, in the manual dialog; and the sending. */
-function editableOf(line: TransactionLine, size: string): Pick<RowView, "atSource" | "manual" | "send"> {
-  const manual = line.origin === "manual";
+function editableOf(
+  line: TransactionLine,
+  size: string,
+  out: boolean,
+): Pick<RowView, "atSource" | "manual" | "send"> {
   return {
     atSource: line.editableAtSource ? { type: line.type, amount: size } : null,
-    manual:
-      manual && line.type !== "transfer"
-        ? { kind: line.type, amount: size, on: line.on, accountId: line.accountId, payee: line.payee ?? "" }
-        : null,
+    manual: manualOf(line, size, out),
     send:
-      manual && line.sendState !== null
+      line.origin === "manual" && line.sendState !== null
         ? { state: line.sendState, source: line.sendSource ?? line.accountName ?? NULL_DISPLAY }
         : null,
   };

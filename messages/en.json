@@ -1932,7 +1932,8 @@
       "type": "Type",
       "types": {
         "expense": "Money out",
-        "income": "Money in"
+        "income": "Money in",
+        "transfer": "Transfer"
       },
       "amount": "Amount",
       "amountHint": "No sign: the type decides it.",
@@ -1989,7 +1990,13 @@
         "notSent": "Not sent to {provider}",
         "notSentOff": "Not sent",
         "sourceOff": "{provider} is not active"
-      }
+      },
+      "direction": "Direction",
+      "directions": {
+        "out": "To the other account",
+        "in": "From the other account"
+      },
+      "otherAccount": "Other account"
     },
     "auto": {
       "mark": "Automatic",

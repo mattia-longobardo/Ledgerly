@@ -28,6 +28,8 @@ export interface ManualForm {
   categoryId: string | null;
   payee: string;
   note: string;
+  /** The other account of a giroconto; `null` for money out or in. `kind` still gives the sign. */
+  transferAccountId: string | null;
 }
 
 export type ManualSaveResult =
@@ -85,4 +87,6 @@ export interface ManualFieldsView {
   accountId: string;
   /** The payee as written, not the name the table shows for a missing one. */
   payee: string;
+  /** The other account of a giroconto written by hand; `null` for money out or in. */
+  transferAccountId: string | null;
 }

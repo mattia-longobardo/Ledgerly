@@ -76,7 +76,14 @@ const MANUAL_ROW: RowView = {
   note: null,
   labels: [],
   labelIds: [],
-  manual: { kind: "expense", amount: "4,50", on: "2026-11-14", accountId: "acc-cash", payee: "Corner bar" },
+  manual: {
+    kind: "expense",
+    amount: "4,50",
+    on: "2026-11-14",
+    accountId: "acc-cash",
+    payee: "Corner bar",
+    transferAccountId: null,
+  },
 };
 
 const GROUPS: GroupView[] = [
@@ -168,6 +175,7 @@ describe("the manual movement's dialog", () => {
       categoryId: null,
       payee: "Corner bar",
       note: "",
+      transferAccountId: null,
     });
     expect(key).toMatch(/^[0-9a-f-]{36}$/);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -324,6 +332,62 @@ describe("the manual movement's dialog", () => {
 async function openRow(user: ReturnType<typeof userEvent.setup>) {
   await user.click(within(screen.getByRole("table")).getByText("Corner bar"));
 }
+
+describe("a giroconto written by hand", () => {
+  const THREE = [...ACCOUNTS, { id: "acc-box", name: "Box", currency: "EUR", mode: "manual" as const }];
+
+  it("asks for the other account, never the same one, and sends no category", async () => {
+    const user = userEvent.setup();
+    const commands = commandsWith({ form: vi.fn(async () => ({ accounts: THREE, today: "2026-11-15" })) });
+    renderScreen(commands);
+    const dialog = await openDialog(user);
+
+    await user.click(dialog.getByRole("button", { name: "Transfer" }));
+    expect(dialog.queryByText("Category")).not.toBeInTheDocument();
+    const other = dialog.getByLabelText("Other account");
+    expect(other).toHaveValue("acc-bank");
+    expect(within(other).queryByRole("option", { name: "Cash" })).not.toBeInTheDocument();
+
+    // The account moves onto the other one: the other one moves away.
+    await user.selectOptions(dialog.getByLabelText("Account"), "acc-bank");
+    expect(dialog.getByLabelText("Other account")).toHaveValue("acc-cash");
+    await user.selectOptions(dialog.getByLabelText("Other account"), "acc-box");
+    await user.click(dialog.getByRole("button", { name: "From the other account" }));
+    await user.type(dialog.getByLabelText("Amount"), "50");
+    await user.click(dialog.getByRole("button", { name: "Add transaction" }));
+
+    await waitFor(() => expect(commands.create).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(commands.create).mock.calls[0][0]).toMatchObject({
+      kind: "income",
+      accountId: "acc-bank",
+      transferAccountId: "acc-box",
+      categoryId: null,
+    });
+  });
+
+  it("goes back to money out with no other account", async () => {
+    const user = userEvent.setup();
+    const commands = commandsWith();
+    renderScreen(commands);
+    const dialog = await openDialog(user);
+    await user.click(dialog.getByRole("button", { name: "Transfer" }));
+    await user.click(dialog.getByRole("button", { name: "Money out" }));
+    expect(dialog.queryByLabelText("Other account")).not.toBeInTheDocument();
+    await user.type(dialog.getByLabelText("Amount"), "5");
+    await user.click(dialog.getByRole("button", { name: "Add transaction" }));
+    await waitFor(() => expect(commands.create).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(commands.create).mock.calls[0][0]).toMatchObject({ transferAccountId: null });
+  });
+
+  it("is offered only with a second account", async () => {
+    const user = userEvent.setup();
+    renderScreen(
+      commandsWith({ form: vi.fn(async () => ({ accounts: ACCOUNTS.slice(0, 1), today: "2026-11-15" })) }),
+    );
+    const dialog = await openDialog(user);
+    expect(dialog.getByRole("button", { name: "Transfer" })).toBeDisabled();
+  });
+});
 
 describe("a manual movement in the table", () => {
   it("carries the badge and its own actions: change, hide, delete", async () => {

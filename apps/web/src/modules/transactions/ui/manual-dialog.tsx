@@ -48,6 +48,25 @@ function rememberAccount(id: string): void {
   }
 }
 
+/** The `<option>`s of the accounts, by group; `except` leaves one account out. */
+function accountOptions(
+  groups: readonly { key: string; label: string; accounts: readonly ManualAccountView[] }[],
+  except?: string,
+) {
+  return groups.map((group) => {
+    const shown = group.accounts.filter((one) => one.id !== except);
+    return shown.length === 0 ? null : (
+      <optgroup key={group.key} label={group.label}>
+        {shown.map((one) => (
+          <option key={one.id} value={one.id}>
+            {one.name}
+          </option>
+        ))}
+      </optgroup>
+    );
+  });
+}
+
 function sameLabels(current: readonly string[], next: readonly string[]): boolean {
   return current.length === next.length && next.every((id) => current.includes(id));
 }
@@ -92,6 +111,7 @@ export function ManualTransactionDialog({
     categoryId: row?.categoryId ?? null,
     payee: editing?.payee ?? "",
     note: row?.note ?? "",
+    transferAccountId: editing?.transferAccountId ?? null,
   });
   const [chosenLabels, setChosenLabels] = useState<readonly string[]>(row?.labelIds ?? []);
   const [picking, setPicking] = useState(false);
@@ -161,7 +181,8 @@ export function ManualTransactionDialog({
   }, [commands, kind, amount, on, accountId, editingId]);
 
   const { payee, note } = form;
-  const suggest = commands.suggest;
+  const transfer = form.transferAccountId !== null;
+  const suggest = transfer ? undefined : commands.suggest;
   // The suggestion: asked for a little after the last key, while the person has chosen nothing.
   useEffect(() => {
     if (!suggest || categoryChosen || amount.trim() === "" || accountId === "") return;
@@ -194,6 +215,27 @@ export function ManualTransactionDialog({
     if (category && category.type !== next) setCategoryChosen(false);
   }
 
+  /** The first account other than `id`: where a giroconto from `id` goes unless the person picks one. */
+  function otherThan(id: string): string {
+    return accounts?.find((one) => one.id !== id)?.id ?? "";
+  }
+
+  function changeType(next: ManualKind | "transfer") {
+    if (next === "transfer") change({ transferAccountId: otherThan(form.accountId) });
+    else {
+      changeKind(next);
+      change({ transferAccountId: null });
+    }
+  }
+
+  function changeAccount(id: string) {
+    // A giroconto never has the same account on both sides.
+    change({
+      accountId: id,
+      ...(transfer && form.transferAccountId === id ? { transferAccountId: otherThan(id) } : {}),
+    });
+  }
+
   function focusAmount() {
     document.getElementById(`${ids}-amount`)?.focus();
   }
@@ -207,7 +249,8 @@ export function ManualTransactionDialog({
   async function save(): Promise<void> {
     // A suggestion left in the field is saved as the person's choice: they saw it in the form
     // they are sending (ux §9.3).
-    const sent = { ...form, categoryId: form.categoryId ?? suggested?.id ?? null };
+    // A giroconto has no category (PERS-733).
+    const sent = { ...form, categoryId: transfer ? null : (form.categoryId ?? suggested?.id ?? null) };
     const result =
       row === null ? await commands.create(sent, idempotencyKey) : await commands.update(row.id, sent);
     if (!result.ok) {
@@ -227,7 +270,7 @@ export function ManualTransactionDialog({
       }
     }
     rememberAccount(form.accountId);
-    onSaved(result, row !== null && row.categoryId !== form.categoryId);
+    onSaved(result, row !== null && row.categoryId !== sent.categoryId);
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -356,16 +399,33 @@ export function ManualTransactionDialog({
           <span className="text-sm font-medium" id={`${ids}-kind`}>
             {t("manual.type")}
           </span>
-          <Segmented
+          <Segmented<ManualKind | "transfer">
             label={t("manual.type")}
-            value={form.kind}
-            onChange={changeKind}
+            value={transfer ? "transfer" : form.kind}
+            onChange={changeType}
             options={[
               { value: "expense", label: t("manual.types.expense") },
               { value: "income", label: t("manual.types.income") },
+              // A giroconto needs a second account of the person's.
+              { value: "transfer", label: t("manual.types.transfer"), disabled: (accounts?.length ?? 0) < 2 },
             ]}
           />
         </div>
+
+        {transfer && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t("manual.direction")}</span>
+            <Segmented
+              label={t("manual.direction")}
+              value={form.kind}
+              onChange={changeKind}
+              options={[
+                { value: "expense", label: t("manual.directions.out") },
+                { value: "income", label: t("manual.directions.in") },
+              ]}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
@@ -408,21 +468,25 @@ export function ManualTransactionDialog({
           <Select
             id={`${ids}-account`}
             value={form.accountId}
-            onChange={(event) => change({ accountId: event.currentTarget.value })}
+            onChange={(event) => changeAccount(event.currentTarget.value)}
             disabled={accounts === null}
             required
           >
-            {groups.map((group) => (
-              <optgroup key={group.key} label={group.label}>
-                {group.accounts.map((one) => (
-                  <option key={one.id} value={one.id}>
-                    {one.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
+            {accountOptions(groups)}
           </Select>
         </Field>
+        {transfer && (
+          <Field label={t("manual.otherAccount")} htmlFor={`${ids}-other`}>
+            <Select
+              id={`${ids}-other`}
+              value={form.transferAccountId ?? ""}
+              onChange={(event) => change({ transferAccountId: event.currentTarget.value })}
+              required
+            >
+              {accountOptions(groups, form.accountId)}
+            </Select>
+          </Field>
+        )}
         {/* One live region for what the chosen account says: the balance, and the bank's warning. */}
         <div aria-live="polite" className="flex flex-col gap-2 empty:hidden">
           {account?.mode === "read_only" && (
@@ -466,60 +530,62 @@ export function ManualTransactionDialog({
           />
         </Field>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={`${ids}-category`} className="text-sm font-medium">
-            {t("manual.category")}
-          </label>
-          <CategoryPicker
-            categories={offered}
-            currentId={category?.id ?? null}
-            likely={{ ids: likely, title: t("row.likely") }}
-            open={picking}
-            onOpenChange={setPicking}
-            onPick={(categoryId) => {
-              setCategoryChosen(true);
-              change({ categoryId });
-            }}
-            uncategorisedLabel={t("row.uncategorised")}
-            searchLabel={t("row.searchCategory")}
-            noMatchLabel={t("row.noCategoryMatch")}
-            triggerLabel={t("manual.category")}
-            triggerId={`${ids}-category`}
-            disabled={pending}
-            triggerClassName={cn(
-              "focus-ring flex h-8 w-full items-center gap-1.5 rounded-ctl border bg-card px-2.5 text-left text-base hover:bg-hover",
-              suggested ? "border-dashed border-muted text-muted" : "border-border",
+        {!transfer && (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={`${ids}-category`} className="text-sm font-medium">
+              {t("manual.category")}
+            </label>
+            <CategoryPicker
+              categories={offered}
+              currentId={category?.id ?? null}
+              likely={{ ids: likely, title: t("row.likely") }}
+              open={picking}
+              onOpenChange={setPicking}
+              onPick={(categoryId) => {
+                setCategoryChosen(true);
+                change({ categoryId });
+              }}
+              uncategorisedLabel={t("row.uncategorised")}
+              searchLabel={t("row.searchCategory")}
+              noMatchLabel={t("row.noCategoryMatch")}
+              triggerLabel={t("manual.category")}
+              triggerId={`${ids}-category`}
+              disabled={pending}
+              triggerClassName={cn(
+                "focus-ring flex h-8 w-full items-center gap-1.5 rounded-ctl border bg-card px-2.5 text-left text-base hover:bg-hover",
+                suggested ? "border-dashed border-muted text-muted" : "border-border",
+              )}
+            >
+              {suggested ? (
+                <>
+                  <span
+                    aria-hidden
+                    className="size-[7px] shrink-0 rounded-xs border"
+                    style={{ borderColor: suggested.color }}
+                  />
+                  <span data-testid="manual-suggestion" className="min-w-0 truncate">
+                    {t("auto.suggestion.chip", { category: suggested.name })}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    aria-hidden
+                    className={cn("size-[7px] shrink-0 rounded-xs", category === null && "bg-faint")}
+                    style={category === null ? undefined : { background: category.color }}
+                  />
+                  <span className="min-w-0 truncate">{category?.name ?? t("row.uncategorised")}</span>
+                </>
+              )}
+            </CategoryPicker>
+            {suggested && <p className="text-sm text-muted">{t("manual.categoryHint")}</p>}
+            {offered.length === 0 && (
+              <Link href="/settings/finance" className="focus-ring self-start text-sm text-accent underline">
+                {t("manual.noCategories")}
+              </Link>
             )}
-          >
-            {suggested ? (
-              <>
-                <span
-                  aria-hidden
-                  className="size-[7px] shrink-0 rounded-xs border"
-                  style={{ borderColor: suggested.color }}
-                />
-                <span data-testid="manual-suggestion" className="min-w-0 truncate">
-                  {t("auto.suggestion.chip", { category: suggested.name })}
-                </span>
-              </>
-            ) : (
-              <>
-                <span
-                  aria-hidden
-                  className={cn("size-[7px] shrink-0 rounded-xs", category === null && "bg-faint")}
-                  style={category === null ? undefined : { background: category.color }}
-                />
-                <span className="min-w-0 truncate">{category?.name ?? t("row.uncategorised")}</span>
-              </>
-            )}
-          </CategoryPicker>
-          {suggested && <p className="text-sm text-muted">{t("manual.categoryHint")}</p>}
-          {offered.length === 0 && (
-            <Link href="/settings/finance" className="focus-ring self-start text-sm text-accent underline">
-              {t("manual.noCategories")}
-            </Link>
-          )}
-        </div>
+          </div>
+        )}
 
         <Field label={t("manual.note")} htmlFor={`${ids}-note`}>
           <Textarea

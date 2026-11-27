@@ -1932,7 +1932,8 @@
       "type": "Tipo",
       "types": {
         "expense": "Uscita",
-        "income": "Entrata"
+        "income": "Entrata",
+        "transfer": "Giroconto"
       },
       "amount": "Importo",
       "amountHint": "Senza segno: lo decide il tipo.",
@@ -1989,7 +1990,13 @@
         "notSent": "Non inviato a {provider}",
         "notSentOff": "Non inviato",
         "sourceOff": "{provider} non è attivo"
-      }
+      },
+      "direction": "Direzione",
+      "directions": {
+        "out": "Verso l'altro conto",
+        "in": "Dall'altro conto"
+      },
+      "otherAccount": "Altro conto"
     },
     "auto": {
       "mark": "Automatica",

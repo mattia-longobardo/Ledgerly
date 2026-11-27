@@ -71,7 +71,14 @@ function row(send: RowView["send"]): RowView {
     note: null,
     labels: [],
     labelIds: [],
-    manual: { kind: "expense", amount: "4,50", on: "2026-11-14", accountId: "acc-app", payee: "Corner bar" },
+    manual: {
+      kind: "expense",
+      amount: "4,50",
+      on: "2026-11-14",
+      accountId: "acc-app",
+      payee: "Corner bar",
+      transferAccountId: null,
+    },
     send,
   };
 }

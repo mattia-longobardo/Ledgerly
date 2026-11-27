@@ -5,6 +5,7 @@
  * DOM tests replace, which keeps them away from the network entirely.
  */
 
+import { views } from "@ledgerly/api-contract/accounts";
 import { giroconti, movements, review, spending } from "@ledgerly/api-contract/transactions";
 import { categories as categoryRoutes, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call, type RouteInput } from "@ledgerly/api-client";
@@ -172,6 +173,8 @@ export function setTransferSide(id: string, side: TransferSide): Promise<FieldRe
   return writing(async () => {
     await call(giroconti.setTransferSide, { params: { id }, body: side });
     invalidate(giroconti.listTransferProposals);
+    // On a manual account the server writes the other leg (PERS-733): that account's balance moves.
+    invalidate(views.getNetWorth, views.getAccountContext, views.getAccountDailyBalances);
   });
 }
 
