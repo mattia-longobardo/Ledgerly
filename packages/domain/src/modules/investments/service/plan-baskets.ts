@@ -75,8 +75,8 @@ async function priceLines(
   );
 }
 
-/** The execution of a due date, made when missing; the unique key keeps one a due date. */
-async function executionOn(
+/** The instalment of a due date, made when missing: the unique key keeps one, whoever makes it first. */
+export async function runOn(
   ctx: Pick<Ctx, "userId">,
   transaction: Tx,
   plan: InvestmentPlan,
@@ -185,7 +185,7 @@ export async function advanceBasket(
   const { currency } = await currencyOfPlan(ctx, plan);
   const priced = await priceLines(ctx, plan, currency, { dueOn, todayOn });
   await getDb().transaction(async (transaction) => {
-    const run = await executionOn(ctx, transaction, plan, dueOn);
+    const run = await runOn(ctx, transaction, plan, dueOn);
     if (run.state !== "pending" && run.state !== "waiting_price") return;
     const waitingSince = run.waitingSince ?? todayOn;
     const missing = priced.some((line) => !line.priced);

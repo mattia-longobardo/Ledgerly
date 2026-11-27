@@ -41,7 +41,7 @@ import {
 } from "./plans";
 import { fromNumeric, InvestmentError, type WriteCtx } from "./types";
 import { closesOfPlan } from "./plan-views";
-import { advanceBasket, runsThePlan, skippedCarry } from "./plan-baskets";
+import { advanceBasket, runOn, runsThePlan, skippedCarry } from "./plan-baskets";
 
 /** The days after its due date a bank movement may document an instalment (E7). */
 const DEBIT_WINDOW_DAYS = 5;
@@ -207,20 +207,6 @@ export async function backfillPlan(
     }
     return { eventIds };
   });
-}
-
-/** The instalment of a due date, made when missing: the unique key keeps one, whoever makes it first. */
-async function runOn(ctx: Pick<Ctx, "userId">, transaction: Tx, plan: InvestmentPlan, dueOn: CivilDate) {
-  await transaction
-    .insert(investmentPlanRuns)
-    .values(userScoped(ctx).stamp({ planId: plan.id, dueOn }))
-    .onConflictDoNothing({ target: [investmentPlanRuns.planId, investmentPlanRuns.dueOn] });
-  const [run] = await transaction
-    .select()
-    .from(investmentPlanRuns)
-    .where(and(eq(investmentPlanRuns.planId, plan.id), eq(investmentPlanRuns.dueOn, dueOn)))
-    .for("update");
-  return run;
 }
 
 /** The first close of the plan's market on or after the due date, and its day; null with none yet. */
