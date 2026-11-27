@@ -19,7 +19,8 @@
 #   6. the health of the site, the numbers "after" at the same instant, and their comparison;
 #   7. the `@smoke` tests on the site (docs/testing.md);
 #   8. the running plugins against the catalog of the official plugins (`scripts/plugins-check.sh`);
-#   9. the `pre-*` images of the releases older than the last 5 removed (docs/operations.md).
+#   9. the `pre-*` images of the releases older than the last 5 removed, and the dump folders of the
+#      releases that no longer have one (docs/operations.md).
 #
 # The official plugins of the catalog and the egress proxy are services of every release: a
 # plugin's bundle carries the release's version, so its digest in the catalog changes with each
@@ -218,17 +219,32 @@ E2E_ORIGIN=127.0.0.1 npx playwright test --grep @smoke || failed "the @smoke tes
 # ——— 8. The plugins against the catalog ————————————————————————————————————————————————————————
 sh scripts/plugins-check.sh || failed "a plugin does not run the bundle of the catalog"
 
-# ——— 9. The rotation of the `pre-*` images —————————————————————————————————————————————————————
+# ——— 9. The rotation of the `pre-*` images and of the dumps ——————————————————————————————————————
 # Keep the `pre-*` images of the last 5 releases (docs/operations.md): this release is the newest,
 # so the release in production and the one before it are always kept. A release is ordered by its
 # newest image. A tag a container still runs is only untagged; a failure does not fail the release.
 keep=${LEDGERLY_PRE_KEEP:-5}
 docker images --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' | grep -E '\|ledgerly[^:]*:pre-' |
-  sort -r | sed 's/.*:pre-//' | awk '!seen[$0]++' | tail -n +$((keep + 1)) > "$folder/pre-removed.txt" || true
+  sort -r | sed 's/.*:pre-//' | awk '!seen[$0]++' > "$folder/pre-releases.txt" || true
+head -n "$keep" "$folder/pre-releases.txt" > "$folder/pre-kept.txt"
+tail -n +$((keep + 1)) "$folder/pre-releases.txt" > "$folder/pre-removed.txt"
 docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^ledgerly[^:]*:pre-' | while read -r ref; do
   grep -qxF "${ref#*:pre-}" "$folder/pre-removed.txt" || continue
   docker image rm "$ref" > /dev/null && echo "removed: $ref" || echo "warning: docker image rm $ref failed" >&2
 done
+# The dump folders go with their images: a folder is kept while its release (the `release:` line of
+# its MANIFEST.txt) has a `pre-*` image. This release's folder, a folder without a manifest and a
+# folder with a `KEEP` file (its reason inside) are never removed. No `pre-*` image read: nothing goes.
+dumps=$(dirname "$folder")
+if [ -s "$folder/pre-kept.txt" ]; then
+  for dir in "$dumps"/*/; do
+    dir=${dir%/}
+    [ "$dir" != "$folder" ] && [ -f "$dir/MANIFEST.txt" ] && [ ! -e "$dir/KEEP" ] || continue
+    id=$(awk '/^release:/ { print $2; exit }' "$dir/MANIFEST.txt")
+    [ -n "$id" ] && ! grep -qxF "$id" "$folder/pre-kept.txt" || continue
+    rm -rf "$dir" && echo "removed: $dir" || echo "warning: rm -rf $dir failed" >&2
+  done
+fi
 
 echo "release $release deployed: $sha"
 echo "$folder"

@@ -242,9 +242,9 @@ again once, with the app stopped for about a minute.
 
 ### Release dumps
 
-Every release has a folder in `/home/mattia/docker/projects/ledgerly-dumps/` — beside this
-checkout, outside this repository and outside the Homelab one. It has no compose file, so
-`projects/stack.sh` skips it.
+Every release has a folder in `/home/mattia/docker/projects/ledgerly-dumps/` — beside the main
+checkout (`release-dump.sh` finds it from a worktree too), outside this repository and outside
+the Homelab one. It has no compose file, so `projects/stack.sh` skips it.
 
 | What        | Rule                                                                                         |
 | ----------- | -------------------------------------------------------------------------------------------- |
@@ -252,9 +252,10 @@ checkout, outside this repository and outside the Homelab one. It has no compose
 | Files       | `ledgerly.dump` (`pg_dump -Fc`), `ledgerly.dump.sha256`, `MANIFEST.txt`, `numbers-*.json`    |
 | Permissions | Folders `700`, files `600`, owner `1000:1000`                                                |
 | Check       | `pg_restore --list` right after the dump (the script does it and fails on an empty list)     |
-| Kept        | The last 5 releases that have a dump. Never delete the release in production or the one before it |
-| Who deletes | The agent that deploys, after a successful deploy, naming what it removed in the deploy comment |
-| `pre-*`     | Same window: the images of the last 5 releases. `scripts/release.sh` (step 9) removes the older ones after a successful release; the Docker cleanup does not touch them |
+| Kept        | The folders of the releases that still have a `pre-*` image (the last 5), so each possible rollback has its folder. The release in production and the one before it are always among them |
+| Who deletes | `scripts/release.sh` (step 9), after a successful release: the release of a folder is the `release:` line of its `MANIFEST.txt`. It prints `removed: <folder>` |
+| Not rotated | A folder without `MANIFEST.txt`, or with a `KEEP` file that says why it is kept |
+| `pre-*`     | The images of the last 5 releases. Step 9 removes the older ones with their folders; the Docker cleanup does not touch them |
 | Secrets     | A dump and a numbers snapshot hold personal data and encrypted credentials: they never leave the server, and never go in a comment or an attachment |
 
 `MANIFEST.txt` says the release, the SHA, the tag before it, the date, the last migration and the

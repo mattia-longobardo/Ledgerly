@@ -269,10 +269,74 @@ describe("scripts/release.sh", () => {
     );
   });
 
+  it("removes the dump folders of the releases that no longer have a pre-* image", () => {
+    const dumps = join(work, "dumps");
+    const folder = (name: string, release?: string) => {
+      mkdirSync(join(dumps, name), { recursive: true });
+      if (release) writeFileSync(join(dumps, name, "MANIFEST.txt"), `release: ${release}\nsha: x\n`);
+      return join(dumps, name);
+    };
+    folder("r1-aaaaaaa", "r1");
+    folder("r6-bbbbbbb", "r6");
+    folder("r7-ccccccc", "r7");
+    folder("fix-ddddddd", "fix (data fix, not a release)");
+    writeFileSync(join(folder("kept-eeeeeee", "kept"), "KEEP"), "the only copy of something\n");
+    folder("notes");
+    const images = ["r1", "r2", "r3", "r4", "r5", "r6", "r7"].map(
+      (id, day) => `2031-01-0${day + 1}T10:00|ledgerly:pre-${id}`,
+    );
+    const run = release("ok", [], "uguale", { FAKE_IMAGES: images.join(" ") });
+    expect(run.status).toBe(0);
+    for (const gone of ["r1-aaaaaaa", "fix-ddddddd"]) expect(existsSync(join(dumps, gone))).toBe(false);
+    for (const kept of ["r6-bbbbbbb", "r7-ccccccc", "kept-eeeeeee", "notes", "t1-abc1234"]) {
+      expect(existsSync(join(dumps, kept))).toBe(true);
+    }
+  });
+
+  it("removes no dump folder when it reads no pre-* image", () => {
+    const old = join(work, "dumps", "r1-aaaaaaa");
+    mkdirSync(old, { recursive: true });
+    writeFileSync(join(old, "MANIFEST.txt"), "release: r1\n");
+    expect(release("ok").status).toBe(0);
+    expect(existsSync(old)).toBe(true);
+  });
+
   it("ends with status 2, deployed, when the numbers differ", () => {
     const run = release("ok", [], "1 differenze:");
     expect(run.status).toBe(2);
     expect(run.stdout).toContain("deployed");
     expect(built(run.calls)).toBe(true);
+  });
+});
+
+describe("scripts/release-dump.sh", () => {
+  it("makes the folder beside the main checkout, also when it runs from a worktree", () => {
+    const sh = (cwd: string, command: string) =>
+      spawnSync("sh", ["-c", command], {
+        cwd,
+        encoding: "utf8",
+        env: { ...process.env, PATH: `${join(work, "bin")}:/usr/bin:/bin` },
+      });
+    const main = join(work, "projects", "ledgerly");
+    mkdirSync(join(main, "scripts"), { recursive: true });
+    mkdirSync(join(main, "drizzle"));
+    writeFileSync(join(main, "drizzle", "0001_first.sql"), "");
+    writeFileSync(
+      join(main, "scripts", "release-dump.sh"),
+      readFileSync(join(process.cwd(), "scripts/release-dump.sh")),
+    );
+    rmSync(join(work, "bin", "git"));
+    const git = "git -c user.name=t -c user.email=t@t -c commit.gpgsign=false";
+    expect(
+      sh(
+        main,
+        `git init -q -b main && ${git} add . && ${git} commit -qm x && git worktree add -q ${join(work, "wt")}`,
+      ).status,
+    ).toBe(0);
+    const run = sh(join(work, "wt"), "sh scripts/release-dump.sh t1 --no-dump");
+    expect(run.status).toBe(0);
+    expect(run.stdout.trim().split("\n").at(-1)).toMatch(
+      new RegExp(`^${join(work, "projects", "ledgerly-dumps")}/t1-[0-9a-f]{7}$`),
+    );
   });
 });
