@@ -143,7 +143,13 @@ export const RATE_LIMIT_WAIT_HOURS = 6;
 /** The days a reading goes back before the last day it covered: a bank books late. */
 export const REREAD_DAYS = 10;
 
-/** Three automatic readings a day, in the person's zone (04-now.md §4.2). */
+/**
+ * The most automatic readings a day a person may give a bank's connection (PSD2, decision of
+ * 26/11/2026): the contract's, so a client disables what goes over it.
+ */
+export { MAX_BANK_SYNCS_PER_DAY } from "@ledgerly/api-contract";
+
+/** Three automatic readings a day, in the person's zone (04-now.md §4.2): the recommended schedule. */
 export const BANK_SCHEDULE = {
   rules: [{ kind: "times" as const, times: ["07:10", "13:10", "19:10"], days: { kind: "every" as const } }],
 };

@@ -4,7 +4,7 @@ import {
   type SyncDays,
   type SyncSchedule,
 } from "@domain/platform/integrations/schedule";
-import { dayChoice, formRules, normalizeTime, scheduleForm } from "./form";
+import { dayChoice, formRules, normalizeTime, passesInDay, scheduleForm } from "./form";
 
 const every: SyncDays = { kind: "every" };
 const workdays: SyncDays = { kind: "weekdays", weekdays: [1, 2, 3, 4, 5] };
@@ -72,5 +72,18 @@ describe("normalizeTime", () => {
 
   it.each(["", "24:00", "12:60", "7", "abc", "1:2:3"])("refuses %s", (typed) => {
     expect(normalizeTime(typed)).toBeNull();
+  });
+});
+
+describe("passesInDay", () => {
+  it("counts the passes of a repeating rule from its start to its end, both included", () => {
+    expect(passesInDay(360, "00:00", "23:59")).toBe(4);
+    expect(passesInDay(240, "00:00", "23:59")).toBe(6);
+    expect(passesInDay(60, "08:00", "11:00")).toBe(4);
+    expect(passesInDay(60, "12:00", "08:00")).toBe(0);
+  });
+
+  it("counts a window not typed in full as the whole day", () => {
+    expect(passesInDay(720, "8", "23:59")).toBe(2);
   });
 });

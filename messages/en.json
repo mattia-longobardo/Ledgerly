@@ -371,6 +371,8 @@
           "cron": "This is not a valid cron expression.",
           "neverRuns": "This rule never runs.",
           "tooFrequent": "Two syncs at {first} and {second}: keep them at least {minutes} minutes apart.",
+          "tooMany": "{count} syncs in one day: this connection allows at most {max} a day.",
+          "tooManySaved": "This schedule has too many syncs: this connection allows at most {max} a day.",
           "time": "Write the time as HH:MM, such as 06:43."
         },
         "manualHint": "No rule: only “Sync now” starts a sync. Add a rule, or choose another mode.",
@@ -1471,10 +1473,7 @@
         "back": "Back to Plugins",
         "schedule": {
           "title": "Schedule",
-          "description": "When Ledgerly updates each connection by itself.",
-          "fixed": "{count, plural, one {# time a day} other {# times a day}} · Next: {time}",
-          "fixedNoNext": "{count, plural, one {# time a day} other {# times a day}}",
-          "off": "Automatic update is off"
+          "description": "When Ledgerly updates each connection by itself."
         },
         "log": {
           "title": "Log",
@@ -2831,7 +2830,7 @@
         "matched": "{count, plural, one {# transaction linked} other {# transactions linked}} to the bank.",
         "fresh": "{count, plural, one {# new transaction} other {# new transactions}} from the bank.",
         "transfers": "{count, plural, one {# transfer recognised} other {# transfers recognised}}.",
-        "sourceStops": "{source} no longer updates this account. Ledgerly reads the bank 3 times a day.",
+        "sourceStops": "{source} no longer updates this account. Settings shows when Ledgerly reads the bank: \"Change\" sets the times, \"Update now\" reads it right now.",
         "howToUndo": "To go back: account settings › “Undo switch”.",
         "theBank": "the bank",
         "goToAccount": "Go to the account",
@@ -6490,7 +6489,7 @@
         "toSettings": "Back to settings",
         "renewed": "Access to {bank} renewed",
         "account": "{count, plural, =0 {No transactions} one {# transaction since {date}} other {# transactions since {date}}} · balance {balance}",
-        "schedule": "Ledgerly reads the bank 3 times a day. For a reading right now use \"Update now\" in Settings.",
+        "schedule": "Settings shows when Ledgerly reads the bank: \"Change\" sets the times, \"Update now\" reads it right now.",
         "toAccounts": "Go to accounts",
         "syncFailedHeading": "{bank} is connected, but the first reading failed",
         "syncFailed": "The accounts are connected, but the transactions were not read. Try again now: a bank gives its full history only in the first minutes.",

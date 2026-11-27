@@ -88,8 +88,11 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   each call. Turning the plugin off stops every call for that person; what is saved stays.
 - **Reading a bank.** After the access the person chooses what each account of the bank is here
   (a new account, one of theirs kept by hand, or nothing), and the app reads the bank at once.
-  Then it reads three times a day (07:10, 13:10, 19:10 in the person's zone) through the same
-  dispatcher as every other connection, and when the person presses "Update now". A bank that
+  Then it reads the bank on the connection's own schedule, through the same dispatcher as every
+  other connection, and when the person presses "Update now". The recommended schedule, and the
+  default, is three times a day (07:10, 13:10, 19:10 in the person's zone); the person changes it
+  with "Change" in Settings › Plugins › Enable Banking. A bank allows at most 4 automatic readings
+  a day (PSD2 limit), so the schedule cannot ask for more. A bank that
   answers "no more calls" puts the automatic readings on hold for six hours; "Update now" still
   works. A person connects as many banks as they want: one connection per bank (from N2). A movement is recognised by the bank's reference, or by a hash when it gives none, so a
   second reading writes nothing twice. "Disconnect" closes the access of that bank and leaves its

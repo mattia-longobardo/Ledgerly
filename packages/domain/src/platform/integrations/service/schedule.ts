@@ -27,18 +27,19 @@ import {
 /**
  * Saves when a connection syncs and works out its next pass in the person's zone. The schedule
  * comes from a form, so it is parsed here and refused as `invalid_schedule` when it is not a list
- * of valid rules, when a rule never runs, or when two passes would come closer than the minimum
- * gap; "Sync now" never goes through here and never moves `next_sync_at`.
+ * of valid rules, when a rule never runs, when two passes would come closer than the minimum
+ * gap, or when a day has more than `maxPerDay` passes (a bank's connection: the caller knows the
+ * provider); "Sync now" never goes through here and never moves `next_sync_at`.
  */
 export async function saveSchedule(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   connectionId: string,
   input: unknown,
-  now: Date = new Date(),
+  { now = new Date(), maxPerDay }: { now?: Date; maxPerDay?: number } = {},
 ): Promise<Connection> {
   const parsed = syncScheduleSchema.safeParse(input);
   if (!parsed.success) throw new IntegrationError("invalid_schedule");
-  const problems = scheduleProblems(parsed.data, civilDateIn(now, ctx.timeZone));
+  const problems = scheduleProblems(parsed.data, civilDateIn(now, ctx.timeZone), maxPerDay);
   if (problems.length > 0) throw new IntegrationError("invalid_schedule", problems);
   const [row] = await getDb()
     .update(integrationConnections)

@@ -232,6 +232,8 @@ export const USERS = {
     name: "Plugins Off",
   },
   pluginsOn: { email: "plugins-on@example.test", name: "Plugins On" },
+  // The schedule of a bank's connection, at most 4 passes a day (tests/e2e/connections/bank-schedule.spec.ts).
+  bankSchedule: { email: "bank-schedule@example.test", name: "Bank Schedule" },
   pluginsLive: {
     email: "plugins-live@example.test",
     name: "Plugins Live",
@@ -372,6 +374,7 @@ export const SESSIONS = {
   pluginsOff: { user: "pluginsOff", file: "plugins-off-session.json" },
   pluginsOn: { user: "pluginsOn", file: "plugins-on-session.json" },
   pluginsLive: { user: "pluginsLive", file: "plugins-live-session.json" },
+  bankSchedule: { user: "bankSchedule", file: "bank-schedule-session.json" },
   pluginsErrors: { user: "pluginsErrors", file: "plugins-errors-session.json" },
   pluginsMixed: { user: "pluginsMixed", file: "plugins-mixed-session.json" },
   pluginsDisconnected: { user: "pluginsDisconnected", file: "plugins-disconnected-session.json" },

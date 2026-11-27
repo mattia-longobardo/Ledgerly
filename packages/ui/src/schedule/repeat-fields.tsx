@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 import { Checkbox, Select } from "../input";
 import { describeEvery } from "./describe";
 import type { RuleError, Simple } from "./drafts";
-import { REPEAT_MINUTES } from "./form";
+import { passesInDay, REPEAT_MINUTES, WHOLE_DAY } from "./form";
 import { TimeInput } from "./time-input";
 
 /** "Only between": the part of the day a repeating rule is limited to. */
@@ -53,15 +53,19 @@ function WindowFields({
 export function RepeatFields({
   state,
   error,
+  maxPerDay,
   onChange,
 }: {
   state: Simple;
   error: RuleError | null | undefined;
+  /** The most passes a day the connection allows: an interval over it in the window is disabled. */
+  maxPerDay?: number;
   onChange: (patch: Partial<Simple>) => void;
 }) {
   const text = useTranslations("settings.integrations.scheduleControl");
   const id = useId();
   const badWindow = error === "window" || error === "time";
+  const window = state.windowed ? state : WHOLE_DAY;
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -75,7 +79,13 @@ export function RepeatFields({
           className="w-auto"
         >
           {REPEAT_MINUTES.map((minutes) => (
-            <option key={minutes} value={minutes}>
+            <option
+              key={minutes}
+              value={minutes}
+              disabled={
+                maxPerDay !== undefined && passesInDay(minutes, window.from, window.until) > maxPerDay
+              }
+            >
               {describeEvery(minutes, text)}
             </option>
           ))}

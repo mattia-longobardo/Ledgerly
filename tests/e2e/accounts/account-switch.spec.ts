@@ -45,6 +45,24 @@ test("another person does not reach the page of the switch", async ({ page, brow
   await context.close();
 });
 
+test("the step Done of a switch says where the bank's schedule is, not a count of readings", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("link", { name: "Conto passato" }).first().click();
+  await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
+  await page.goto(`${new URL(page.url()).pathname}/switch?step=done`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "“Conto passato” now comes from the bank" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      /no longer updates this account\. Settings shows when Ledgerly reads the bank: "Change" sets the times, "Update now" reads it right now\.$/,
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/times a day/)).toHaveCount(0);
+});
+
 /** Decision H58: archiving a double asks first and says, in its Danger zone, that it counts in no month. */
 test("archiving an account that doubles another asks first, and its Danger zone says so", async ({
   page,

@@ -309,4 +309,47 @@ describe("scheduleProblems", () => {
     };
     expect(scheduleProblems(never, today)).toEqual([{ code: "neverRuns", rule: 1 }]);
   });
+  describe("with a most of passes a day (a bank's connection)", () => {
+    const max = 4;
+    const bankDefault = times(["07:10", "13:10", "19:10"]);
+
+    it("accepts up to the most, and a manual schedule", () => {
+      expect(scheduleProblems(bankDefault, today, max)).toEqual([]);
+      expect(scheduleProblems(times(["06:00", "11:00", "16:00", "21:00"]), today, max)).toEqual([]);
+      expect(scheduleProblems({ rules: [] }, today, max)).toEqual([]);
+    });
+
+    it("refuses one pass more, and the hourly preset", () => {
+      expect(scheduleProblems(times(["06:00", "10:00", "14:00", "18:00", "22:00"]), today, max)).toEqual([
+        { code: "tooMany", day: today, count: 5, max },
+      ]);
+      const hourly: SyncSchedule = {
+        rules: [{ kind: "interval", everyMinutes: 60, from: "00:00", until: "23:59", days: every }],
+      };
+      expect(scheduleProblems(hourly, today, max)).toEqual([{ code: "tooMany", day: today, count: 24, max }]);
+    });
+
+    it("counts all rules together on the worst day: a weekday's and a month day's passes", () => {
+      const union: SyncSchedule = {
+        rules: [
+          bankDefault.rules[0],
+          { kind: "times", times: ["21:00"], days: { kind: "weekdays", weekdays: [5] } },
+          { kind: "times", times: ["23:00"], days: { kind: "monthDays", monthDays: [-1] } },
+        ],
+      };
+      // Four on a Friday and on the last day; five only on a Friday that ends a month.
+      expect(scheduleProblems(union, today, max)).toEqual([
+        { code: "tooMany", day: "2027-04-30", count: 5, max },
+      ]);
+      expect(scheduleProblems({ rules: union.rules.slice(0, 2) }, today, max)).toEqual([]);
+    });
+
+    it("counts a cron's passes on the days it names", () => {
+      const cron: SyncSchedule = { rules: [{ kind: "cron", expression: "0 6,9,12,15,18 * * 6" }] };
+      expect(scheduleProblems(cron, today, max)).toEqual([
+        { code: "tooMany", day: "2026-11-14", count: 5, max },
+      ]);
+      expect(scheduleProblems(cron, today)).toEqual([]);
+    });
+  });
 });

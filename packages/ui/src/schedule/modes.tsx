@@ -191,12 +191,14 @@ export function Modes({
   errors,
   problems,
   locale,
+  maxPerDay,
   patch,
 }: {
   state: Simple;
   errors: (RuleError | null)[];
   problems: ScheduleProblem[];
   locale: string;
+  maxPerDay?: number;
   patch: Patch;
 }) {
   const text = useTranslations("settings.integrations.scheduleControl");
@@ -206,6 +208,7 @@ export function Modes({
       <RepeatFields
         state={state}
         error={errors[0]}
+        maxPerDay={maxPerDay}
         onChange={(change) => patch((all) => ({ ...all, ...change }))}
       />
     ),

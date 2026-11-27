@@ -51,7 +51,7 @@ describe("POST /connections/{id}/schedule/preview", () => {
         for (const now of NOWS) {
           const label = `${JSON.stringify(rules)} ${zone} ${now.toISOString()}`;
           expect(syncScheduleSchema.safeParse({ rules }).success, label).toBe(true);
-          expect(domain.previewSchedule(rules, zone, now, SCHEDULE_PREVIEW_COUNT), label).toEqual(
+          expect(domain.previewSchedule(rules, zone, now, { count: SCHEDULE_PREVIEW_COUNT }), label).toEqual(
             browserPreview(rules, zone, now),
           );
         }
@@ -66,7 +66,7 @@ describe("POST /connections/{id}/schedule/preview", () => {
     ];
     expect(syncScheduleSchema.safeParse({ rules }).success).toBe(true);
     expect(browserPreview(rules, "Europe/Rome", NOWS[0])).toBeNull();
-    expect(domain.previewSchedule(rules, "Europe/Rome", NOWS[0], 5)).toEqual({
+    expect(domain.previewSchedule(rules, "Europe/Rome", NOWS[0], { count: 5 })).toEqual({
       next: [],
       problems: [{ code: "invalidRule", rule: 1 }],
     });

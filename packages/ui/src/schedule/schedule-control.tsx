@@ -24,6 +24,7 @@ export function ScheduleControl({
   recommended,
   next,
   timeZone,
+  maxPerDay,
   save,
   preview,
 }: {
@@ -35,6 +36,8 @@ export function ScheduleControl({
   /** The next pass, already written for the reader; null when none is planned. */
   next: string | null;
   timeZone: string;
+  /** The most passes a day this connection allows: the "Repeat" intervals over it are disabled. */
+  maxPerDay?: number;
   save: SaveSchedule;
   preview: PreviewSchedule;
 }) {
@@ -62,6 +65,7 @@ export function ScheduleControl({
           recommended={recommended}
           timeZone={timeZone}
           locale={locale}
+          maxPerDay={maxPerDay}
           save={save}
           preview={preview}
           onClose={() => setOpen(false)}

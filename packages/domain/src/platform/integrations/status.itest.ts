@@ -300,7 +300,7 @@ describe("the connections of a provider", () => {
       ctx,
       scheduled.id,
       { rules: [{ kind: "times", times: ["07:10"], days: { kind: "every" } }] },
-      NOW,
+      { now: NOW },
     );
     const other = await wallet(ctx);
     const before = (await reread(ctx, other)).nextSyncAt;
@@ -363,7 +363,7 @@ describe("the warnings after a pass (ux §6)", () => {
       ctx,
       connection.id,
       { rules: [{ kind: "times", times: ["07:10"], days: { kind: "every" } }] },
-      NOW,
+      { now: NOW },
     );
     await run(ctx, connection, "transactions", {}, NOW);
     // A reading that works just before each report: the only thing to say is the end of the access.

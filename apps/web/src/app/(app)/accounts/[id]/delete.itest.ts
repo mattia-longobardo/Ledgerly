@@ -292,7 +292,7 @@ describe("an account of Wallet", () => {
     const schedule = {
       rules: [{ kind: "times" as const, times: ["06:30"], days: { kind: "every" as const } }],
     };
-    await saveSchedule(ctx, connection.id, schedule, NOW);
+    await saveSchedule(ctx, connection.id, schedule, { now: NOW });
     await syncSourceNow(ctx, connection.id, options);
     await requestSourceBackfill(ctx, connection.id, 24);
     const general = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-general")!;

@@ -309,16 +309,18 @@ test.describe("the rows of the connections", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("the schedule is on the source's page: fixed for a bank, a control for the others", async ({
+  test("the schedule is on the source's page: the same control for a bank and for the others", async ({
     page,
   }) => {
     await page.goto(BANKS);
     const banks = page.getByRole("region", { name: "Schedule" }).getByTestId("schedule-row");
-    await expect(banks.filter({ hasText: "Alfa Bank" })).toContainText(/3 times a day · Next: /);
-    await expect(banks.filter({ hasText: "Zeta Bank" })).toContainText("Automatic update is off");
+    // A bank's schedule can be changed since PERS-667 (at most 4 passes a day, bank-schedule.spec.ts).
+    await expect(banks.filter({ hasText: "Alfa Bank" })).toContainText("At 07:10, 13:10, 19:10");
+    await expect(banks.filter({ hasText: "Alfa Bank" })).toContainText(/Next: /);
+    await expect(banks.filter({ hasText: "Zeta Bank" })).toContainText("On demand only");
     await expect(
       banks.filter({ hasText: "Alfa Bank" }).getByRole("button", { name: /schedule/i }),
-    ).toHaveCount(0);
+    ).toHaveCount(1);
     // Each connection leads to its own log, under its history (point 12).
     const alfa = row(page, "Alfa Bank");
     await alfa.getByRole("button", { name: "History", exact: true }).click();

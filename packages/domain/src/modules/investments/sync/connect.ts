@@ -165,7 +165,7 @@ export async function connectInvestmentProvider(
 
   const connection = await saveConnection(ctx, { provider: provider.id, credentials: keys });
   try {
-    await saveSchedule(ctx, connection.id, PROVIDER_SCHEDULE, now);
+    await saveSchedule(ctx, connection.id, PROVIDER_SCHEDULE, { now });
     const accountId = await getDb().transaction(async (tx) => {
       let investment: InvestmentAccount;
       let from: CivilDate;

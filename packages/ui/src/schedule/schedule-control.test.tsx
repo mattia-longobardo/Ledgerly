@@ -17,7 +17,7 @@ const save = vi.fn();
 
 /** The server's answer, computed here by the function the route runs, so the dialog shows it at once. */
 const preview = (schedule: { rules: readonly unknown[] }) => {
-  const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), 5);
+  const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), { count: 5 });
   return { next: next.map((instant) => instant.toISOString()), problems };
 };
 
@@ -233,5 +233,71 @@ describe("ScheduleControl", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: /Use recommended/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: T.save }));
     expect(save).toHaveBeenCalledWith("wallet", DEFAULT_SYNC_SCHEDULE);
+  });
+});
+
+describe("ScheduleControl of a bank's connection (at most 4 passes a day)", () => {
+  const MAX = 4;
+  const BANK: SyncSchedule = { rules: [{ kind: "times", times: ["07:10", "13:10", "19:10"], days: EVERY }] };
+  const bankPreview = (schedule: { rules: readonly unknown[] }) => {
+    const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), {
+      count: 5,
+      maxPerDay: MAX,
+    });
+    return { next: next.map((instant) => instant.toISOString()), problems };
+  };
+
+  function renderBank() {
+    render(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+        <ScheduleControl
+          save={(rules) => save("bank", rules)}
+          preview={bankPreview}
+          name="Alfa Bank"
+          schedule={BANK}
+          recommended={BANK}
+          next={null}
+          timeZone="Europe/Rome"
+          maxPerDay={MAX}
+        />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  async function addTime(dialog: HTMLElement, time: string) {
+    const input = within(dialog).getByLabelText(T.newTimeSimple);
+    await userEvent.clear(input);
+    await userEvent.type(input, time);
+    await userEvent.click(within(dialog).getByRole("button", { name: T.addTime }));
+  }
+
+  it("disables the Repeat intervals that go over the cap in the day", async () => {
+    renderBank();
+    const dialog = await openDialog();
+    await userEvent.click(within(dialog).getByRole("radio", { name: new RegExp(T.modes.repeat) }));
+    const options = within(dialog).getAllByRole("option") as HTMLOptionElement[];
+    const disabled = options.filter((option) => option.disabled).map((option) => Number(option.value));
+    expect(disabled).toEqual([15, 30, 60, 120, 240]);
+  });
+
+  it("saves four times, and says a fifth is too many with Save off", async () => {
+    renderBank();
+    const dialog = await openDialog();
+    await addTime(dialog, "22:00");
+    expect(within(dialog).getByRole("button", { name: T.save })).toBeEnabled();
+    await addTime(dialog, "23:00");
+    expect(
+      within(dialog).getByText(/5 syncs in one day: this connection allows at most 4 a day/),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: T.save })).toBeDisabled();
+  });
+
+  it("says why the server refused a schedule with too many passes", async () => {
+    save.mockResolvedValue({ ok: false, tooMany: true });
+    renderBank();
+    const dialog = await openDialog();
+    await addTime(dialog, "22:00");
+    await userEvent.click(within(dialog).getByRole("button", { name: T.save }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(/at most 4 a day/);
   });
 });

@@ -159,12 +159,12 @@ describe("deleteConnection", () => {
       rules: [{ kind: "times" as const, times: ["07:10"], days: { kind: "every" as const } }],
     };
     const wallet = await walletConnection();
-    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, wallet.id, schedule, NOW);
+    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, wallet.id, schedule, { now: NOW });
     await saveSyncJob(ctx, wallet.id, "transactions", {
       cursor: { backfillMonths: "36", backfillFrom: "x" },
     });
     const trek = await saveConnection(ctx, { provider: TREK_PROVIDER, credentials: { token: "one" } });
-    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, trek.id, schedule, NOW);
+    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, trek.id, schedule, { now: NOW });
 
     await deleteConnection(ctx, wallet.id);
     await deleteConnection(ctx, trek.id);
@@ -179,7 +179,7 @@ describe("deleteConnection", () => {
       backfillMonths: "36",
     });
     // Taken back once: the next connection after a new one starts from its own settings.
-    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, trekAgain.id, { rules: [] }, NOW);
+    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, trekAgain.id, { rules: [] }, { now: NOW });
     expect(
       (await saveConnection(ctx, { provider: TREK_PROVIDER, credentials: { token: "three" } })).schedule,
     ).toEqual({

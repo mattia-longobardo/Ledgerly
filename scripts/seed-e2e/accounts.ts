@@ -1,7 +1,7 @@
 // scripts/seed-e2e/accounts.ts — the users and the data of the flow `accounts` (tests/e2e/accounts/).
 import { eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
-import { accounts } from "@domain/modules/accounts/schema";
+import { accountSwitches, accounts } from "@domain/modules/accounts/schema";
 import { createAccount } from "@domain/modules/accounts/service";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { parseKeyRing, sealJson } from "@domain/platform/crypto";
@@ -132,4 +132,18 @@ export async function seedSwitching(email: string = USERS.switching.email): Prom
     .update(integrationConnections)
     .set({ nextSyncAt: new Date(Date.now() + 48 * 3_600_000), lastOkAt: new Date() })
     .where(eq(integrationConnections.id, connection.id));
+  // The step «Done» of a switch already applied, written here: applying one would ask a bank.
+  const switched = await syncedAccount(ctx, "e2e-switching-done", "Conto passato");
+  await getDb()
+    .insert(accountSwitches)
+    .values({
+      userId: ctx.userId,
+      accountId: switched,
+      fromProvider: WALLET_PROVIDER,
+      fromProviderAccountId: "e2e-switching-done",
+      toProvider: pluginProvider(BANK_PLUGIN),
+      toProviderAccountId: "e2e-switch-stable-done",
+      connectionId: connection.id,
+      cutDate: today(ctx.timeZone),
+    });
 }
