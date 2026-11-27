@@ -62,6 +62,20 @@ describe("the row of a manual movement", () => {
     expect(row).toMatchObject({ accountId: ACCOUNT, amountCents: -450n, currency: "EUR", type: "expense" });
   });
 
+  it("is a giroconto with no category when it names the other account, the kind giving the sign", () => {
+    const other = "018f4e9a-2222-7000-8000-00000000000b";
+    const input = manualMovementSchema.parse({ ...base, transferAccountId: other });
+    expect(manualColumns(input, "EUR", "Europe/Rome")).toMatchObject({
+      amountCents: -450n,
+      type: "transfer",
+      categoryId: null,
+      transferAccountId: other,
+    });
+    expect(
+      manualColumns(manualMovementSchema.parse(base), "EUR", "Europe/Rome").transferAccountId,
+    ).toBeNull();
+  });
+
   it("says a day after today has not come", () => {
     expect(isAfterToday("2026-11-16", "2026-11-15")).toBe(true);
     expect(isAfterToday("2026-11-15", "2026-11-15")).toBe(false);

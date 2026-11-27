@@ -11,7 +11,9 @@ import { today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { retypeMovements } from "./macro";
-import { linkOwnTransfers } from "./service/giroconti";
+import { linkOwnTransfers, requireOtherAccount } from "./service/giroconti";
+import { withMarkers } from "./service/pairing-marks";
+import { rebuildTwinBalances, refreshTwins, twinAccountsOf, writeTwin } from "./service/twins";
 import { isAfterToday, manualColumns, manualMovementSchema } from "./manual-rules";
 import { type Transaction, getTransaction } from "./queries";
 import { transactions } from "./schema";
@@ -46,11 +48,21 @@ function checksOnce(ctx: ManualCtx) {
   };
 }
 
+/**
+ * A giroconto written by hand finds its other leg as one a source wrote does, and on a manual
+ * account, where none ever arrives, gets it written (PERS-733).
+ */
+async function pairWritten(ctx: ManualCtx, id: string): Promise<void> {
+  await linkOwnTransfers(ctx, [id]);
+  await writeTwin(ctx, id);
+}
+
 async function parsed(ctx: ManualCtx, input: unknown, checks = checksOnce(ctx)) {
   const movement = manualMovementSchema.parse(input);
   if (isAfterToday(movement.on, today(ctx.timeZone))) throw new TransactionError("future_date");
   const account = await checks.account(movement.accountId);
   await checks.category(movement.categoryId);
+  await requireOtherAccount(ctx, movement.accountId, movement.transferAccountId);
   const columns = manualColumns(movement, account.currency, ctx.timeZone);
   // A category the person left in the dialog is their choice, a suggestion they saw included.
   return { ...columns, ...chosenBy(columns.categoryId === null ? null : "user") };
@@ -65,6 +77,8 @@ function manualRow(
 ) {
   return userScoped(ctx).stamp({
     ...columns,
+    // A giroconto is the person's choice: the `type` marker keeps it one while it waits.
+    locallyEdited: columns.type === "transfer" ? ["type"] : [],
     origin: "manual" as const,
     idempotencyKey,
     sendState: toSend ? ("to_send" as const) : null,
@@ -109,6 +123,7 @@ export async function createManualTransaction(
     .returning({ id: transactions.id });
   if (row) {
     await retypeMovements(getDb(), ctx);
+    if (columns.transferAccountId !== null) await pairWritten(ctx, row.id);
     return { transaction: await requireTransaction(ctx, row.id), created: true };
   }
   const sent = idempotencyKey === undefined ? null : await byKey(ctx, idempotencyKey);
@@ -179,11 +194,13 @@ export async function updateManualTransaction(
     // The form gives a kind and a category: a giroconto it was stops being one, its partner waits.
     .set({
       ...columns,
+      ...(columns.type === "transfer" ? { locallyEdited: withMarkers(current.locallyEdited, "type") } : {}),
       sendState,
       ...(sendState === null ? { sendAskedOn: null } : {}),
       transferGroupId: null,
       transferOutside: false,
-      transferAccountId: null,
+      // Changed by hand: a leg the server wrote is the person's from now on (PERS-733).
+      twinOf: null,
     })
     .where(
       and(
@@ -193,13 +210,18 @@ export async function updateManualTransaction(
       ),
     );
   await retypeMovements(getDb(), ctx);
+  // Its written leg follows the change, or goes with the giroconto.
+  await refreshTwins(ctx, [current.id]);
   if (current.transferGroupId !== null) await linkOwnTransfers(ctx);
+  if (columns.transferAccountId !== null) await pairWritten(ctx, current.id);
   return { transaction: await requireTransaction(ctx, current.id), previousAccountId: current.accountId };
 }
 
 /** Deletes a manual movement for good: it is the person's own, with no provider to bring it back. */
 export async function deleteManualTransaction(ctx: ManualCtx, id: string): Promise<{ accountId: string }> {
   const current = await requireManual(ctx, id);
+  // Its written leg goes with it (`twin_of` cascades): that account's balance changes too.
+  const twinAccounts = await twinAccountsOf(ctx, [current.id]);
   await getDb()
     .delete(transactions)
     .where(
@@ -209,5 +231,6 @@ export async function deleteManualTransaction(ctx: ManualCtx, id: string): Promi
         userScoped(ctx).owns(transactions),
       ),
     );
+  await rebuildTwinBalances(ctx, twinAccounts);
   return { accountId: current.accountId };
 }

@@ -31,6 +31,7 @@ import {
 } from "./guards";
 import { ProviderIds, deduped } from "./provider-ids";
 import { linkOwnTransfers, PAIRED_BY_HAND } from "./giroconti";
+import { refreshTwins } from "./twins";
 
 /**
  * Applies a provider's movements to one account (spec §7.2, §9.1). Idempotent by construction:
@@ -277,6 +278,8 @@ export async function upsertFromProvider(
     }
     await retypeMovements(tx, ctx);
   });
+  // The legs written on manual accounts follow the legs the reading changed (PERS-733).
+  await refreshTwins(ctx, [...patches.map((one) => one.id), ...assignments.map((one) => one.id)]);
   // A reading is a write that can make a giroconto: the legs of this pass find their twins now.
   await linkOwnTransfers(ctx);
 

@@ -8,7 +8,10 @@ import { type CivilDate, isCivilDate, wallClockIn } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
 import type { TransactionType } from "./rules";
 
-/** A manual movement is money out or money in: a giroconto is two movements a provider pairs. */
+/**
+ * A manual movement is money out or money in. With `transferAccountId` it is a giroconto with that
+ * account (PERS-733): the kind still gives the sign, and a giroconto has no category.
+ */
 export const MANUAL_KINDS = ["expense", "income"] as const satisfies readonly TransactionType[];
 export type ManualKind = (typeof MANUAL_KINDS)[number];
 
@@ -35,6 +38,10 @@ export const manualMovementSchema = z.object({
   categoryId: z.uuid().nullable(),
   payee: optionalText(MANUAL_PAYEE_MAX),
   note: optionalText(MANUAL_NOTE_MAX),
+  transferAccountId: z
+    .uuid()
+    .nullish()
+    .transform((value) => value ?? null),
 });
 type ManualMovementInput = z.infer<typeof manualMovementSchema>;
 
@@ -58,14 +65,16 @@ export function manualOccurredAt(on: CivilDate, timeZone: string): Date {
 
 /** The columns of a manual movement, from what the dialog sent. */
 export function manualColumns(input: ManualMovementInput, currency: string, timeZone: string) {
+  const transfer = input.transferAccountId !== null;
   return {
     accountId: input.accountId,
     occurredAt: manualOccurredAt(input.on, timeZone),
     amountCents: signedAmount(input.kind, input.amountCents),
     currency,
-    type: input.kind,
-    categoryId: input.categoryId,
+    type: transfer ? ("transfer" as const) : input.kind,
+    categoryId: transfer ? null : input.categoryId,
     payee: input.payee,
     note: input.note,
+    transferAccountId: input.transferAccountId,
   };
 }

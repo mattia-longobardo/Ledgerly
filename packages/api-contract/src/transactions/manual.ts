@@ -24,6 +24,11 @@ const movement = z.object({
   categoryId: id().nullable(),
   payee: z.string().max(255),
   note: z.string().max(2000),
+  /**
+   * PERS-733: a giroconto with this other account of the person's; `kind` still gives the sign, and
+   * `categoryId` is ignored. On a manual account the other leg is written at once and paired.
+   */
+  transferAccountId: id().nullable().optional(),
 });
 
 const MOVEMENT_EXAMPLE = {

@@ -4,7 +4,7 @@
 // linked once, and the money that does not change. Synthetic data only: made-up names and amounts.
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { readingsAt } from "../accounts";
+import { createAccount, readingsAt } from "../accounts";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { saveRates } from "../../platform/fx/service";
@@ -362,5 +362,44 @@ describe("a leg in another currency than the bank's movement (PERS-659)", () => 
     const legs = await legsOf(usdBroker);
     expect(legs).toHaveLength(1);
     expect(legs[0].transferGroupId).toBe((await bankRow()).transferGroupId);
+  });
+});
+
+// PERS-737: a deposit from a manual account has its other leg written there (PERS-733).
+describe("a deposit from a manual account", () => {
+  it("moves the written leg with the deposit's amount, and it goes with the deposit", async () => {
+    const { id: cash } = await createAccount(ctx, {
+      name: "Contanti",
+      type: "savings",
+      currency: "EUR",
+      openingBalance: { on: "2026-03-01", cents: 0n },
+    });
+    const counterpart = { kind: "account", accountId: cash } as const;
+    const written = async () =>
+      (await listTransactions(ctx, { includeHidden: true, limit: 100 })).filter(
+        (row) => row.accountId === cash,
+      );
+    const cashBalance = async () => (await readingsAt(ctx, [cash], DAY)).get(cash);
+    const { eventId } = await deposit(1_000_00n, DAY, { counterpart });
+    expect((await written()).map((row) => row.amountCents)).toEqual([-1_000_00n]);
+
+    await updateOperation(
+      ctx,
+      eventId,
+      { kind: "deposit", on: DAY, amountCents: 1_200_00n, counterpart },
+      broker,
+    );
+
+    const [twin] = await written();
+    expect(twin).toMatchObject({ amountCents: -1_200_00n });
+    expect((await legsOf(broker))[0]!.transferGroupId).toBe(twin!.transferGroupId);
+    expect(await cashBalance()).toBe(-1_200_00n);
+    // The next reading of the bank leaves it where it is.
+    await readBank(-10_00n);
+    expect((await written()).map((row) => row.amountCents)).toEqual([-1_200_00n]);
+
+    await deleteOperation(ctx, eventId, broker);
+    expect(await written()).toHaveLength(0);
+    expect(await cashBalance()).toBe(0n);
   });
 });

@@ -122,7 +122,7 @@ interface MovementsWrites {
     incoming: IncomingMovement[],
     options: { provider: string; now?: Date; window?: { from: CivilDate; to: CivilDate } },
   ) => Promise<UpsertOutcome>;
-  purgeRemovedUpstream: (ctx: Who, source: { provider: string }) => Promise<number>;
+  purgeRemovedUpstream: (ctx: WhoWhere, source: { provider: string }) => Promise<number>;
   alignCategoryTypesToMovements: (ctx: Who, createdSince: Date) => Promise<number>;
   getTransaction: (ctx: Who, id: string) => Promise<{ id: string; accountId: string } | null>;
   releaseLocalEdits: (ctx: Who, id: string, fields: readonly PushedField[]) => Promise<void>;

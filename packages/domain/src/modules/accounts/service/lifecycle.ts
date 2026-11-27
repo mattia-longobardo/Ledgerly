@@ -24,6 +24,7 @@ import {
 import { type Account, listAccounts } from "../queries";
 import { accounts, accountSwitches, balanceEntries } from "../schema";
 import { AccountError, hasBalanceEntries, nextSortOrder, personIban, requireAccount } from "./guards";
+import { rebuildDerivedBalances } from "./derived-balances";
 
 /**
  * A manual account, with its optional opening balance written in the same transaction so an
@@ -220,13 +221,18 @@ export interface DeletedAccount {
  * both. The provider ids of the *account* live in `accounts.provider_account_id` (§11.4), so they
  * go with the row; the caller gets them back to tell the source the account is no longer chosen.
  */
-export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<DeletedAccount> {
+export async function removeAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+): Promise<DeletedAccount> {
   const account = await requireAccount(ctx, id);
   // The ids before the delete, because the movements fall by foreign key and their
   // `provider_links` rows do not (`entity_id` is not a real foreign key: the deviation of §11.4).
   // Left behind they would hold the entity unique key of rows nothing can resolve, and a source
   // chosen again would take its movements for known ones and never import them back.
   const movementIds = await movements().transactionIdsOfAccount(ctx, id);
+  // The legs the server wrote for them on manual accounts go with them (`twin_of` cascades).
+  const twinAccounts = (await movements().twinAccountsOf(ctx, movementIds)).filter((one) => one !== id);
   // An account of a source turned off is kept by hand and keeps the source's id as a link only.
   const converted = await linksOfEntity(ctx, "account", id);
   // A switch goes with the account (`on delete cascade`): without it, the source the account left
@@ -258,6 +264,7 @@ export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promi
   // which is wrong money in every total. This way the failure mode is the one we already have.
   await unlinkEntitiesOfEveryProvider(ctx, "transaction", movementIds);
   await unlinkEntitiesOfEveryProvider(ctx, "account", [id]);
+  if (twinAccounts.length > 0) await rebuildDerivedBalances(ctx, twinAccounts, { manualChanged: true });
   const own =
     account.provider !== null && account.providerAccountId !== null
       ? [{ provider: account.provider, providerAccountId: account.providerAccountId }]

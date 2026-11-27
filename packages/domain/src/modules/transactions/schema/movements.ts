@@ -93,6 +93,9 @@ export const transactions = pgTable(
     // Neither: the leg waits for the person ("Scegli il conto").
     transferOutside: boolean("transfer_outside").notNull().default(false),
     transferAccountId: uuid("transfer_account_id").references(() => accounts.id, { onDelete: "set null" }),
+    // The leg the server wrote on a manual account for this giroconto's other leg (PERS-733): it
+    // follows that leg while nobody changes it by hand, and goes with it. `null` on any other row.
+    twinOf: uuid("twin_of").references((): AnyPgColumn => transactions.id, { onDelete: "cascade" }),
     // Who wrote the row (rewrite plan N3). The default keeps every row an image without this
     // column writes what it is: a provider's.
     origin: text("origin", { enum: TRANSACTION_ORIGINS }).notNull().default("provider"),
@@ -121,6 +124,10 @@ export const transactions = pgTable(
     index("transactions_account_occurred_idx").on(table.accountId, table.occurredAt.desc()),
     index("transactions_user_category_idx").on(table.userId, table.categoryId),
     index("transactions_transfer_group_idx").on(table.transferGroupId),
+    // One written leg per giroconto: a second request that writes it again writes nothing.
+    uniqueIndex("transactions_twin_of_uq")
+      .on(table.twinOf)
+      .where(sql`${table.twinOf} is not null`),
     // The manual movements of an account, for the balance after them: a handful of rows found
     // without walking the thousands a provider wrote on the same account.
     index("transactions_manual_idx")
