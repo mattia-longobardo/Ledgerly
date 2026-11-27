@@ -17,7 +17,7 @@ const save = vi.fn();
 
 /** The server's answer, computed here by the function the route runs, so the dialog shows it at once. */
 const preview = (schedule: { rules: readonly unknown[] }) => {
-  const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), 5);
+  const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), { count: 5 });
   return { next: next.map((instant) => instant.toISOString()), problems };
 };
 
@@ -240,7 +240,10 @@ describe("ScheduleControl of a bank's connection (at most 4 passes a day)", () =
   const MAX = 4;
   const BANK: SyncSchedule = { rules: [{ kind: "times", times: ["07:10", "13:10", "19:10"], days: EVERY }] };
   const bankPreview = (schedule: { rules: readonly unknown[] }) => {
-    const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), 5, MAX);
+    const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), {
+      count: 5,
+      maxPerDay: MAX,
+    });
     return { next: next.map((instant) => instant.toISOString()), problems };
   };
 

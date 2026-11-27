@@ -251,13 +251,10 @@ function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: Connectio
   });
   serve(app, guard, connections.previewSchedule, async ({ ctx, params, body }) => {
     const connection = await connectionOf(ctx, params.id);
-    const preview = previewSchedule(
-      body.rules,
-      ctx.timeZone,
-      new Date(),
-      SCHEDULE_PREVIEW_COUNT,
-      await maxSyncsPerDay(connection.provider),
-    );
+    const preview = previewSchedule(body.rules, ctx.timeZone, new Date(), {
+      count: SCHEDULE_PREVIEW_COUNT,
+      maxPerDay: await maxSyncsPerDay(connection.provider),
+    });
     return { next: preview.next.map((instant) => instant.toISOString()), problems: preview.problems };
   });
   serveConnectionAccounts(app, guard, cases);

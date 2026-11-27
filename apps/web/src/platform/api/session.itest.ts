@@ -475,7 +475,7 @@ describe("POST /connections/{id}/schedule/preview", () => {
       const response = await preview(alice, id, schedule);
       expect(response.status, name).toBe(200);
       const body = await response.json();
-      const expected = previewSchedule(schedule.rules, timeZone, new Date(), 5);
+      const expected = previewSchedule(schedule.rules, timeZone, new Date(), { count: 5 });
       expect(body.problems, name).toEqual(expected.problems);
       expect(body.next, name).toEqual(expected.next.map((instant) => instant.toISOString()));
       if (name === "valid") expect(body.next).toHaveLength(5);

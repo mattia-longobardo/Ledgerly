@@ -377,8 +377,7 @@ export function previewSchedule(
   rules: readonly unknown[],
   timeZone: string,
   now: Date,
-  count: number,
-  maxPerDay?: number,
+  { count, maxPerDay }: { count: number; maxPerDay?: number },
 ): { next: Date[]; problems: PreviewProblem[] } {
   const invalid = rules.flatMap((rule, index) =>
     syncRuleSchema.safeParse(rule).success ? [] : [{ code: "invalidRule" as const, rule: index }],
