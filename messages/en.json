@@ -5450,7 +5450,8 @@
       "every": {
         "week": "{interval, plural, one {every week on {day}} other {every # weeks on {day}}}",
         "month": "{interval, plural, one {every month on day {day}} other {every # months on day {day}}}",
-        "quarter": "{interval, plural, one {every quarter on day {day}} other {every # quarters on day {day}}}"
+        "quarter": "{interval, plural, one {every quarter on day {day}} other {every # quarters on day {day}}}",
+        "day": "{interval, plural, one {every working day} other {every # working days}}"
       },
       "weekdays": {
         "1": "Monday",
@@ -5464,7 +5465,8 @@
       "frequencies": {
         "week": "Weekly",
         "month": "Monthly",
-        "quarter": "Quarterly"
+        "quarter": "Quarterly",
+        "day": "Daily"
       },
       "actions": "Commands of {name}",
       "edit": "Edit",
@@ -5489,14 +5491,17 @@
         "negative_cash": "Not enough cash. Record a deposit, then confirm it.",
         "quantity_exceeded": "The quantity is more than you can buy: check it, then confirm.",
         "wrong_mode": "The position is kept by value: confirm it by hand.",
-        "before_period": "The day is before the period you can change: correct the day, then confirm."
+        "before_period": "The day is before the period you can change: correct the day, then confirm.",
+        "market_closed": "The market was closed that day: skipped, its amount is not added.",
+        "amount_missing": "The plan has no amount yet: type it."
       },
       "runStates": {
         "pending": "Due",
         "waiting_price": "No price yet",
         "proposed": "To confirm",
         "recorded": "Recorded",
-        "skipped": "Skipped"
+        "skipped": "Skipped",
+        "expired": "Expired"
       },
       "proposal": "{quantity} × {price} = {amount} · fee {fee}",
       "priceOnly": "Price {price}",
@@ -6556,7 +6561,8 @@
       "fund_to_verify": "Fund to check",
       "plan_run_to_confirm": "Plan instalment to confirm",
       "plan_run_no_cash": "Plan instalment with no cash",
-      "plan_run_price_missing": "Plan instalment with no price"
+      "plan_run_price_missing": "Plan instalment with no price",
+      "plan_amount_missing": "Plan with no amount"
     },
     "todo": {
       "connection_failed": "A connection stopped reading. Repair it.",
@@ -6569,6 +6575,7 @@
       "plan_run_to_confirm": "A plan instalment of {date} to confirm",
       "plan_run_no_cash": "A plan instalment of {date} has no cash. Record a deposit, then confirm it.",
       "plan_run_price_missing": "A plan instalment of {date} has no price yet. Type it.",
+      "plan_amount_missing": "A purchase plan has no amount yet. Type it.",
       "account_low_balance": "An account is below its threshold",
       "budget_threshold": "A budget reached {percent}%",
       "monthly_summary": "The monthly summary is ready"

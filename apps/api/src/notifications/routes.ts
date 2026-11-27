@@ -66,6 +66,9 @@ async function refreshFacts(ctx: Ctx): Promise<void> {
   );
   await syncFacts(ctx, "plan_run_no_cash", async () => planFacts(plans.toConfirm.filter(noCash)));
   await syncFacts(ctx, "plan_run_price_missing", async () => planFacts(plans.priceMissing));
+  await syncFacts(ctx, "plan_amount_missing", async () =>
+    plans.amountMissing.map((fact) => ({ subject: fact.planId, targetId: fact.accountId })),
+  );
   const connections = (await listConnections(ctx)).map((connection) => connection.id);
   await resolve(ctx, "connection_failed", { keep: connections });
   await resolve(ctx, "connection_stale", { keep: connections });

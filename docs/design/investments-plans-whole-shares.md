@@ -163,7 +163,7 @@ Stati: si aggiunge `expired` (§4.3). Motivi (`PLAN_RUN_REASONS`): si aggiungono
 | `asset_id`, `weight_bp` | copia del piano al momento della proposta: cambiare il piano non cambia una proposta aperta |
 | `price`, `price_currency`, `price_on`, `fx_rate` | prezzo di chiusura usato e cambio BCE; `null` se manca |
 | `target_cents`, `quantity`, `spent_cents` | risultato di §2.2 (proposta); alla conferma i valori reali |
-| `state` | `buy`, `too_expensive`, `price_missing` |
+| `state` | `buy`, `too_expensive`, `price_missing`, `skipped` (riga confermata con 0 quote, §5) |
 | `event_id` | → `investment_events`, `on delete set null`, **unico**: l'acquisto registrato della riga |
 
 Vincoli: `unique (run_id, asset_id)`, `unique (event_id)`. `investment_operations.plan_run_id` resta solo per i piani
@@ -232,7 +232,7 @@ Il `resto_in` è il `carry_out_cents` dell'ultima esecuzione chiusa del piano. S
 |---|---|
 | **Conferma** | Un acquisto (`buyWithin`) per ogni riga con quote > 0, tutti o nessuno, in una transazione; `event_id` sulla riga; esecuzione `recorded`, `carry_out = budget − spesa reale`. Cassa insufficiente → errore `negative_cash`, niente scritto: Mattia registra prima il versamento |
 | **Modifica** | Solo nel dialog, prima della conferma: anteprima dal server (§5), nessuna scrittura |
-| **Scarta** | Esecuzione `skipped`, nessun acquisto, `carry_out = budget` (M1, D2: tutto il non speso passa) |
+| **Scarta** | Esecuzione `skipped`, nessun acquisto, `carry_out = budget` (M1, D2: tutto il non speso passa). Un'esecuzione ancora senza budget (`pending`, `waiting_price`) mentre la precedente è `proposed` → 409 `not_editable`: fissare il suo budget farebbe scadere la proposta senza una proposta nuova. Mattia conferma o scarta prima la proposta |
 | **Non confermata alla scadenza dopo** | Quando il job crea la proposta della scadenza seguente, la precedente ancora `proposed` diventa `expired` con `carry_out = budget`, e il budget nuovo la include. Così ogni proposta aperta ha un `resto_in` certo e ce n'è al massimo una per piano |
 
 Dopo la conferma un acquisto è un'operazione normale: si modifica con la modifica delle operazioni (PERS-683). La
@@ -247,11 +247,11 @@ Contratto in `packages/api-contract/src/investments/plans.ts` e `plan-schemas.ts
 | Metodo e percorso | Cambio | Body / risposta |
 |---|---|---|
 | `GET /investments/{accountId}/plans` | Esteso | Ogni piano: `model`, `currency`, `amount` (null = da inserire), `instruments[] {assetId, name, weight}`, `frequency`, `interval`, `day`, `carry` (resto attuale), `nextDueOn`, `state` |
-| `POST /investments/{accountId}/plans` | Cambiato | `{ name, amount, instruments: [{ assetId \| instrument+mic, weight }], frequency: day\|week\|month, interval, day, startOn (≥ oggi), endOn \| runsLimit, fee, debitAccountId }`. Il corpo R5d (`assetId` + `amount`/`quantity`) → 400 `plan_model_retired` |
-| `PATCH /investments/{accountId}/plans/{planId}` | Esteso | Stessi campi; vale dalla prossima esecuzione, una proposta aperta non cambia |
+| `POST /investments/{accountId}/plans` | Cambiato | `{ name, amount, instruments: [{ assetId \| instrument+mic, weight }], frequency: day\|week\|month, interval, day, startOn (≥ oggi), endOn \| runsLimit, fee, debitAccountId }`. Il corpo R5d (`instrumentId` + `quantity`/`fractions`/`mode`) → 400 `invalid` |
+| `PATCH /investments/{accountId}/plans/{planId}` | Esteso | Stessi campi; vale dalla prossima esecuzione, una proposta aperta non cambia. Una cadenza nuova riparte da oggi: anche `runsLimit` conta da lì (N esecuzioni con la cadenza nuova) |
 | `GET …/plans/{planId}/runs` | Esteso | `budget`, `carryIn`, `carryOut`, `lines[] {assetId, weight, price, priceCurrency, priceOn, fxRate, target, quantity, spent, state, eventId}` |
-| `POST …/runs/{runId}/preview` | **Nuovo** | `{ lines: [{ assetId, unitPrice?, quantity? }] }` → stessa forma di una run, nessuna scrittura. Unico punto di calcolo: la UI non calcola |
-| `POST …/runs/{runId}/confirm` | Cambiato per `basket` | `{ on?, lines: [{ assetId, quantity, unitPrice, fee? }] }` → `{ eventIds[] }`. Errori: 409 `not_editable`, 422 `negative_cash`, 400 riga mancante o strumento estraneo |
+| `POST …/runs/{runId}/preview` | **Nuovo** | `{ lines: [{ assetId, unitPrice?, quantity? }] }` → stessa forma di una run, nessuna scrittura. Unico punto di calcolo: la UI non calcola. Quote non intere → 400 `invalid` |
+| `POST …/runs/{runId}/confirm` | Cambiato per `basket` | `{ on?, lines: [{ assetId, quantity, unitPrice, fee? }] }` → `{ eventIds[] }`. Errori: 409 `not_editable`, 409 `negative_cash` (come la registrazione a mano), 400 `invalid` riga mancante, strumento estraneo o quote non intere. La commissione fissa del piano è nella valuta del conto e si converte al cambio BCE del giorno per uno strumento in altra valuta; `fee` di una riga è nella valuta dello strumento. Una riga confermata con 0 quote che il job proponeva di comprare diventa `skipped` (quote 0, spesa 0) |
 | `POST …/runs/{runId}/skip` | Invariato | Scarto (§4.3) |
 | `POST …/runs/{runId}/debit` | Invariato | |
 | `GET/POST …/plans/{planId}/backfill` | Solo `single` | Un piano `basket` → 400 `plan_model_retired`: un acquisto passato si registra a mano |

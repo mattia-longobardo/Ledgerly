@@ -42,22 +42,19 @@ beforeEach(() => {
 });
 
 describe("the calls of the purchase plans", () => {
-  it("send a new plan as the contract's decimals, with fractions as chosen (P3)", async () => {
+  // The body of a plan is a basket since PERS-681: the R5d form sends one instrument at 100 %.
+  it("send a new plan as the contract's decimals, a basket of the one instrument", async () => {
     expect(await createPlan(ACCOUNT, FORM)).toEqual({ ok: true, id: PLAN });
     expect(call.mock.calls[0][1]).toEqual({
       params: { accountId: ACCOUNT },
       body: {
         name: "Monthly ETF",
-        mode: "propose",
         endOn: null,
         runsLimit: null,
         debitAccountId: null,
         fee: null,
-        instrumentId: FORM.instrumentId,
-        mic: "XMIL",
+        instruments: [{ instrumentId: FORM.instrumentId, mic: "XMIL", weight: "100" }],
         amount: "1000.50",
-        quantity: null,
-        fractions: false,
         frequency: "month",
         interval: 1,
         day: 5,

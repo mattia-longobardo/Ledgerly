@@ -32,6 +32,8 @@ import {
   OPERATION_KINDS,
   ORIGINS,
   PLAN_FREQUENCIES,
+  PLAN_LINE_STATES,
+  PLAN_MODELS,
   PLAN_RUN_REASONS,
   PLAN_MODES,
   PLAN_RECORDERS,
@@ -550,6 +552,10 @@ export const investmentPlans = pgTable(
     feeRate: rate("fee_rate"),
     mode: text("mode", { enum: PLAN_MODES }).notNull().default("propose"),
     state: text("state", { enum: PLAN_STATES }).notNull().default("active"),
+    /** `single` (R5d, one asset) or `basket` (PERS-681: several by weight, whole shares, proposals only). */
+    model: text("model", { enum: PLAN_MODELS }).notNull().default("single"),
+    /** A basket's amount of each execution, in the portfolio's currency; null on a converted plan: to type. */
+    executionAmountCents: bigint("execution_amount_cents", { mode: "bigint" }),
     /** The first day the job looks at: the due dates before it are «Record the past instalments» (P4). */
     createdOn: date("created_on").notNull(),
     createdAt: createdAtColumn(),
@@ -580,6 +586,34 @@ export const investmentPlans = pgTable(
     ),
     checkIn("investment_plans_mode_ck", table.mode, PLAN_MODES),
     checkIn("investment_plans_state_ck", table.state, PLAN_STATES),
+    checkIn("investment_plans_model_ck", table.model, PLAN_MODELS),
+    check(
+      "investment_plans_execution_ck",
+      sql`${table.executionAmountCents} is null or ${table.executionAmountCents} > 0`,
+    ),
+  ],
+);
+
+/** An instrument of a basket plan and its weight (PERS-681 §3.2): the sum and the 10 rows are the service's. */
+export const investmentPlanInstruments = pgTable(
+  "investment_plan_instruments",
+  {
+    id: idColumn(),
+    userId: ownerColumn(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => investmentPlans.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => investmentAssets.id, { onDelete: "restrict" }),
+    weightBp: integer("weight_bp").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    unique("investment_plan_instruments_uq").on(table.planId, table.assetId),
+    index("investment_plan_instruments_user_idx").on(table.userId),
+    check("investment_plan_instruments_weight_ck", sql`${table.weightBp} between 1 and 10000`),
   ],
 );
 
@@ -607,6 +641,10 @@ export const investmentPlanRuns = pgTable(
       onDelete: "set null",
     }),
     debitLinked: boolean("debit_linked").notNull().default(false),
+    /** A basket's execution (PERS-681 §3.3): its amount plus the carry in, the carry in, and what it carries out. */
+    budgetCents: bigint("budget_cents", { mode: "bigint" }),
+    carryInCents: bigint("carry_in_cents", { mode: "bigint" }),
+    carryOutCents: bigint("carry_out_cents", { mode: "bigint" }),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
@@ -617,5 +655,42 @@ export const investmentPlanRuns = pgTable(
     check("investment_plan_runs_price_ck", sql`${table.price} is null or ${table.price} > 0`),
     checkIn("investment_plan_runs_recorded_ck", table.recordedBy, PLAN_RECORDERS, true),
     check("investment_plan_runs_reason_ck", sql`${table.reason} is null or length(${table.reason}) <= 40`),
+  ],
+);
+
+/**
+ * A line of a basket's execution (PERS-681 §3.4): the instrument and its weight copied from the plan,
+ * the close and the ECB rate used, and what it buys — proposed, then as confirmed. `event_id` is the
+ * purchase written for it.
+ */
+export const investmentPlanRunLines = pgTable(
+  "investment_plan_run_lines",
+  {
+    id: idColumn(),
+    userId: ownerColumn(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => investmentPlanRuns.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => investmentAssets.id, { onDelete: "restrict" }),
+    weightBp: integer("weight_bp").notNull(),
+    price: price("price"),
+    priceCurrency: text("price_currency"),
+    priceOn: date("price_on"),
+    /** Units of the portfolio's currency per unit of the asset's; null in the same currency. */
+    fxRate: rate("fx_rate"),
+    targetCents: bigint("target_cents", { mode: "bigint" }).notNull(),
+    quantity: quantity("quantity").notNull(),
+    spentCents: bigint("spent_cents", { mode: "bigint" }).notNull(),
+    state: text("state", { enum: PLAN_LINE_STATES }).notNull(),
+    eventId: uuid("event_id").references(() => investmentEvents.id, { onDelete: "set null" }),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    unique("investment_plan_run_lines_uq").on(table.runId, table.assetId),
+    unique("investment_plan_run_lines_event_uq").on(table.eventId),
+    index("investment_plan_run_lines_user_idx").on(table.userId),
+    checkIn("investment_plan_run_lines_state_ck", table.state, PLAN_LINE_STATES),
   ],
 );

@@ -94,6 +94,7 @@ export const INVESTMENT_REFUSALS = [
   "before_positions",
   "not_a_transfer",
   "quantity_exceeded",
+  "plan_model_retired",
   "unknown_provider",
   "invalid_credentials",
   "not_read_only",

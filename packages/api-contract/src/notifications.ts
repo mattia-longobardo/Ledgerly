@@ -31,6 +31,8 @@ export const NOTIFICATION_EVENT_NAMES = [
   "plan_run_to_confirm",
   "plan_run_no_cash",
   "plan_run_price_missing",
+  // PERS-681: a converted basket plan with no amount yet: the person types it.
+  "plan_amount_missing",
 ] as const;
 
 export type NotificationEvent = (typeof NOTIFICATION_EVENT_NAMES)[number];
@@ -63,6 +65,7 @@ export const NOTIFICATION_EVENTS = {
   plan_run_to_confirm: { category: "action", addon: "investments", page: "investment_plan" },
   plan_run_no_cash: { category: "action", addon: "investments", page: "investment_plan" },
   plan_run_price_missing: { category: "action", addon: "investments", page: "investment_plan" },
+  plan_amount_missing: { category: "action", addon: "investments", page: "investment_plan" },
 } as const satisfies Record<
   NotificationEvent,
   { category: NotificationCategory; addon: AddonId | null; page: (typeof NOTIFICATION_PAGES)[number] }

@@ -1,7 +1,7 @@
 // The instalments of the purchase plans (rewrite plan R5d, step 2; 11-standardization.md §11.3.2): the
 // daily job that makes the due dates and prices them, and what the person does with one — confirm,
 // skip, record the past ones. A purchase and its instalment's state are written in one transaction.
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "../../accounts";
 import { matchMovements } from "../../transactions/queries";
@@ -34,6 +34,7 @@ import {
 } from "./plans";
 import { fromNumeric, InvestmentError, type WriteCtx } from "./types";
 import { closesOfPlan } from "./plan-views";
+import { advanceBasket, runsThePlan, skippedCarry } from "./plan-baskets";
 
 /** The days after its due date a bank movement may document an instalment (E7). */
 const DEBIT_WINDOW_DAYS = 5;
@@ -50,7 +51,9 @@ export type RunConfirmation = z.input<typeof confirmSchema>;
 
 async function requireRun(ctx: Pick<Ctx, "userId">, plan: InvestmentPlan, runId: string, transaction: Tx) {
   const run = await lockRun(ctx, plan, runId, transaction);
-  if (run.state === "recorded" || run.state === "skipped") throw new InvestmentError("not_editable");
+  if (run.state === "recorded" || run.state === "skipped" || run.state === "expired") {
+    throw new InvestmentError("not_editable");
+  }
   return run;
 }
 
@@ -110,6 +113,8 @@ export async function confirmRun(
 ): Promise<{ eventId: string }> {
   const parsed = confirmSchema.parse(input);
   const plan = await requirePlan(ctx, ref.accountId, ref.planId);
+  // A basket's execution has lines (PERS-681): `confirmBasketRun`.
+  if (plan.model === "basket") throw new RangeError("A basket's execution is confirmed by its lines");
   return getDb().transaction(async (transaction) => {
     const run = await requireRun(ctx, plan, ref.runId, transaction);
     const unitPrice = parsed.unitPrice ?? fromNumeric(run.price, PRICE_SCALE);
@@ -134,7 +139,12 @@ export async function skipRun(
     const run = await requireRun(ctx, plan, ref.runId, transaction);
     await transaction
       .update(investmentPlanRuns)
-      .set({ state: "skipped", reason: null, updatedAt: new Date() })
+      .set({
+        state: "skipped",
+        reason: null,
+        ...(await skippedCarry(transaction, plan, run)),
+        updatedAt: new Date(),
+      })
       .where(eq(investmentPlanRuns.id, run.id));
   });
 }
@@ -166,6 +176,8 @@ export async function backfillPlan(
 ): Promise<{ eventIds: string[] }> {
   const parsed = backfillSchema.parse(input);
   const plan = await requirePlan(ctx, ref.accountId, ref.planId);
+  // A basket has no past executions: a past purchase is recorded by hand (PERS-681 §5).
+  if (plan.model === "basket") throw new InvestmentError("plan_model_retired");
   const dates = new Set(dueDates(scheduleOf(plan), today(ctx.timeZone)));
   if (parsed.runs.some((row) => !dates.has(row.dueOn))) throw new RangeError("Not a due date of the plan");
   return getDb().transaction(async (transaction) => {
@@ -318,6 +330,7 @@ export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promis
   const todayOn = today(ctx.timeZone, now);
   let advanced = 0;
   for (const plan of await activePlans(ctx)) {
+    if (!runsThePlan(plan)) continue;
     const own = await getDb().select().from(investmentPlanRuns).where(eq(investmentPlanRuns.planId, plan.id));
     const known = new Map(own.map((run) => [run.dueOn, run]));
     const due = dueDates(scheduleOf(plan), todayOn).filter((day) => day >= plan.createdOn);
@@ -326,15 +339,18 @@ export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promis
       .filter((run) => run.state === "pending" || run.state === "waiting_price")
       .map((run) => run.dueOn);
     for (const dueOn of [...new Set([...open, ...missing])].sort()) {
-      await advance(ctx, plan, dueOn, todayOn);
+      await (plan.model === "basket" ? advanceBasket : advance)(ctx, plan, dueOn, todayOn);
       advanced += 1;
     }
     const after = await getDb()
       .select()
       .from(investmentPlanRuns)
       .where(eq(investmentPlanRuns.planId, plan.id));
+    // shortcut: a basket's execution is several purchases, and a bank movement documents one event:
+    // no debit match for baskets yet (PERS-681), upgrade when a movement can document several.
     for (const run of after)
-      if (run.state === "proposed" || run.state === "recorded") await proposeDebit(ctx, plan, run);
+      if (plan.model !== "basket" && (run.state === "proposed" || run.state === "recorded"))
+        await proposeDebit(ctx, plan, run);
     if (endedBy(scheduleOf(plan), todayOn) && after.every((run) => run.dueOn <= todayOn)) {
       await getDb()
         .update(investmentPlans)
@@ -348,10 +364,14 @@ export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promis
 /** «Da fare» of the plans (R5e): the instalments to confirm, and those with no price after 5 working days. */
 export async function plansToDo(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-): Promise<{ toConfirm: PlanFact[]; priceMissing: PlanFact[] }> {
+): Promise<{ toConfirm: PlanFact[]; priceMissing: PlanFact[]; amountMissing: PlanAmountFact[] }> {
   const todayOn = today(ctx.timeZone);
   const rows = await getDb()
-    .select({ run: investmentPlanRuns, accountId: investmentAccounts.accountId })
+    .select({
+      run: investmentPlanRuns,
+      accountId: investmentAccounts.accountId,
+      model: investmentPlans.model,
+    })
     .from(investmentPlanRuns)
     .innerJoin(investmentPlans, eq(investmentPlans.id, investmentPlanRuns.planId))
     .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentPlans.investmentAccountId))
@@ -369,10 +389,34 @@ export async function plansToDo(
   });
   const late = (row: (typeof rows)[number]) =>
     row.run.waitingSince !== null && marketPrices().isStale(row.run.waitingSince, todayOn);
+  // A basket proposed with a line to type after 5 working days is a proposal: «price missing» too (§6).
+  const lineToType = (row: (typeof rows)[number]) =>
+    row.model === "basket" && row.run.state === "proposed" && row.run.waitingSince !== null;
+  const amountMissing = await getDb()
+    .select({ planId: investmentPlans.id, accountId: investmentAccounts.accountId })
+    .from(investmentPlans)
+    .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentPlans.investmentAccountId))
+    .where(
+      and(
+        userScoped(ctx).owns(investmentPlans),
+        eq(investmentPlans.model, "basket"),
+        eq(investmentPlans.state, "active"),
+        isNull(investmentPlans.executionAmountCents),
+      ),
+    );
   return {
-    toConfirm: rows.filter((row) => row.run.state === "proposed").map(fact),
-    priceMissing: rows.filter((row) => row.run.state === "waiting_price" && late(row)).map(fact),
+    toConfirm: rows.filter((row) => row.run.state === "proposed" && !lineToType(row)).map(fact),
+    priceMissing: rows
+      .filter((row) => (row.run.state === "waiting_price" && late(row)) || lineToType(row))
+      .map(fact),
+    amountMissing,
   };
+}
+
+/** A converted basket with no amount yet (PERS-681 §3.5): its portfolio's page. */
+interface PlanAmountFact {
+  planId: string;
+  accountId: string;
 }
 
 export interface PlanFact {

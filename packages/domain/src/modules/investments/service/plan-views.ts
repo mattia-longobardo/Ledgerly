@@ -23,6 +23,8 @@ import {
   sizeOf,
 } from "./plans";
 import { fromNumeric } from "./types";
+import { carryOfPlans, currencyOfPlan, linesOf, type PlanRunLine } from "./plan-baskets";
+import { instrumentsOf } from "./plan-instruments";
 
 /** A plan as the pages list it: its asset, its next due date and the instalments waiting. */
 export interface PlanView {
@@ -31,6 +33,18 @@ export interface PlanView {
   nextDueOn: CivilDate | null;
   toConfirm: number;
   waitingPrice: number;
+  /** The currency of the amount: the asset's for `single`, the portfolio's for `basket`. */
+  currency: string;
+  /** A basket's instruments by weight (PERS-681); none for `single`. */
+  instruments: {
+    id: string;
+    name: string;
+    instrumentId: string | null;
+    mic: string | null;
+    weightBp: number;
+  }[];
+  /** A basket's carry to its next execution (M1); 0 for `single`. */
+  carryCents: Cents;
 }
 
 export async function listPlans(
@@ -51,6 +65,9 @@ export async function listPlans(
     rows.map((row) => row.plan.id),
   );
   const todayOn = today(ctx.timeZone);
+  const ids = rows.map((row) => row.plan.id);
+  const [instruments, carry] = await Promise.all([instrumentsOf(ctx, ids), carryOfPlans(ctx, ids)]);
+  const portfolio = rows.length === 0 ? null : (await currencyOfPlan(ctx, rows[0].plan)).currency;
   return rows.map(({ plan, asset }) => {
     const own = runs.filter((run) => run.planId === plan.id);
     const known = new Set(own.map((run) => run.dueOn));
@@ -72,6 +89,17 @@ export async function listPlans(
       nextDueOn: next,
       toConfirm: own.filter((run) => run.state === "proposed").length,
       waitingPrice: own.filter((run) => run.state === "waiting_price").length,
+      currency: plan.model === "basket" && portfolio !== null ? portfolio : asset.currency,
+      instruments: instruments
+        .filter((one) => one.row.planId === plan.id)
+        .map((one) => ({
+          id: one.asset.id,
+          name: one.asset.name,
+          instrumentId: one.asset.instrumentId,
+          mic: one.asset.mic,
+          weightBp: one.row.weightBp,
+        })),
+      carryCents: carry.get(plan.id) ?? 0n,
     };
   });
 }
@@ -98,6 +126,8 @@ export interface RunView {
   currency: string;
   proposal: { on: CivilDate; quantity: bigint; unitPrice: bigint; spentCents: Cents; feeCents: Cents } | null;
   eventId: string | null;
+  /** A basket's lines (PERS-681 §3.4), heaviest first; none for `single`. */
+  lines: (PlanRunLine & { name: string })[];
   debit: {
     transactionId: string;
     on: CivilDate;
@@ -114,21 +144,29 @@ export async function listRuns(
   planId: string,
 ): Promise<RunView[]> {
   const plan = await requirePlan(ctx, accountId, planId);
-  const { currency } = await assetOfPlan(plan);
+  const basket = plan.model === "basket";
+  const { currency } = basket ? await currencyOfPlan(ctx, plan) : await assetOfPlan(plan);
   const runs = await runsOf(ctx, [plan.id]);
-  const events = await eventsOfRuns(
-    ctx,
-    runs.map((run) => run.id),
-  );
+  const ids = runs.map((run) => run.id);
+  const [events, lines] = await Promise.all([eventsOfRuns(ctx, ids), linesOf(ctx, ids)]);
   return Promise.all(
     runs.map(async (run) => {
       const unitPrice = fromNumeric(run.price, PRICE_SCALE);
       const open = run.state === "proposed" || run.state === "waiting_price" || run.state === "pending";
       const proposal =
-        open && unitPrice !== null
+        !basket && open && unitPrice !== null
           ? { on: run.priceOn ?? run.dueOn, unitPrice, ...instalment(sizeOf(plan), unitPrice) }
           : null;
-      return { run, currency, proposal, eventId: events.get(run.id) ?? null, debit: await debitOf(ctx, run) };
+      return {
+        run,
+        currency,
+        proposal,
+        eventId: events.get(run.id) ?? null,
+        lines: lines
+          .filter((one) => one.line.runId === run.id)
+          .map((one) => ({ ...one.line, name: one.name })),
+        debit: await debitOf(ctx, run),
+      };
     }),
   );
 }

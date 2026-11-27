@@ -83,16 +83,15 @@ async function planWrite<T extends object>(work: () => Promise<T>): Promise<({ o
 export function createPlan(accountId: string, form: PlanForm): Promise<ActionResult> {
   return planWrite(async () => {
     const format = await formatOf();
-    const byAmount = form.size === "amount";
+    // shortcut: the R5d form as a basket of one instrument (PERS-681); the new form of the plans replaces it.
+    const { mode, ...edit } = editBody(form, format);
+    void mode;
     const body = {
-      ...editBody(form, format),
-      instrumentId: form.instrumentId,
-      mic: form.mic,
-      amount: byAmount ? required(amountOf(form.amount, format)) : null,
-      quantity: byAmount ? null : required(decimalOf(form.quantity, format)),
-      fractions: form.fractions,
-      frequency: form.frequency,
-      interval: wholeOf(form.interval),
+      ...edit,
+      instruments: [{ instrumentId: form.instrumentId, mic: form.mic, weight: "100" }],
+      amount: required(amountOf(form.amount, format)),
+      frequency: form.frequency === "quarter" ? ("month" as const) : form.frequency,
+      interval: wholeOf(form.interval) * (form.frequency === "quarter" ? 3 : 1),
       day: wholeOf(form.day),
       startOn: form.startOn,
     };

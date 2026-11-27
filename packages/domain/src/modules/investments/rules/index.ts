@@ -20,13 +20,18 @@ export {
   OPERATION_KINDS,
   ORIGINS,
   PERIOD_REASONS,
+  MAX_PLAN_INSTRUMENTS,
   PLAN_FREQUENCIES,
+  PLAN_LINE_STATES,
+  PLAN_MODELS,
   PLAN_RUN_REASONS,
   PLAN_MODES,
   PLAN_RECORDERS,
   PLAN_RUN_STATES,
   PLAN_STATES,
   type PlanFrequency,
+  type PlanLineState,
+  type PlanModel,
   type PlanMode,
   type PlanRunReason,
   type PlanRunState,
@@ -43,6 +48,7 @@ export {
   READING_STATUSES,
   RECONCILIATION_KINDS,
   unitPriceOf,
+  WEIGHT_WHOLE,
 } from "./vocabulary";
 export type {
   AccountOrigin,
@@ -61,6 +67,7 @@ export type { AccountBalanceLike, Book, EventLike, HoldingLike, OperationLike, R
 export { holdingStates } from "./positions";
 export { negativeCash, shortPosition } from "./short";
 export {
+  allocateWholeShares,
   dueDates,
   endedBy,
   FRACTION_DECIMALS,
@@ -69,8 +76,9 @@ export {
   MAX_CATCH_UP,
   planFee,
   quantityFor,
+  spentAt,
 } from "./plans";
-export type { PlanSchedule } from "./plans";
+export type { Allocation, AllocationInput, AllocationLine, PlanSchedule } from "./plans";
 export type { HoldingState } from "./positions";
 export {
   computePoints,
