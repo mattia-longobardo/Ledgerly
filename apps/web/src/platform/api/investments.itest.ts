@@ -92,6 +92,7 @@ async function send(ctx: Ctx, method: string, path: string, body?: unknown) {
     investments: {
       queueSync: async (_ctx, connectionId) => void queued.push(`sync:${connectionId}`),
       queueFirstFlows: async (_ctx, connectionId) => void queued.push(`flows:${connectionId}`),
+      queuePrices: async () => void queued.push("prices"),
     },
   });
   const response = await routes.request(path, {

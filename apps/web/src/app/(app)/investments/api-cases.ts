@@ -1,6 +1,6 @@
 // src/app/(app)/investments/api-cases.ts — the queue of the worker that the web process lends
 // `/api/v1/investments` (rewrite plan R2) until R4, as the Server Actions of Investments use it:
-// «Sync now» and the first flows of a new connection run after the answer.
+// «Sync now», the first flows of a new connection and the first closes of a new market run after the answer.
 import "server-only";
 import type { InvestmentCases } from "@ledgerly/api";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
@@ -12,5 +12,8 @@ export const investmentCases: InvestmentCases = {
   },
   async queueFirstFlows(ctx, connectionId, accountId) {
     await enqueue(tasks.firstFlows(ctx.userId, connectionId, accountId));
+  },
+  async queuePrices() {
+    await enqueue(tasks.job("instrument-prices"));
   },
 };

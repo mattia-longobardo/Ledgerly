@@ -75,6 +75,7 @@ export {
   createPortfolioWithAccount,
   addAsset,
   assetPrices,
+  hasUnpricedMarket,
   isPortfolio,
   pricedMarkets,
   revalueAfterPrices,

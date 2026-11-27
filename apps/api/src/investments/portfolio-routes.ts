@@ -7,6 +7,7 @@ import { searchInstruments } from "@ledgerly/domain/instruments";
 import {
   addAsset,
   convertToPortfolio,
+  hasUnpricedMarket,
   isPortfolio,
   type OperationForEdit,
   PRICE_SCALE,
@@ -18,6 +19,7 @@ import {
   updateBuy,
   updateOperation,
 } from "@ledgerly/domain/investments";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { pricesPlugin } from "@ledgerly/domain/platform/plugins";
 import { formatDecimal, parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
@@ -26,6 +28,11 @@ import { maybe, money } from "./dto";
 import { cents, decimal, refusing } from "./refusals";
 
 const { register, instruments } = INVESTMENTS;
+
+/** The queue the routes put the first read of a market in (`InvestmentCases.queuePrices`). */
+interface PricesQueue {
+  queuePrices(ctx: Ctx): Promise<void>;
+}
 
 type OperationBody = z.output<typeof register.recordOperation.body>;
 type BuyBody = Extract<OperationBody, { kind: "buy" }>;
@@ -214,7 +221,19 @@ function bodyOf(found: OperationForEdit): ReadBody {
   }
 }
 
-export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
+/**
+ * After a purchase, an edit or «Switch to positions»: a market with no close yet is read now, not at
+ * the daily job (PERS-694). The operation is already written: a failure here waits for that job.
+ */
+export async function readNewMarkets(ctx: Ctx, accountId: string, cases: PricesQueue): Promise<void> {
+  try {
+    if (await hasUnpricedMarket(ctx, accountId)) await cases.queuePrices(ctx);
+  } catch (error) {
+    console.error("[api] the first read of a market was not queued", redactForLog(error));
+  }
+}
+
+export function servePortfolio(app: Hono<ApiEnv>, guard: Guard, cases: PricesQueue): void {
   serve(app, guard, instruments.searchInstruments, async ({ query }) => {
     // A new market is read by the instance's prices plugin, when it has one.
     const plugin = await pricesPlugin();
@@ -233,6 +252,7 @@ export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
   });
   serve(app, guard, register.updateOperation, async ({ ctx, params, body }) => {
     await refusing(() => editOperation(ctx, params, body));
+    if (body.kind === "buy") await readNewMarkets(ctx, params.accountId, cases);
   });
   serve(app, guard, register.setPriceMode, async ({ ctx, params, body }) => {
     await refusing(() => setPriceMode(ctx, params.accountId, params.holdingId, body.mode));
@@ -251,5 +271,6 @@ export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
         })),
       }),
     );
+    await readNewMarkets(ctx, params.accountId, cases);
   });
 }
