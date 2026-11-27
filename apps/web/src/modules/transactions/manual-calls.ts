@@ -12,7 +12,7 @@ import type { ManualCommands, ManualForm, ManualSaveResult } from "./ui/manual-t
 
 type Refusal = Extract<ManualSaveResult, { ok: false }>;
 
-/** What a manual write changes: the movements, the balances of its account and Overview. */
+/** What a manual write changes: the movements, the balances of its accounts (a giroconto's other one too) and Overview. */
 function changed(): void {
   invalidate(
     movements.getTransactionsView,
@@ -24,6 +24,7 @@ function changed(): void {
     review.getReview,
     views.getNetWorth,
     views.getAccountContext,
+    views.getAccountDailyBalances,
     categoryBoard.getCategoriesBoard,
   );
 }
@@ -95,6 +96,7 @@ const fields = (movement: ManualForm) => ({
   categoryId: movement.categoryId,
   payee: movement.payee,
   note: movement.note,
+  transferAccountId: movement.transferAccountId,
 });
 
 export const MANUAL_CALLS: Required<ManualCommands> = {

@@ -90,3 +90,25 @@ describe("the other side of a giroconto", () => {
     });
   });
 });
+
+describe("a giroconto written by hand, in the manual dialog", () => {
+  const manual = { origin: "manual" as const, type: "transfer" as const, macros: [] };
+
+  it("opens with its other account and the side its sign gives", () => {
+    expect(view({ ...manual, transferAccountId: SAVINGS.id }).manual).toMatchObject({
+      kind: "expense",
+      amount: "25,00",
+      transferAccountId: SAVINGS.id,
+    });
+    expect(view({ ...manual, amount: "25.00", transferAccountId: SAVINGS.id }).manual?.kind).toBe("income");
+  });
+
+  it("stays out of the dialog with no account of the person's on the other side", () => {
+    expect(view({ ...manual }).manual).toBeNull();
+    expect(view({ ...manual, transferOutside: true, transferAccountId: SAVINGS.id }).manual).toBeNull();
+  });
+
+  it("is no giroconto on money out", () => {
+    expect(view({ origin: "manual" }).manual).toMatchObject({ kind: "expense", transferAccountId: null });
+  });
+});

@@ -19,6 +19,7 @@ const FORM = {
   categoryId: null,
   payee: "Shop",
   note: "",
+  transferAccountId: null,
 };
 
 beforeEach(() => {
@@ -34,6 +35,16 @@ describe("the calls of the manual movement", () => {
     expect(saved).toMatchObject({ ok: true, created: true, id: ID, on: "2026-10-14", accountId: ID });
     expect(saved.ok && saved.date).toContain("2026");
     expect(invalidate).toHaveBeenCalled();
+  });
+
+  it("send a giroconto's other account, and read again the balances of every account", async () => {
+    const other = "00000000-0000-4000-8000-000000000002";
+    call.mockResolvedValue({ id: ID, created: true });
+    await MANUAL_CALLS.create({ ...FORM, transferAccountId: other }, ID);
+    expect(call.mock.calls[0][1].body).toMatchObject({ transferAccountId: other });
+    expect(invalidate.mock.calls[0].map((route: { path: string }) => route.path)).toEqual(
+      expect.arrayContaining(["/net-worth", "/accounts/{id}/context", "/accounts/{id}/daily-balances"]),
+    );
   });
 
   it("refuse an amount that is not one above zero without a call", async () => {
