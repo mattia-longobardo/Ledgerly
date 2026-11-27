@@ -4,6 +4,15 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · A basket's line with no price, and its bank movement (additive)
+
+- Changed: in `POST …/runs/{runId}/confirm` of a basket, `lines[].unitPrice` is optional on a line with
+  `quantity` 0: a line with no price (`price_missing`) is confirmed with 0 shares, buys nothing, and its
+  part goes to the next execution. A line with shares and no price is `invalid`.
+- The debit account (E7) now proposes a bank movement for a basket's recorded execution: out of that
+  account, for its purchases and their fees. `POST …/runs/{runId}/debit` links it to the purchase of the
+  heaviest line (a movement documents one operation).
+
 ## Unreleased · Purchase plans of several instruments, whole shares (not additive)
 
 The purchase plans of a manual portfolio are baskets (docs/design/investments-plans-whole-shares.md):

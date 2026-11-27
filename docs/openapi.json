@@ -38387,8 +38387,7 @@
                       },
                       "required": [
                         "assetId",
-                        "quantity",
-                        "unitPrice"
+                        "quantity"
                       ],
                       "additionalProperties": false
                     }

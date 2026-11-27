@@ -136,12 +136,18 @@ const confirmSchema = z.object({
   on: civilDate().optional(),
   lines: z
     .array(
-      z.object({
-        assetId: z.uuid(),
-        quantity: wholeShares,
-        unitPrice: positive,
-        feeCents: z.bigint().nonnegative().optional(),
-      }),
+      z
+        .object({
+          assetId: z.uuid(),
+          quantity: wholeShares,
+          // A line with no price (§6 `price_missing`) is confirmed with 0 shares: it buys nothing.
+          unitPrice: positive.optional(),
+          feeCents: z.bigint().nonnegative().optional(),
+        })
+        .refine(
+          (line) => line.quantity === 0n || line.unitPrice !== undefined,
+          "A line with shares needs a price",
+        ),
     )
     .min(1),
 });
@@ -181,7 +187,14 @@ export async function confirmBasketRun(
           .where(eq(investmentPlanRunLines.id, line.id));
         continue;
       }
-      const bought = await buyLine(ctx, transaction, { plan, account, line, currency, typed, day });
+      const bought = await buyLine(ctx, transaction, {
+        plan,
+        account,
+        line,
+        currency,
+        typed: { ...typed, unitPrice: typed.unitPrice! },
+        day,
+      });
       spentCents += bought.spentCents;
       eventIds.push(bought.eventId);
     }
@@ -224,7 +237,7 @@ async function buyLine(
     line: PlanRunLine;
     /** The asset's currency, the one of its price and of a fee typed on the line. */
     currency: string;
-    typed: TypedLine;
+    typed: TypedLine & { unitPrice: bigint };
     day: CivilDate;
   },
 ): Promise<{ eventId: string; spentCents: bigint }> {

@@ -2,7 +2,7 @@
 // registry, a sale of more than is held, the price mode, «Switch to positions», the MCP's holdings.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
-import { dayOfWeek, today } from "@domain/shared/dates";
+import { addDays, dayOfWeek, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { contextFor } from "../../../../../test/fixtures";
 import { createTestUser } from "../../../../../test/users";
@@ -614,6 +614,55 @@ describe("the purchase plans on /api/v1 (R5d, step 2; baskets since PERS-681)", 
     expect((await send(alice, "GET", `${base}/${made.body.id}/runs`)).body.runs).toMatchObject([
       { state: "proposed", lines: [{ eventId: null }] },
     ]);
+  });
+
+  it("confirms a line with no price at 0 shares, and refuses shares with no price (PERS-714)", async () => {
+    const other = await otherInstrument();
+    await closeToday(other.listingId, "40");
+    const accountId = await portfolio();
+    await send(alice, "POST", `/investments/${accountId}/operations`, {
+      kind: "deposit",
+      on: todayOn,
+      amount: "1000.00",
+    });
+    const base = `/investments/${accountId}/plans`;
+    // Another public example ISIN, on a market with no source of prices.
+    const unpriced = (async (input: string | URL | Request) => {
+      const answer = await REGISTERS(input);
+      return new Response(
+        (await answer.text()).replace("BBG000000001", "BBG000000003").replace("EXA", "EXC"),
+      );
+    }) as typeof globalThis.fetch;
+    const [third] = (await searchInstruments("US0231351067", { fetch: unpriced, priceSourceId: null })).items;
+    // A monthly basket due today, one of its markets with no close: a proposal after 5 working days.
+    const instruments = [
+      { instrumentId: third.instrumentId, mic: "XMIL", weight: "50" },
+      { instrumentId: other.instrumentId, mic: "XMIL", weight: "50" },
+    ];
+    const made = await send(
+      alice,
+      "POST",
+      base,
+      plan({ instruments, frequency: "month", day: Number(todayOn.slice(8, 10)) }),
+    );
+    expect(made.status).toBe(201);
+    await runDuePlans(alice);
+    await runDuePlans(alice, new Date(`${addDays(todayOn, 10)}T11:00:00Z`));
+    const [run] = (await send(alice, "GET", `${base}/${made.body.id}/runs`)).body.runs;
+    const missing = run.lines.find((line: Json) => line.state === "price_missing");
+    const priced = run.lines.find((line: Json) => line.state === "buy");
+    expect(run.state).toBe("proposed");
+    const confirm = `${base}/${made.body.id}/runs/${run.id}/confirm`;
+    const bought = { assetId: priced.assetId, quantity: "1", unitPrice: "40" };
+    expect(
+      await send(alice, "POST", confirm, { lines: [{ assetId: missing.assetId, quantity: "1" }, bought] }),
+    ).toMatchObject({ status: 400, body: { error: "invalid" } });
+    const confirmed = await send(alice, "POST", confirm, {
+      lines: [{ assetId: missing.assetId, quantity: "0" }, bought],
+    });
+    expect(confirmed).toMatchObject({ status: 201, body: { ids: [expect.any(String)] } });
+    const [recorded] = (await send(alice, "GET", `${base}/${made.body.id}/runs`)).body.runs;
+    expect(recorded).toMatchObject({ state: "recorded", carryOut: "60.00" });
   });
 
   it("is refused on a service that is not a portfolio, and lists none there", async () => {

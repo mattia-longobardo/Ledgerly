@@ -330,7 +330,8 @@ export const confirmBody = z
           .object({
             assetId: id(),
             quantity: decimalInput(),
-            unitPrice: decimalInput(),
+            /** Required with shares; a line with no price is confirmed with quantity 0 and none. */
+            unitPrice: decimalInput().optional(),
             fee: amountInput().optional(),
           })
           .strict(),
