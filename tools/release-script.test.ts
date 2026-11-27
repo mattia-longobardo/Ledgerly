@@ -21,7 +21,8 @@ const FAKES: Record<string, string> = {
   "rev-parse HEAD" | "rev-parse origin/main") echo abc1234abc1234abc1234abc1234abc1234abc123 ;;
   *) ;;
 esac`,
-  docker: `echo "docker $*" >> "$FAKE_LOG"`,
+  // `docker inspect --format '{{.Image}}' <container>` answers the image the container runs.
+  docker: `echo "docker $*" >> "$FAKE_LOG"; [ "$1" = "inspect" ] && echo "sha256:run-$4"; exit 0`,
   curl: `echo "curl" >> "$FAKE_LOG"; echo '{"status":"ok","db":"up"}'`,
   sleep: `:`,
   // The browser check before the build, and `npx playwright test --grep @smoke` after it.
@@ -123,7 +124,7 @@ describe("scripts/release.sh", () => {
     const docker = join(work, "bin", "docker");
     writeFileSync(
       docker,
-      `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\n[ "$1 $2 $3" = "image inspect --format" ] && echo "${revision}"\nexit 0\n`,
+      `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\n[ "$1 $2 $3" = "image inspect --format" ] && echo "${revision}"\n[ "$1" = "inspect" ] && echo "sha256:run-$4"\nexit 0\n`,
     );
     chmodSync(docker, 0o755);
   }
@@ -178,11 +179,22 @@ describe("scripts/release.sh", () => {
     );
   });
 
+  it("after the start, tags the image each container runs as latest", () => {
+    const run = release("ok", ["--plugin", "enablebanking"]);
+    expect(run.status).toBe(0);
+    const at = (call: string) => run.calls.indexOf(call);
+    const tag = "docker tag sha256:run-ledgerly-plugin-enablebanking ledgerly-plugin-enablebanking:latest";
+    expect(at(tag)).toBeGreaterThan(
+      at("docker compose up -d --wait ledgerly ledgerly-web ledgerly-plugin-enablebanking"),
+    );
+    expect(run.calls).toContain("docker tag sha256:run-ledgerly ledgerly:latest");
+  });
+
   it("keeps no image for a service deployed for the first time, and goes on", () => {
     const docker = join(work, "bin", "docker");
     writeFileSync(
       docker,
-      `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\n[ "$1 $2" = "image inspect" ] && [ "$3" = "ledgerly-plugin-enablebanking:latest" ] && exit 1\nexit 0\n`,
+      `#!/bin/sh\necho "docker $*" >> "$FAKE_LOG"\n[ "$1 $2" = "image inspect" ] && [ "$3" = "ledgerly-plugin-enablebanking:latest" ] && exit 1\n[ "$1" = "inspect" ] && echo "sha256:run-$4"\nexit 0\n`,
     );
     chmodSync(docker, 0o755);
     const run = release("ok", ["--plugin", "enablebanking"]);

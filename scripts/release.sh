@@ -172,6 +172,15 @@ if [ -n "${to_build# }" ]; then
 fi
 # shellcheck disable=SC2086
 docker compose up -d --wait $services || failed "the containers did not become healthy"
+# `:latest` names the image each container runs. With the containerd image store, a build of an
+# unchanged plugin gets a new image ID (its attestation changes) over the same platform manifest:
+# compose keeps the running container, and `:latest` would name an image no container uses — the
+# Docker cleanup removes it, and the next release has no `pre-<id>` image for that plugin.
+for service in $services; do
+  running=$(docker inspect --format '{{.Image}}' "$service") && [ -n "$running" ] ||
+    failed "the container $service is missing after the start"
+  docker tag "$running" "$service:latest" || failed "docker tag $service:latest failed"
+done
 # The worker runs the image `ledgerly` just started (rewrite plan R1); it starts after the
 # migrations, which `ledgerly` applies as it starts.
 docker compose up -d --wait --no-build --remove-orphans ledgerly-worker ||
