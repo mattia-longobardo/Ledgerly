@@ -1952,7 +1952,8 @@
       "bankBalance": "Il saldo cambia subito. Alla prossima lettura vale il saldo della banca.",
       "balance": {
         "change": "Saldo di «{account}»: da {before} a {after}.",
-        "unchanged": "Il saldo di «{account}» è stato scritto il {date} e comprende già questo giorno: non cambia."
+        "unchanged": "Il saldo di «{account}» è stato scritto il {date} e comprende già questo giorno: non cambia.",
+        "beforeOpening": "«{account}» parte dal saldo di apertura del {date}: un movimento di un giorno prima non entra nel saldo. Puoi spostare l'apertura dalla pagina del conto."
       },
       "saving": "Salvataggio…",
       "toasts": {
@@ -2951,12 +2952,20 @@
         "unreadable": "Ledgerly non riesce a leggere il file. Controlla che sia un file di testo CSV.",
         "invalid": "Controlla il file e le colonne.",
         "failed": "L'import non è riuscito. Riprova."
-      }
+      },
+      "beforeOpening": "{count, plural, one {# movimento è} other {# movimenti sono}} prima del saldo di apertura: il saldo non {count, plural, one {lo conta} other {li conta}}. Puoi spostare l'apertura dalla pagina del conto."
     },
     "stopped": {
       "title": "Questo conto non si aggiorna: {provider} non è attivo",
       "body": "Saldo e movimenti sono fermi al {date}. Scegli se attivare {provider} o rendere il conto a mano.",
       "fix": "Sistema in {provider}"
+    },
+    "beforeOpening": {
+      "title": "{count, plural, one {# movimento è} other {# movimenti sono}} prima del saldo di apertura",
+      "body": "Il saldo parte dall'apertura del {opening} e non conta {count, plural, one {il movimento} other {i movimenti}} dal {first}. Se il conto è iniziato prima, sposta l'apertura: il saldo {count, plural, one {lo conterà} other {li conterà}}.",
+      "move": "Sposta l'apertura al {date}",
+      "moved": "Apertura spostata al {date}",
+      "failed": "Non è stato possibile spostare l'apertura. Riprova."
     }
   },
   "budgets": {

@@ -1,7 +1,7 @@
 // The calls of the accounts' forms to `/api/v1` (rewrite plan R3): each keeps the name and the answer of
 // the Server Action it replaces — `{ ok }` or the use case's code — so a form reads one shape whatever
 // sent it. An amount is typed in the person's number format and travels as a plain decimal.
-import { accounts, accountSwitch, balances, links, summary } from "@ledgerly/api-contract/accounts";
+import { accounts, accountSwitch, balances, links, summary, views } from "@ledgerly/api-contract/accounts";
 import { profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
@@ -95,6 +95,28 @@ export function updateBalanceEntryAction(accountId: string, entryId: string, inp
   return entryWrite(input, (body) =>
     call(balances.updateBalanceEntry, { params: { id: accountId, entryId }, body }),
   );
+}
+
+/**
+ * «Move the opening» (PERS-678): the opening balance as the person recorded it, dated `moveTo` — the
+ * day before the first movement it left out — so the balance counts those movements.
+ */
+export function moveOpeningAction(
+  accountId: string,
+  opening: { id: string; balance: string; available: string | null; note: string | null },
+  moveTo: string,
+) {
+  const body = { on: moveTo, balance: opening.balance, available: opening.available, note: opening.note };
+  return writing(async () => {
+    await call(balances.updateBalanceEntry, { params: { id: accountId, entryId: opening.id }, body });
+    await invalidate(
+      balances.getAccountBalances,
+      views.getNetWorth,
+      views.getAccountDailyBalances,
+      views.getAccountContext,
+      accounts.getAccount,
+    );
+  });
 }
 
 export function deleteBalanceEntryAction(accountId: string, entryId: string) {

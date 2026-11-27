@@ -677,7 +677,7 @@ describe("rebuildDerivedBalances", () => {
 
   it("writes the month ends before the first reading, and nothing new when it runs again", async () => {
     const accountId = await aSyncedAccount();
-    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3, beforeOpening: new Map() });
     const first = await rebuilt(accountId);
     expect(first).toEqual([
       ["2026-08-31", 520_000n],
@@ -685,7 +685,7 @@ describe("rebuildDerivedBalances", () => {
       ["2026-06-30", 310_000n],
     ]);
 
-    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3, beforeOpening: new Map() });
     expect(await rebuilt(accountId)).toEqual(first);
 
     // The chart stands on them, and says so; September is the real reading.
@@ -764,14 +764,14 @@ describe("rebuildDerivedBalances", () => {
       ...CHECKING,
       openingBalance: { on: "2026-01-10", cents: 1n },
     });
-    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 0 });
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 0, beforeOpening: new Map() });
     expect((await listBalanceEntries(ctx, account.id)).map((entry) => entry.source)).toEqual(["manual"]);
   });
 
   it("rebuilds nobody else's accounts", async () => {
     await aSyncedAccount();
     const other = await newContext();
-    expect(await rebuildDerivedBalances(other)).toEqual({ written: 0 });
+    expect(await rebuildDerivedBalances(other)).toEqual({ written: 0, beforeOpening: new Map() });
   });
 
   it("leaves the account of a provider with no movements alone (investments.md §1.7)", async () => {
@@ -791,7 +791,7 @@ describe("rebuildDerivedBalances", () => {
       provider: WALLET_PROVIDER,
     });
 
-    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
+    expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3, beforeOpening: new Map() });
     expect(await rebuilt(binance!.account.id)).toEqual([]);
     expect(await rebuilt(walletId)).toHaveLength(3);
   });

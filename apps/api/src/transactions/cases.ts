@@ -22,6 +22,9 @@ export interface ManualMovement {
   note: string;
 }
 
+/** The manual movements a write leaves before an account's opening (PERS-678): how many, the earliest day. */
+type BeforeOpening = { count: number; first: CivilDate } | null;
+
 export type EditOutcome =
   { state: "saved" | "unchanged" | "not_linked" } | { state: "refused" | "failed"; reason: string };
 
@@ -49,16 +52,29 @@ export interface TransactionCases {
       source?: { name: string; waiting: boolean };
     }[]
   >;
+  /** `opening`: the reading that holds the movement is the first of an account «a mano» (PERS-678). */
   previewManual(
     ctx: Ctx,
     input: { kind: Kind; amountCents: Cents; on: CivilDate; accountId: string; editingId?: string },
-  ): Promise<{ account: string; effect: Effect } | null>;
-  createManual(ctx: Ctx, movement: ManualMovement, key: string): Promise<{ id: string; created: boolean }>;
-  updateManual(ctx: Ctx, id: string, movement: ManualMovement): Promise<{ id: string }>;
+  ): Promise<{ account: string; effect: Effect; opening: boolean } | null>;
+  createManual(
+    ctx: Ctx,
+    movement: ManualMovement,
+    key: string,
+  ): Promise<{ id: string; created: boolean; beforeOpening: BeforeOpening }>;
+  updateManual(
+    ctx: Ctx,
+    id: string,
+    movement: ManualMovement,
+  ): Promise<{ id: string; beforeOpening: BeforeOpening }>;
   deleteManual(ctx: Ctx, id: string): Promise<void>;
   retrySend(ctx: Ctx, id: string): Promise<{ sent: boolean }>;
   /** Hide, restore or delete with the balance of the manual movements' accounts rebuilt. */
-  changeVisibility(ctx: Ctx, ids: readonly string[], change: "hide" | "restore" | "delete"): Promise<number>;
+  changeVisibility(
+    ctx: Ctx,
+    ids: readonly string[],
+    change: "hide" | "restore" | "delete",
+  ): Promise<{ count: number; beforeOpening: BeforeOpening }>;
   /** A pass of the categorisation after new labels; `train` when the default groups were just made. */
   learn(ctx: Ctx, train: boolean): Promise<void>;
 }

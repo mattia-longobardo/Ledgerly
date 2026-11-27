@@ -4,7 +4,15 @@
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { amountInput, civilDate, id, money } from "../primitives";
-import { ACCOUNT_ERRORS, ACCOUNT_ID, BALANCE_ENTRY_EXAMPLE, balanceEntry, delta, ENTRY_ID } from "./shared";
+import {
+  ACCOUNT_ERRORS,
+  ACCOUNT_ID,
+  BALANCE_ENTRY_EXAMPLE,
+  balanceEntry,
+  beforeOpening,
+  delta,
+  ENTRY_ID,
+} from "./shared";
 
 /** The most entries one read gives, and how many when the caller does not say. */
 const MAX_BALANCES = 200;
@@ -98,16 +106,18 @@ export const updateBalanceEntry = defineRoute({
   path: "/accounts/{id}/balances/{entryId}",
   scope: "write",
   capability: "accounts",
-  summary: "Corrects a balance a person recorded; any other source is `conflict`.",
+  summary:
+    "Corrects a balance a person recorded; any other source is `conflict`. Moved earlier, it moves the " +
+    "account's opening day back with it. `beforeOpening`: the manual movements left before the first balance.",
   actions: [],
   params: byEntry,
   body: entryInput,
-  response: balanceEntry,
+  response: balanceEntry.extend({ beforeOpening }),
   errors: ACCOUNT_ERRORS,
   example: {
     params: { id: ACCOUNT_ID, entryId: ENTRY_ID },
     body: ENTRY_INPUT_EXAMPLE,
-    response: BALANCE_ENTRY_EXAMPLE,
+    response: { ...BALANCE_ENTRY_EXAMPLE, beforeOpening: null },
   },
 });
 

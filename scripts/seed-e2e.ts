@@ -34,7 +34,7 @@ import {
 } from "../tests/e2e/_shared/env";
 import { totpCode } from "../tests/e2e/_shared/totp";
 import { cookieHeader, createTestUsers, drawPassword } from "./seed-e2e/users";
-import { seedCurrency, seedSwitching } from "./seed-e2e/accounts";
+import { seedBeforeOpening, seedCurrency, seedSwitching } from "./seed-e2e/accounts";
 import { seedBudgets } from "./seed-e2e/budgets";
 import { seedHistory, seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
 import { seedPreviewPlugins, seedPreviewRates } from "./seed-e2e/common";
@@ -229,6 +229,7 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [["pluginsGone"], seedPluginsGone],
   [["pluginsJourney"], seedPluginsJourney],
   [["currency"], seedCurrency],
+  [["beforeOpening"], seedBeforeOpening],
 ];
 
 const REGION = {

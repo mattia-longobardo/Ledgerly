@@ -23,6 +23,7 @@ function changed(): void {
     spending.getSpendingSeries,
     review.getReview,
     views.getNetWorth,
+    views.getAccountContext,
     categoryBoard.getCategoriesBoard,
   );
 }
@@ -118,6 +119,7 @@ export const MANUAL_CALLS: Required<ManualCommands> = {
         kind: "unchanged",
         account: preview.account,
         date: formatDate(preview.readingOn, "long", prefs.locale),
+        opening: preview.opening,
       };
     }
     const style = numberStyle(prefs);

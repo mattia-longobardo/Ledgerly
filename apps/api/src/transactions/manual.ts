@@ -74,6 +74,7 @@ export function serveManual(app: Hono<ApiEnv>, guard: Guard, cases: TransactionC
           kind: "unchanged" as const,
           account: preview.account,
           readingOn: preview.effect.readingOn,
+          opening: preview.opening,
         },
       };
     }
@@ -95,7 +96,7 @@ export function serveManual(app: Hono<ApiEnv>, guard: Guard, cases: TransactionC
   serve(app, guard, manual.updateManualMovement, async ({ ctx, params, body }) => {
     const movement = movementOf(body);
     const saved = await refusing(cases.updateManual(ctx, params.id, movement));
-    return { id: saved.id, created: false, on: movement.on, accountId: movement.accountId };
+    return { ...saved, created: false, on: movement.on, accountId: movement.accountId };
   });
   serve(app, guard, manual.deleteManualMovement, ({ ctx, params }) =>
     refusing(cases.deleteManual(ctx, params.id)),

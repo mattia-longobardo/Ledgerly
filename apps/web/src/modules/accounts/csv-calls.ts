@@ -31,6 +31,7 @@ function changed(): void {
     views.getNetWorth,
     views.getNetWorthDaily,
     views.getAccountDailyBalances,
+    views.getAccountContext,
     categoryBoard.getCategoriesBoard,
   );
 }

@@ -9,9 +9,12 @@ import { getAccount, listAccounts, movementBasis } from "@ledgerly/domain/accoun
 import {
   type AccountMode,
   accountMode,
+  type BeforeOpening,
+  joinedBeforeOpening,
   MANUAL_MOVEMENT_MODES,
   type MovementEffect,
   movementEffect,
+  movementsBeforeOpening,
 } from "@ledgerly/domain/accounts";
 import { rebuildDerivedBalances } from "@ledgerly/domain/accounts";
 import {
@@ -204,6 +207,15 @@ async function requireManualAccount(
   return { id: account.id, toSend: mode === "two_way" };
 }
 
+/** The manual movements left before the opening of the accounts a write rebuilt (PERS-678). */
+type LeftBefore = Pick<BeforeOpening, "count" | "first"> | null;
+
+/** Rebuilds the balance after a change of manual movements, and says what it left before the opening. */
+async function rebuildAfterManual(ctx: ManualCtx, accountIds: readonly string[]): Promise<LeftBefore> {
+  const { beforeOpening } = await rebuildDerivedBalances(ctx, accountIds, { manualChanged: true });
+  return joinedBeforeOpening(beforeOpening.values());
+}
+
 /**
  * Writes a manual movement and the balance after it. The same key sent twice writes once. On a
  * "read and write" account the movement waits for the next update of its source (N3.1).
@@ -212,27 +224,31 @@ export async function createManual(
   ctx: ManualCtx,
   input: unknown,
   idempotencyKey?: string,
-): Promise<{ transaction: Transaction; created: boolean }> {
+): Promise<{ transaction: Transaction; created: boolean; beforeOpening: LeftBefore }> {
   const account = await requireManualAccount(ctx, input);
   const result = await createManualTransaction(ctx, input, idempotencyKey, { toSend: account.toSend });
-  if (result.created) await rebuildDerivedBalances(ctx, [account.id], { manualChanged: true });
-  return result;
+  const beforeOpening = result.created ? await rebuildAfterManual(ctx, [account.id]) : null;
+  return { ...result, beforeOpening };
 }
 
 /** Changes a manual movement and corrects the balance of the account, and of the one it left. */
-export async function updateManual(ctx: ManualCtx, id: string, input: unknown): Promise<Transaction> {
+export async function updateManual(
+  ctx: ManualCtx,
+  id: string,
+  input: unknown,
+): Promise<{ transaction: Transaction; beforeOpening: LeftBefore }> {
   const account = await requireManualAccount(ctx, input);
   const { transaction, previousAccountId } = await updateManualTransaction(ctx, id, input, {
     toSend: account.toSend,
   });
-  await rebuildDerivedBalances(ctx, [...new Set([account.id, previousAccountId])], { manualChanged: true });
-  return transaction;
+  const beforeOpening = await rebuildAfterManual(ctx, [...new Set([account.id, previousAccountId])]);
+  return { transaction, beforeOpening };
 }
 
 /** Deletes a manual movement and takes it out of the balance. */
 export async function deleteManual(ctx: ManualCtx, id: string): Promise<void> {
   const { accountId } = await deleteManualTransaction(ctx, id);
-  await rebuildDerivedBalances(ctx, [accountId], { manualChanged: true });
+  await rebuildAfterManual(ctx, [accountId]);
 }
 
 /**
@@ -243,7 +259,7 @@ export async function changeVisibility(
   ctx: ManualCtx,
   ids: readonly string[],
   change: "hide" | "restore" | "delete",
-): Promise<number> {
+): Promise<{ count: number; beforeOpening: LeftBefore }> {
   const rows = await transactionsByIds(ctx, [...ids]);
   const accounts = [
     ...new Set([...rows.values()].filter((row) => row.origin === "manual").map((row) => row.accountId)),
@@ -254,8 +270,8 @@ export async function changeVisibility(
       : change === "restore"
         ? await restoreTransactions(ctx, ids)
         : await deleteHiddenTransactions(ctx, ids);
-  if (count > 0 && accounts.length > 0) await rebuildDerivedBalances(ctx, accounts, { manualChanged: true });
-  return count;
+  const beforeOpening = count > 0 && accounts.length > 0 ? await rebuildAfterManual(ctx, accounts) : null;
+  return { count, beforeOpening };
 }
 
 /** What the dialog asks about before it saves. */
@@ -275,17 +291,19 @@ interface ManualPreviewInput {
 export async function previewManual(
   ctx: ManualCtx,
   input: ManualPreviewInput,
-): Promise<{ account: string; effect: MovementEffect } | null> {
+): Promise<{ account: string; effect: MovementEffect; opening: boolean } | null> {
   const account = await getAccount(ctx, input.accountId);
   if (!account) return null;
-  const [basis, manual] = await Promise.all([
+  const [basis, manual, modes] = await Promise.all([
     movementBasis(ctx, [account.id]),
     manualMovementsByAccount(ctx, [account.id]),
+    modesOf([account]),
   ]);
   const all = manual.get(account.id) ?? [];
   const editing = all.find((movement) => movement.id === input.editingId);
+  const readings = basis.get(account.id)?.readings ?? [];
   const effect = movementEffect(
-    basis.get(account.id)?.readings ?? [],
+    readings,
     all,
     {
       on: input.on,
@@ -296,5 +314,11 @@ export async function previewManual(
     today(ctx.timeZone),
     editing,
   );
-  return { account: account.name, effect };
+  // PERS-678: the reading that «holds» the movement is the opening of an account «a mano», which
+  // may mean «the account starts here». A source's first reading does hold what came before it.
+  const opening =
+    effect.kind === "unchanged" &&
+    modes.get(account) === "manual" &&
+    movementsBeforeOpening(readings, [{ on: input.on }]) !== null;
+  return { account: account.name, effect, opening };
 }

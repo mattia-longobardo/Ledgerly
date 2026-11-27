@@ -308,6 +308,27 @@ export const getAccountContext = defineRoute({
       .nullable(),
     /** With no open switch: `offer` it can move to a connected bank, `connect_first` no bank yet, `none` not at all. */
     switchOffer: z.enum(SWITCH_OFFERS),
+    /**
+     * An account «a mano» only (PERS-678): its manual movements dated before its first balance, which
+     * the balance leaves out. `opening` is that balance when a person recorded it: «Move the opening»
+     * sends it back to `PUT /accounts/{id}/balances/{entryId}` dated `moveTo`, the day before `first`.
+     */
+    beforeOpening: z
+      .object({
+        count: z.number().int(),
+        first: civilDate(),
+        moveTo: civilDate(),
+        opening: z
+          .object({
+            id: id(),
+            on: civilDate(),
+            balance: money(),
+            available: money().nullable(),
+            note: z.string().nullable(),
+          })
+          .nullable(),
+      })
+      .nullable(),
   }),
   errors: ["invalid", "not_found"],
   example: {
@@ -322,6 +343,7 @@ export const getAccountContext = defineRoute({
       interestRules: [{ id: ACCOUNT_ID, tiers: [{ upTo: null, annualRate: "0.0275" }] }],
       switch: null,
       switchOffer: "none",
+      beforeOpening: null,
     },
   },
 });

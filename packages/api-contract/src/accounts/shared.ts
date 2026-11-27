@@ -2,7 +2,7 @@
 // vocabularies of the wire and one DTO per resource, used by the REST route and by its MCP tool
 // alike (audit ACC-5, API-2). No route is declared here.
 import { z } from "zod";
-import { id, instant, money } from "../primitives";
+import { civilDate, id, instant, money } from "../primitives";
 
 // The vocabularies are the domain's (`@ledgerly/domain/accounts`, `rules.ts`): the contract imports
 // zod only (10-modularity.md §10.2), so `tools/contract.test.ts` holds the two lists equal.
@@ -106,6 +106,13 @@ export const balanceEntry = z.object({
  * unknown gives `amount: null`; an earlier value of zero gives `fraction: null`.
  */
 export const delta = z.object({ amount: money().nullable(), fraction: z.number().nullable() });
+
+/**
+ * The manual movements of an account «a mano» dated before its first balance, the opening
+ * (PERS-678): its balance leaves them out, as the opening holds them. `first` is the earliest day.
+ * Null with none. A write that leaves some there says so in its answer.
+ */
+export const beforeOpening = z.object({ count: z.number().int(), first: civilDate() }).nullable();
 
 export const BALANCE_ENTRY_EXAMPLE = {
   id: ENTRY_ID,

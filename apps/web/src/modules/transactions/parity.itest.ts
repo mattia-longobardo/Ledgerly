@@ -161,12 +161,12 @@ describe("transactions, old Server Action = new call", () => {
 
     for (const change of ["hide", "restore", "hide"] as const) {
       await manualCases.changeVisibility(ctx, [oldId], change);
-      expect((await visibility(change, true)).body).toEqual({ count: 1 });
+      expect((await visibility(change, true)).body).toEqual({ count: 1, beforeOpening: null });
       expect(await rowsOf(now)).toEqual(await rowsOf(old));
       expect(await balanceOf(now)).toBe(await balanceOf(old));
     }
     await manualCases.changeVisibility(ctx, [oldId], "delete");
-    expect((await visibility("delete", true)).body).toEqual({ count: 1 });
+    expect((await visibility("delete", true)).body).toEqual({ count: 1, beforeOpening: null });
     expect(await rowsOf(now)).toEqual(await rowsOf(old));
     expect(await balanceOf(now)).toBe(await balanceOf(old));
   });

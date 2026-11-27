@@ -10,7 +10,7 @@ import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 type Wire<T extends z.ZodType> = z.input<T>;
 type Detail = Wire<typeof ACCOUNTS.accounts.getAccount.response>;
 type Row = Wire<typeof ACCOUNTS.accounts.listAccounts.response>["accounts"][number];
-type Entry = Wire<typeof ACCOUNTS.balances.updateBalanceEntry.response>;
+type Entry = Omit<Wire<typeof ACCOUNTS.balances.updateBalanceEntry.response>, "beforeOpening">;
 type Snapshot = Wire<typeof ACCOUNTS.summary.listSnapshots.response>["snapshots"][number];
 type ViewRow = Wire<typeof ACCOUNTS.views.getNetWorth.response>["accounts"][number];
 

@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { amountInput, civilDate, id, money } from "../primitives";
+import { beforeOpening } from "../accounts/shared";
 import {
   ACCOUNT_ID,
   byTransaction,
@@ -221,7 +222,8 @@ export const changeTransactionsVisibility = defineRoute({
   summary:
     "Hides, restores or deletes for good (hidden rows only) a selection, and rebuilds the balance of " +
     "each manual movement's account. `rebuildBalances` is accepted and has no effect: the balance is " +
-    "always rebuilt. A synced row deleted is never imported again.",
+    "always rebuilt. A synced row deleted is never imported again. `beforeOpening`: the manual movements " +
+    "of those accounts left before their first balance.",
   actions: [],
   body: z.object({
     ids: selection(MAX_SELECTION),
@@ -229,9 +231,12 @@ export const changeTransactionsVisibility = defineRoute({
     /** No effect since 0.42.0: every action rebuilds the balances. Kept so no client breaks. */
     rebuildBalances: z.boolean(),
   }),
-  response: changed,
+  response: changed.extend({ beforeOpening }),
   errors: TRANSACTION_ERRORS,
-  example: { body: { ids: [TRANSACTION_ID], change: "hide", rebuildBalances: true }, response: { count: 1 } },
+  example: {
+    body: { ids: [TRANSACTION_ID], change: "hide", rebuildBalances: true },
+    response: { count: 1, beforeOpening: null },
+  },
 });
 
 export const editAtSource = defineRoute({

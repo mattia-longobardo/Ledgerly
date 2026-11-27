@@ -159,9 +159,9 @@ function serveWrites(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): 
     return { count };
   });
   // Every action rebuilds the balance of a manual movement's account; `rebuildBalances` is read no more.
-  serve(app, guard, movements.changeTransactionsVisibility, async ({ ctx, body }) => ({
-    count: await refusing(cases.changeVisibility(ctx, body.ids, body.change)),
-  }));
+  serve(app, guard, movements.changeTransactionsVisibility, ({ ctx, body }) =>
+    refusing(cases.changeVisibility(ctx, body.ids, body.change)),
+  );
 }
 
 function serveOne(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): void {

@@ -23,6 +23,7 @@ export type { ProviderBalanceInput } from "./balances";
 export {
   reconstructedBalances,
   accountReconstructedBalances,
+  beforeOpeningOf,
   rebuildDerivedBalances,
   replacePortfolioPoints,
   openedNoLaterThan,

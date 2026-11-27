@@ -24,12 +24,14 @@ export {
   hasIbanField,
   isFutureDate,
   isStale,
+  joinedBeforeOpening,
   movementEffect,
+  movementsBeforeOpening,
   shareOf,
   stepsOf,
   windowChangeOf,
 } from "./rules";
-export type { AccountMode, Change, MovementEffect } from "./rules";
+export type { AccountMode, BeforeOpening, Change, MovementEffect } from "./rules";
 export {
   AccountError,
   accountReconstructedBalances,
@@ -38,6 +40,7 @@ export {
   addConnection,
   applyProviderAccounts,
   archiveAccount,
+  beforeOpeningOf,
   connectionsOf,
   createAccount,
   dailyNetWorth,
