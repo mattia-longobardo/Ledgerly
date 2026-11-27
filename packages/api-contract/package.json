@@ -1,6 +1,6 @@
 {
   "name": "@ledgerly/api-contract",
-  "version": "0.85.2",
+  "version": "0.86.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
