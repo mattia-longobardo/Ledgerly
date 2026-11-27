@@ -37,7 +37,7 @@ const routes = apiRoutes({
     context.set("ctx", session);
     await next();
   },
-  investments: { queueSync: async () => {}, queueFirstFlows: async () => {} },
+  investments: { queueSync: async () => {}, queueFirstFlows: async () => {}, queuePrices: async () => {} },
 });
 
 // `call` of the API client reaches the routes as the browser would, under `/api/v1`.

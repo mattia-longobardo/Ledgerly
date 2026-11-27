@@ -53,7 +53,7 @@ import { activityOut, homeOut, movementsOut, overviewOut } from "./pages";
 import { catalogOut, connectionOut, positionsOut } from "./tabs";
 import { fundsListOut, portfolioOut } from "./portfolio";
 import { servePlans } from "./plan-routes";
-import { operationInput, servePortfolio, writeOperation } from "./portfolio-routes";
+import { operationInput, readNewMarkets, servePortfolio, writeOperation } from "./portfolio-routes";
 import { decimal, notFound, refusing } from "./refusals";
 
 const { investments, register, connection } = INVESTMENTS;
@@ -67,6 +67,8 @@ export interface InvestmentCases {
   queueSync(ctx: Ctx, connectionId: string): Promise<void>;
   /** The first flows of a new connection, read after the answer (`tasks.firstFlows`). */
   queueFirstFlows(ctx: Ctx, connectionId: string, accountId: string): Promise<void>;
+  /** The daily prices, now: a market just entered a portfolio (`tasks.job("instrument-prices")`). */
+  queuePrices(ctx: Ctx): Promise<void>;
 }
 
 /** A page of events, with the plan of each purchase a plan wrote (R5d). */
@@ -205,7 +207,7 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
   });
 }
 
-function serveRegister(app: Hono<ApiEnv>, guard: Guard): void {
+function serveRegister(app: Hono<ApiEnv>, guard: Guard, cases: InvestmentCases): void {
   serve(app, guard, register.createManualService, async ({ ctx, body }) =>
     refusing(() => {
       if ("kind" in body) {
@@ -232,6 +234,7 @@ function serveRegister(app: Hono<ApiEnv>, guard: Guard): void {
         recordOperation(ctx, params.accountId, operationInput(input)),
       ),
     );
+    if (body.kind === "buy") await readNewMarkets(ctx, params.accountId, cases);
     return { id: eventId };
   });
   serve(app, guard, register.deleteOperation, async ({ ctx, params }) => {
@@ -304,9 +307,9 @@ export function serveInvestments(
 ): readonly RouteContract[] {
   serveReads(app, guard);
   serveTabs(app, guard);
-  serveRegister(app, guard);
+  serveRegister(app, guard, cases);
   serveConnection(app, guard, cases);
-  servePortfolio(app, guard);
+  servePortfolio(app, guard, cases);
   servePlans(app, guard);
   return INVESTMENTS_ROUTES;
 }

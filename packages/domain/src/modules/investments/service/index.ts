@@ -35,7 +35,7 @@ export {
 export type { ManualServiceInput, ServiceValueInput } from "./services";
 export { convertToPortfolio, createPortfolio, createPortfolioWithAccount, isPortfolio } from "./portfolio";
 export type { ConversionInput, PortfolioInput } from "./portfolio";
-export { assetPrices, pricedMarkets, revalueAfterPrices, setPriceMode } from "./prices";
+export { assetPrices, hasUnpricedMarket, pricedMarkets, revalueAfterPrices, setPriceMode } from "./prices";
 export type { AssetPrice } from "./prices";
 export { assetInputSchema, createAsset, ensureAssetSeed } from "./assets";
 export type { AssetInput } from "./assets";

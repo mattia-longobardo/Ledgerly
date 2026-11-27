@@ -17,14 +17,25 @@ const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition"
 const { apiRoutes } = await import("@ledgerly/api");
 const { refreshPrices, searchInstruments } = await import("@ledgerly/domain/instruments");
 const { createAccount } = await import("@domain/modules/accounts/service");
-const { runDuePlans } = await import("@ledgerly/domain/investments");
+const { pricedMarkets, revalueAfterPrices, runDuePlans } = await import("@ledgerly/domain/investments");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the answers are read as JSON
 type Json = any;
 
+/** The first reads of a market the routes queued (PERS-694); `queueFails`: the queue is down. */
+let queuedPrices = 0;
+let queueFails = false;
+
 async function send(ctx: Ctx, method: string, path: string, body?: unknown) {
   const routes = apiRoutes({
     ...adapters,
+    investments: {
+      ...adapters.investments,
+      async queuePrices() {
+        if (queueFails) throw new Error("queue down");
+        queuedPrices += 1;
+      },
+    },
     guard: () => async (context, next) => {
       context.set("ctx", ctx);
       await next();
@@ -62,6 +73,8 @@ beforeEach(async () => {
   alice = contextFor((await createTestUser()).id);
   signedIn = alice;
   todayOn = today(alice.timeZone);
+  queuedPrices = 0;
+  queueFails = false;
   instrumentId = (await searchInstruments(ISIN, { fetch: REGISTERS, priceSourceId: null })).items[0]
     .instrumentId;
 });
@@ -571,5 +584,90 @@ describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
     expect((await send(alice, "GET", base)).body).toEqual({ accountId: made.body.accountId, plans: [] });
     const unknown = "00000000-0000-4000-8000-000000000000";
     expect((await send(alice, "GET", `/investments/${unknown}/plans`)).status).toBe(404);
+  });
+});
+
+describe("the first price of a market just entered (PERS-694)", () => {
+  /** An instrument whose market the instance's source of prices reads. */
+  async function pricedInstrument(): Promise<string> {
+    const registers = (async (input: string | URL | Request) => {
+      const answer = await REGISTERS(input);
+      const text = (await answer.text()).replace("BBG000000001", "BBG000000003");
+      return new Response(text.replace('"EXA"', '"EXB"').replace("Example ETF", "Other ETF"));
+    }) as typeof globalThis.fetch;
+    const [hit] = (await searchInstruments("US5949181045", { fetch: registers, priceSourceId: "prices" }))
+      .items;
+    return hit.instrumentId;
+  }
+
+  /** A portfolio with money in, and the operations' path. */
+  async function funded(): Promise<{ accountId: string; ops: string }> {
+    const accountId = await portfolio();
+    const ops = `/investments/${accountId}/operations`;
+    await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1000.00" });
+    return { accountId, ops };
+  }
+
+  /** What the queued `instrument-prices` does, with a fake source: every close at 50 today. */
+  async function runPricesJob(): Promise<void> {
+    const run = await refreshPrices({
+      source: {
+        id: "prices",
+        closes: async (request) => ({
+          bars: request.listings.map((one) => ({ key: one.key, on: todayOn, close: "50", currency: "EUR" })),
+          errors: [],
+        }),
+      },
+      markets: await pricedMarkets(alice),
+      today: todayOn,
+      cap: 10,
+    });
+    await revalueAfterPrices(alice, run);
+  }
+
+  it("queues the read of a new market once, and none for a market already priced", async () => {
+    const { accountId, ops } = await funded();
+    const pricedId = await pricedInstrument();
+    expect((await send(alice, "POST", ops, { ...buy("1", "40"), instrumentId: pricedId })).status).toBe(201);
+    expect(queuedPrices).toBe(1);
+    await runPricesJob();
+    const holdings = await send(alice, "GET", `/investments/${accountId}/holdings`);
+    expect(holdings.body.holdings[0]).toMatchObject({
+      value: "50.00",
+      asset: { price: { mode: "auto", on: todayOn } },
+    });
+    expect((await send(alice, "POST", ops, { ...buy("1", "40"), instrumentId: pricedId })).status).toBe(201);
+    expect(queuedPrices).toBe(1);
+    // A market no source reads has no read to queue.
+    expect(await send(alice, "POST", ops, buy("1", "40"))).toMatchObject({
+      status: 201,
+      body: { id: expect.any(String) },
+    });
+    expect(queuedPrices).toBe(1);
+  });
+
+  it("queues the read when an edit moves a purchase to a new market", async () => {
+    const { ops } = await funded();
+    const bought = await send(alice, "POST", ops, buy("1", "40"));
+    expect(queuedPrices).toBe(0);
+    const pricedId = await pricedInstrument();
+    const edited = await send(alice, "PATCH", `${ops}/${bought.body.id}`, {
+      ...buy("1", "40"),
+      instrumentId: pricedId,
+    });
+    expect(edited).toMatchObject({ status: 204, body: null });
+    expect(queuedPrices).toBe(1);
+  });
+
+  it("keeps the purchase when the read cannot be queued: the daily job reads it", async () => {
+    const { accountId, ops } = await funded();
+    queueFails = true;
+    const bought = await send(alice, "POST", ops, {
+      ...buy("1", "40"),
+      instrumentId: await pricedInstrument(),
+    });
+    expect(bought.status).toBe(201);
+    const activity = await send(alice, "GET", `/investments/${accountId}/activity?period=all`);
+    expect(activity.body.rows.map((row: Json) => row.id)).toContain(bought.body.id);
   });
 });
