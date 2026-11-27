@@ -61,9 +61,9 @@ describe("the steps of a bank, old action = new call", () => {
     expect(await viaRoute("GET", "/banks?country=IT")).toEqual(
       await old(cases.listBanks(ctx, "IT")).then((answer) => (answer.ok ? { ok: true } : answer)),
     );
-    // A reading of a connection that is not the person's: the old use case read nothing and said `ok`,
-    // the route says `not_found`. «Try again» reads the outcome page again whatever the answer.
-    expect(await old(cases.retryBankReading(ctx, missing, null))).toEqual({ ok: true });
+    // A reading of a connection that is not the person's: the use case says the reading was refused
+    // (no active bank plugin here), the route says `not_found` before it reads.
+    expect(await old(cases.retryBankReading(ctx, missing, null))).toEqual({ ok: false, error: "not_active" });
     expect(await viaRoute("POST", `/connections/${missing}/read`)).toEqual({ ok: false, error: "not_found" });
     expect(await viaRoute("DELETE", `/connections/${missing}`)).toEqual(
       await old(cases.cancelBankConnection(ctx, missing)),
