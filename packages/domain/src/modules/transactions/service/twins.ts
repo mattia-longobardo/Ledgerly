@@ -1,7 +1,7 @@
 // modules/transactions/service/twins.ts — the other leg of a giroconto with a manual account
 // (PERS-733). An account no source reads never brings its leg, so the server writes it there: the
 // opposite amount, in the account's currency, at the same moment, paired at once. The written leg
-// follows the leg it was written for — its amount and day, and goes when that leg goes or stops
+// follows the leg it was written for — its amount, day, payee and note, and goes when that leg goes or stops
 // being a giroconto with that account — until the person changes it by hand: then it is theirs.
 // A leg the source stops returning keeps its twin: the mark is undone when the source sends it
 // again, and the deletion for good takes the twin with it (`twin_of` cascades).
@@ -23,6 +23,8 @@ const LEG = {
   occurredAt: transactions.occurredAt,
   amountCents: transactions.amountCents,
   currency: transactions.currency,
+  payee: transactions.payee,
+  note: transactions.note,
   type: transactions.type,
   transferGroupId: transactions.transferGroupId,
   transferAccountId: transactions.transferAccountId,
@@ -119,6 +121,8 @@ export async function writeTwin(ctx: WhoWhere, id: string): Promise<void> {
             occurredAt: leg.occurredAt,
             amountCents,
             currency: account.currency,
+            payee: leg.payee,
+            note: leg.note,
             type: "transfer" as const,
             origin: "manual" as const,
             twinOf: leg.id,
@@ -166,9 +170,17 @@ const follows = (leg: Leg, twin: { id: string; accountId: string; transferGroupI
     leg.transferGroupId === twin.id ||
     (leg.transferGroupId !== null && leg.transferGroupId === twin.transferGroupId));
 
+type Followed = { amountCents: Cents; occurredAt: Date; payee: string | null; note: string | null };
+
+const differs = (twin: Followed, follow: Followed) =>
+  follow.amountCents !== twin.amountCents ||
+  follow.occurredAt.getTime() !== twin.occurredAt.getTime() ||
+  follow.payee !== twin.payee ||
+  follow.note !== twin.note;
+
 /**
- * Keeps the written legs of `ids` (of every leg, without) in line with them: the amount and the
- * moment follow, the pair is made again after the leg left it to the same account, and the twin goes
+ * Keeps the written legs of `ids` (of every leg, without) in line with them: the amount, the
+ * moment, the payee and the note follow, the pair is made again after the leg left it to the same account, and the twin goes
  * when its leg went to another account or to none. A twin the person changed is no longer
  * one (`twinOf` is cleared by every change by hand) and is never touched here.
  */
@@ -181,6 +193,8 @@ export async function refreshTwins(ctx: WhoWhere, ids?: readonly string[]): Prom
       occurredAt: transactions.occurredAt,
       amountCents: transactions.amountCents,
       currency: transactions.currency,
+      payee: transactions.payee,
+      note: transactions.note,
       transferGroupId: transactions.transferGroupId,
       twinOf: transactions.twinOf,
     })
@@ -214,12 +228,12 @@ export async function refreshTwins(ctx: WhoWhere, ids?: readonly string[]): Prom
     // Without the rate of the new day the twin keeps the amount it has.
     const amountCents = (await oppositeIn(ctx, leg, twin.currency)) ?? twin.amountCents;
     const repair = leg.transferGroupId !== twin.id || twin.transferGroupId !== twin.id;
-    const moved = amountCents !== twin.amountCents || leg.occurredAt.getTime() !== twin.occurredAt.getTime();
-    if (!repair && !moved) continue;
+    const follow = { amountCents, occurredAt: leg.occurredAt, payee: leg.payee, note: leg.note };
+    if (!repair && !differs(twin, follow)) continue;
     await getDb().transaction(async (trx) => {
       const [kept] = await trx
         .update(transactions)
-        .set({ amountCents, occurredAt: leg.occurredAt, transferGroupId: twin.id })
+        .set({ ...follow, transferGroupId: twin.id })
         .where(and(untouched, userScoped(ctx).owns(transactions)))
         .returning({ id: transactions.id });
       if (kept && repair) await pairWithTwin(trx, ctx, leg, twin.id);

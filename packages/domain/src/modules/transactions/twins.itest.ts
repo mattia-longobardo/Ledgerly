@@ -277,6 +277,28 @@ describe("a giroconto written by hand", () => {
     expect(await balance(ctx, savings)).toBe(0n);
   });
 
+  it("gives the other leg the payee and the note of its leg, and follows them", async () => {
+    const ctx = await newContext();
+    const cash = await manualAccount(ctx, "Cash");
+    const savings = await manualAccount(ctx, "Savings");
+    const { transaction } = await createManualTransaction(
+      ctx,
+      manualMovement(cash, { transferAccountId: savings, payee: "Piggy bank", note: "June" }),
+    );
+    expect(await only(ctx, savings)).toMatchObject({ payee: "Piggy bank", note: "June" });
+
+    await updateManualTransaction(
+      ctx,
+      transaction.id,
+      manualMovement(cash, { transferAccountId: savings, payee: "Holiday fund", note: "July" }),
+    );
+    expect(await only(ctx, savings)).toMatchObject({
+      payee: "Holiday fund",
+      note: "July",
+      twinOf: transaction.id,
+    });
+  });
+
   it("deletes the other leg when the movement is changed into a spending", async () => {
     const ctx = await newContext();
     const cash = await manualAccount(ctx, "Cash");
