@@ -1,0 +1,3 @@
+ALTER TABLE "transactions" ADD COLUMN "twin_of" uuid;--> statement-breakpoint
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_twin_of_transactions_id_fk" FOREIGN KEY ("twin_of") REFERENCES "public"."transactions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "transactions_twin_of_uq" ON "transactions" USING btree ("twin_of") WHERE "transactions"."twin_of" is not null;

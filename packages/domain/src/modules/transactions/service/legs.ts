@@ -158,7 +158,7 @@ export async function writeLegs(
  * (decision 1) — free to pair with the bank's movement when it arrives.
  */
 export async function settleLegs(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   written: Pick<WrittenLegs, "touched" | "choices">,
 ): Promise<void> {
   for (const [id, choice] of written.choices) {

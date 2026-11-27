@@ -639,7 +639,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#1",
@@ -678,7 +679,8 @@
       "category_rule_id": null,
       "time_known": true,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#2",
@@ -717,7 +719,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#3",
@@ -756,7 +759,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#4",
@@ -795,7 +799,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#5",
@@ -834,7 +839,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#6",
@@ -873,7 +879,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#7",
@@ -912,7 +919,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#8",
@@ -951,7 +959,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#9",
@@ -990,7 +999,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#10",
@@ -1029,7 +1039,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#11",
@@ -1068,7 +1079,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     },
     {
       "id": "transactions#12",
@@ -1107,7 +1119,8 @@
       "category_rule_id": null,
       "time_known": false,
       "transfer_outside": false,
-      "transfer_account_id": null
+      "transfer_account_id": null,
+      "twin_of": null
     }
   ],
   "labels": [

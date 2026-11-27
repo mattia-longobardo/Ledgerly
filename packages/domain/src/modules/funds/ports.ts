@@ -26,7 +26,10 @@ interface CashLegs {
     account: { id: string; currency: string },
     wanted: readonly WantedLeg[],
   ): Promise<WrittenLegs>;
-  settleLegs(ctx: Pick<Ctx, "userId">, written: Pick<WrittenLegs, "touched" | "choices">): Promise<void>;
+  settleLegs(
+    ctx: Pick<Ctx, "userId" | "timeZone">,
+    written: Pick<WrittenLegs, "touched" | "choices">,
+  ): Promise<void>;
 }
 
 declare global {

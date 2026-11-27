@@ -23,26 +23,14 @@ import { retypeMovements } from "../macro";
 import { transactions, girocontoProposals } from "../schema";
 import { conversionFor } from "./conversion";
 import { TransactionError, parseId, requireTransaction } from "./guards";
+import { NO_CATEGORY, PAIRED_BY_HAND, withMarkers } from "./pairing-marks";
+import { refreshTwins, writeTwin } from "./twins";
+
+export { PAIRED_BY_HAND } from "./pairing-marks";
 
 type Who = Pick<Ctx, "userId">;
-
-/** The marker of a pair a person made or confirmed: no rule ever takes it apart or moves it. */
-export const PAIRED_BY_HAND = "transferGroupId";
-
-/** A giroconto has accounts, not a category: what a row loses when it becomes one. */
-const NO_CATEGORY = {
-  categoryId: null,
-  categoryOrigin: null,
-  categoryConfidence: null,
-  categoryModelVersion: null,
-  categoryReason: null,
-  categoryReasonParams: null,
-  categoryRuleId: null,
-  suggestedCategoryId: null,
-} as const;
-
-const withMarkers = (current: readonly string[], ...added: string[]) =>
-  [...new Set([...current, ...added])].sort();
+/** A choice of the person may write a leg on a manual account, and its balance: the day is the person's. */
+type WhoWhere = Pick<Ctx, "userId" | "timeZone">;
 
 /* Automatic pairing */
 
@@ -295,6 +283,13 @@ async function dropProposals(trx: Tx, ctx: Who, ids: readonly string[]): Promise
     );
 }
 
+/** The other account of a giroconto: one of the person's, not the movement's own. */
+export async function requireOtherAccount(ctx: Who, accountId: string, other: string | null): Promise<void> {
+  if (other === null) return;
+  const account = await getAccount(ctx, other);
+  if (!account || account.id === accountId) throw new TransactionError("invalid_reference");
+}
+
 /**
  * The other side of a giroconto (decision 9A), chosen by the person: one of their accounts — the
  * leg waits for its twin there, and is paired the moment one is unique —, an account outside
@@ -302,35 +297,33 @@ async function dropProposals(trx: Tx, ctx: Who, ids: readonly string[]): Promise
  * leaves it first; its partner goes back to "Scegli il conto". Every choice is the person's: the
  * `type` marker keeps it from the rules and from the source's next reading.
  */
-export async function chooseTransferSide(ctx: Who, id: string, input: unknown): Promise<void> {
+export async function chooseTransferSide(ctx: WhoWhere, id: string, input: unknown): Promise<void> {
   const transactionId = parseId(id);
   const side = transferSideSchema.parse(input);
   const row = await requireTransaction(ctx, transactionId);
-  if (side.kind === "account") {
-    const account = await getAccount(ctx, side.accountId);
-    if (!account || account.id === row.accountId) throw new TransactionError("invalid_reference");
-  }
+  if (side.kind === "account") await requireOtherAccount(ctx, row.accountId, side.accountId);
   const touched = await getDb().transaction(async (trx) => {
     const legs = await unpair(trx, ctx, row.transferGroupId);
     const [current] = await trx
       .select({ locallyEdited: transactions.locallyEdited })
       .from(transactions)
       .where(and(eq(transactions.id, transactionId), userScoped(ctx).owns(transactions)));
-    const locallyEdited = withMarkers(current!.locallyEdited, "type");
+    // A written leg the person chooses for is theirs from now on (`twinOf` cleared).
+    const mine = { locallyEdited: withMarkers(current!.locallyEdited, "type"), twinOf: null };
     const values =
       side.kind === "none"
         ? {
             type: row.amountCents < 0n ? ("expense" as const) : ("income" as const),
             transferOutside: false,
             transferAccountId: null,
-            locallyEdited,
+            ...mine,
           }
         : {
             ...NO_CATEGORY,
             type: "transfer" as const,
             transferOutside: side.kind === "outside",
             transferAccountId: side.kind === "account" ? side.accountId : null,
-            locallyEdited,
+            ...mine,
           };
     await trx
       .update(transactions)
@@ -340,7 +333,11 @@ export async function chooseTransferSide(ctx: Who, id: string, input: unknown): 
     await retypeMovements(trx, ctx);
     return [transactionId, ...legs];
   });
+  // Its written leg first: kept to the same account, gone for any other side (PERS-733).
+  await refreshTwins(ctx, touched);
   await linkOwnTransfers(ctx, touched);
+  // A leg that still waits for a manual account gets it written there.
+  if (side.kind === "account") await writeTwin(ctx, transactionId);
 }
 
 /**
@@ -348,7 +345,7 @@ export async function chooseTransferSide(ctx: Who, id: string, input: unknown): 
  * any two of the person's accounts — the amounts may differ, as in two currencies. Each leaves a
  * pair it was in. The pair carries {@link PAIRED_BY_HAND}, and no rule takes it apart.
  */
-export async function pairByHand(ctx: Who, firstId: string, secondId: string): Promise<void> {
+export async function pairByHand(ctx: WhoWhere, firstId: string, secondId: string): Promise<void> {
   const [firstLeg, secondLeg] = [parseId(firstId), parseId(secondId)];
   if (firstLeg === secondLeg) throw new TransactionError("invalid");
   const first = await requireTransaction(ctx, firstLeg);
@@ -376,6 +373,7 @@ export async function pairByHand(ctx: Who, firstId: string, secondId: string): P
           transferOutside: false,
           transferAccountId: null,
           locallyEdited: withMarkers(current!.locallyEdited, "type", PAIRED_BY_HAND),
+          twinOf: null,
         })
         .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
     }
@@ -383,6 +381,8 @@ export async function pairByHand(ctx: Who, firstId: string, secondId: string): P
     await retypeMovements(trx, ctx);
     return [firstLeg, secondLeg, ...legs];
   });
+  // A leg paired by hand to another movement leaves the leg written for it (PERS-733).
+  await refreshTwins(ctx, touched);
   await linkOwnTransfers(ctx, touched);
 }
 
@@ -451,7 +451,7 @@ export async function listTransferProposals(
  * The person's answer to a proposal: "yes" pairs the two by hand and the other proposals of the
  * same legs go; "no" is kept, so the same pair is never proposed again, and the pairing runs again.
  */
-export async function answerTransferProposal(ctx: Who, id: string, accept: boolean): Promise<void> {
+export async function answerTransferProposal(ctx: WhoWhere, id: string, accept: boolean): Promise<void> {
   const proposalId = parseId(id);
   const [proposal] = await getDb()
     .select({ outId: girocontoProposals.outId, inId: girocontoProposals.inId })
