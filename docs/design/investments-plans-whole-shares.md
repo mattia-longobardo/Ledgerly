@@ -1,6 +1,6 @@
 # Piani di acquisto a quote intere (PERS-681)
 
-Stato: **proposta di design, da verificare.** Solo documento: nessun codice, nessuna migrazione applicata.
+Stato: **design approvato** (domande D1 e D2 decise da Mattia il 27/11/2026). Lo sviluppo del server è PERS-703.
 Base: `main` a `f5dcac55` (`v0.80.0`). Sostituisce il modello «un piano = uno strumento» di
 [`11-standardization.md`](rewrite-plan/11-standardization.md) §11.3.1 per i piani nuovi e convertiti; il job, «Da fare» e
 l'abbinatore del conto di addebito (E7) di §11.3.2-§11.3.3 restano.
@@ -15,6 +15,8 @@ Tutti i nomi (A, B, C) e i numeri di questo documento sono inventati.
 | M2 | Se una quota costa più della parte dello strumento, lo strumento si salta in quell'esecuzione; la sua parte va nel resto |
 | M3 | L'esecuzione **propone** gli acquisti. Mattia conferma e può correggere il prezzo reale prima che le operazioni esistano |
 | M4 | I piani R5d esistenti si convertono: strumenti e cadenza restano, l'importo va inserito di nuovo |
+| D1 | Le commissioni sono **fuori** dall'importo: 200 € di titoli, commissioni in più |
+| D2 | Un'esecuzione scartata o non confermata **passa** il suo importo all'esecuzione dopo |
 
 Modello: un piano ha 1-10 strumenti con una percentuale ciascuno (somma 100 %), un importo per esecuzione e una cadenza
 giornaliera, settimanale o mensile. Si comprano solo quote intere.
@@ -63,7 +65,7 @@ Regole:
   dopo (M1), dove alza gli obiettivi. Le righe si mostrano per peso decrescente, poi per nome.
 - **Limite del resto:** per ogni strumento quel che resta è minore di una quota (o pari all'obiettivo, se saltato). Il
   resto non cresce senza limite: quando supera il prezzo di una quota, l'esecuzione dopo la compra (esempio 1, run 4).
-- **Commissioni:** fuori dal budget (come R5d): si registrano su ogni operazione e non cambiano il resto. Vedi domanda D1.
+- **Commissioni:** fuori dal budget (come R5d): si registrano su ogni operazione e non cambiano il resto (D1).
 - Funzione pura `allocateWholeShares(input) → { lines, spentCents, carryOutCents }` in `rules/plans.ts`, con gli esempi
   sotto come test unitari.
 
@@ -228,9 +230,9 @@ Il `resto_in` è il `carry_out_cents` dell'ultima esecuzione chiusa del piano. S
 
 | Azione | Effetto |
 |---|---|
-| **Conferma** | Un acquisto (`buyWithin`) per ogni riga con quote > 0, tutti o nessuno, in una transazione; `event_id` sulla riga; esecuzione `recorded`, `carry_out = budget − spesa reale`. Cassa insufficiente (D2) → errore `negative_cash`, niente scritto: Mattia registra prima il versamento |
+| **Conferma** | Un acquisto (`buyWithin`) per ogni riga con quote > 0, tutti o nessuno, in una transazione; `event_id` sulla riga; esecuzione `recorded`, `carry_out = budget − spesa reale`. Cassa insufficiente → errore `negative_cash`, niente scritto: Mattia registra prima il versamento |
 | **Modifica** | Solo nel dialog, prima della conferma: anteprima dal server (§5), nessuna scrittura |
-| **Scarta** | Esecuzione `skipped`, nessun acquisto, `carry_out = budget` (M1: tutto il non speso passa). Vedi domanda D2 |
+| **Scarta** | Esecuzione `skipped`, nessun acquisto, `carry_out = budget` (M1, D2: tutto il non speso passa) |
 | **Non confermata alla scadenza dopo** | Quando il job crea la proposta della scadenza seguente, la precedente ancora `proposed` diventa `expired` con `carry_out = budget`, e il budget nuovo la include. Così ogni proposta aperta ha un `resto_in` certo e ce n'è al massimo una per piano |
 
 Dopo la conferma un acquisto è un'operazione normale: si modifica con la modifica delle operazioni (PERS-683). La
@@ -325,12 +327,10 @@ Un solo rilascio con il resto di PERS-681, uno alla volta con gli altri rilasci 
 | In attesa di prezzo / prezzo mancante | Riga «Prezzo da inserire»: conferma bloccata finché il prezzo manca |
 | Errore di cassa | Cassa del seed sotto la spesa: errore e link «Registra versamento», nessuna operazione scritta |
 
-## 9. Domande per Mattia (cambiano il risultato)
+## 9. Domande per Mattia
 
-| # | Domanda | Proposta del design |
-|---|---|---|
-| D1 | Le commissioni stanno **dentro** l'importo (200 € comprende le commissioni) o **fuori** (200 € di titoli, commissioni in più)? | Fuori, come R5d: il resto non dipende dalle commissioni |
-| D2 | Un'esecuzione scartata o non confermata: il suo importo passa alla successiva (la prossima ha 400 €) o si perde (la prossima ha 200 € + il resto vecchio)? | Passa (lettura letterale di M1). Rischio: con la cadenza giornaliera, giorni senza conferma accumulano budget |
+Decise il 27/11/2026: D1 e D2 sono in §0. Rischio noto di D2: con la cadenza giornaliera, giorni senza
+conferma accumulano budget.
 
 ## 10. Fuori da questo design
 
