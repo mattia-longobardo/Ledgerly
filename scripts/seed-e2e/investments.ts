@@ -536,18 +536,20 @@ export async function seedEditOps(): Promise<void> {
 
 /**
  * The instruments of the basket plans (PERS-681, docs/design/investments-plans-whole-shares.md §2.3):
- * public example ISINs (ISO 6166) of their own, priced by a source of the seed's, so their close of
- * today is known without the instance's prices plugin. The closes are the design's examples 1 and 2;
+ * ISINs of their own with a right check digit (ISO 6166) under the user-assigned country «XX», so no
+ * real security of a shared registry has them (on the site a real ISIN is already there, with its own
+ * markets and prices, and the plans would wait for a close), priced by a source of the seed's, so
+ * their close of today is known without the instance's prices plugin. The closes are the design's examples 1 and 2;
  * «Zeta» has none. The registers are answered here, as for the portfolio's instrument.
  */
 const PLAN_SOURCE = "e2e-prices";
 const BASKET = [
-  { key: "alfa", isin: "US5949181045", name: "Alfa World ETF", close: "41.30" },
-  { key: "beta", isin: "US02079K3059", name: "Beta Bond ETF", close: "18.75" },
-  { key: "gamma", isin: "US0231351067", name: "Gamma Gold ETC", close: "9.10" },
-  { key: "delta", isin: "US88160R1014", name: "Delta Europe ETF", close: "55" },
-  { key: "epsilon", isin: "US30303M1027", name: "Epsilon EM ETF", close: "38" },
-  { key: "zeta", isin: "DE0007164600", name: "Zeta Small Cap ETF", close: null },
+  { key: "alfa", isin: "XXE2EPLAN015", name: "Alfa World ETF", close: "41.30" },
+  { key: "beta", isin: "XXE2EPLAN023", name: "Beta Bond ETF", close: "18.75" },
+  { key: "gamma", isin: "XXE2EPLAN031", name: "Gamma Gold ETC", close: "9.10" },
+  { key: "delta", isin: "XXE2EPLAN049", name: "Delta Europe ETF", close: "55" },
+  { key: "epsilon", isin: "XXE2EPLAN056", name: "Epsilon EM ETF", close: "38" },
+  { key: "zeta", isin: "XXE2EPLAN064", name: "Zeta Small Cap ETF", close: null },
 ] as const;
 type BasketKey = (typeof BASKET)[number]["key"];
 
@@ -559,7 +561,7 @@ function registersOf(one: (typeof BASKET)[number], index: number): typeof global
           {
             ticker: `E2E${index}`,
             exchCode: "IM",
-            shareClassFIGI: `BBG00000E2E${index}`,
+            shareClassFIGI: `BBGXXE2EPLN${index}`,
             securityType: "ETP",
           },
         ],

@@ -201,7 +201,7 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await plansTab(page, "Piani");
       await page.getByRole("button", { name: "New plan" }).click();
-      for (const isin of ["US5949181045", "US02079K3059"]) {
+      for (const isin of ["XXE2EPLAN015", "XXE2EPLAN023"]) {
         await page.getByRole("searchbox", { name: "Instrument" }).fill(isin);
         await page.getByTestId("instrument-hit").first().click();
         await page.getByRole("button", { name: "Add instrument" }).click();

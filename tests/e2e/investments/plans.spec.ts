@@ -69,8 +69,8 @@ test("form error: percentages of 60 and 30 are refused with the sum's message", 
   const dialog = page.getByRole("dialog", { name: "New purchase plan · Piani" });
   await dialog.getByLabel("Name").fill("Piano sbagliato");
   await dialog.getByLabel("Amount of each execution").fill("100");
-  await addInstrument(dialog, "US5949181045");
-  await addInstrument(dialog, "US02079K3059");
+  await addInstrument(dialog, "XXE2EPLAN015");
+  await addInstrument(dialog, "XXE2EPLAN023");
   await dialog.getByLabel("Percentage of Alfa World ETF").fill("60");
   await dialog.getByLabel("Percentage of Beta Bond ETF").fill("30");
   await dialog.getByLabel("Day of the month").fill("10");
@@ -88,8 +88,8 @@ test("active plan: a plan of 2 instruments shows its percentages, amount, cadenc
   const dialog = page.getByRole("dialog", { name: "New purchase plan · Piani" });
   await dialog.getByLabel("Name").fill("PAC mensile");
   await dialog.getByLabel("Amount of each execution").fill("150");
-  await addInstrument(dialog, "US5949181045");
-  await addInstrument(dialog, "US02079K3059");
+  await addInstrument(dialog, "XXE2EPLAN015");
+  await addInstrument(dialog, "XXE2EPLAN023");
   await dialog.getByLabel("Percentage of Alfa World ETF").fill("60");
   await dialog.getByLabel("Percentage of Beta Bond ETF").fill("40");
   await dialog.getByLabel("Day of the month").fill("10");
