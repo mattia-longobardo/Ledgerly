@@ -29,10 +29,9 @@ interface DailyNet {
  *
  * A month that holds **any** reading gets nothing: `monthlyPoints` takes a month's latest day
  * before its source, so a derived point on the 31st would beat a real reading of the 20th. Every
- * other month end between the month before the first movement and the latest reading gets the
- * nearest reading **after** it, minus what moved in between — so a gap between two readings is
- * filled too, and each value leans on the closest thing actually known. Before the month of the
- * first movement nothing is known about the history, and nothing is written.
+ * other month end between the month before the first movement and the latest reading is rebuilt
+ * with `between`: a gap between two readings is filled too. Before the month of the first movement
+ * nothing is known about the history, and nothing is written.
  *
  * `observed` must hold one reading per day at most (the best source of that day); `daily` is sorted
  * by day. A day's movements count up to and including the reading of that day, which is how a
@@ -57,11 +56,30 @@ export function deriveMonthEnds(
   ) {
     if (readMonths.has(month)) continue;
     const end = lastDayOfMonth(month);
-    const next = readings.find((reading) => reading.on > end);
-    if (!next) break;
-    derived.push({ on: end, cents: next.cents - (movedThrough(next.on) - movedThrough(end)), derived: true });
+    const value = between(readings, movedThrough, end);
+    if (value === null) break;
+    derived.push({ on: end, cents: value, derived: true });
   }
   return derived;
+}
+
+/**
+ * The balance at the end of `day`, which is no reading's day, up to the latest reading: the reading
+ * before it plus what moved since, or, before the first reading, the first one minus what moved in
+ * between. When two readings and the movements between them disagree (a movement the bank did not
+ * list yet), the difference so shows on the day of the later reading, where it was read, and is not
+ * spread over the days back to the earlier one. `null` past the latest reading.
+ */
+function between(
+  readings: readonly BalancePoint[],
+  movedThrough: (on: CivilDate) => Cents,
+  day: CivilDate,
+): Cents | null {
+  const next = readings.findIndex((reading) => reading.on > day);
+  if (next < 0) return null;
+  if (next === 0) return readings[0].cents - (movedThrough(readings[0].on) - movedThrough(day));
+  const previous = readings[next - 1];
+  return previous.cents + (movedThrough(day) - movedThrough(previous.on));
 }
 
 /**
@@ -90,9 +108,9 @@ function movementsThrough(daily: readonly DailyNet[]): (on: CivilDate) => Cents 
 /**
  * An account's balance on each of `days` (F2.5), for Account detail's day grain.
  *
- * `movements` (a synced account): the nearest reading on or after the day, minus what moved in
- * between — so a reading, or a correction typed by hand, is never walked over — and past the latest
- * reading, that reading plus what moved since. Days before the first reading are rebuilt and flagged
+ * `movements` (a synced account): a reading's own day takes the reading, so a reading or a
+ * correction typed by hand is never walked over; any other day comes from `between`, and past the
+ * latest reading it is that reading plus what moved since. Days before the first reading are rebuilt and flagged
  * `estimated`, like the month ends of `deriveMonthEnds`, and nothing is rebuilt before the month the
  * first movement falls in. `hold` (a manual account, or one with no movements): the last entry
  * carries until the next, and a day before the first one is unknown.
@@ -124,9 +142,9 @@ export function dailySeries(
   const latest = sorted[sorted.length - 1];
   const values = days.map((day) => {
     if (day < earliest) return held(day);
-    const next = sorted.find((reading) => reading.on >= day);
-    if (next) return next.cents - (movedThrough(next.on) - movedThrough(day));
-    return latest.cents + (movedThrough(day) - movedThrough(latest.on));
+    const own = sorted.find((reading) => reading.on === day);
+    if (own) return own.cents;
+    return between(sorted, movedThrough, day) ?? latest.cents + (movedThrough(day) - movedThrough(latest.on));
   });
   return { values, estimated: days.map((day, index) => values[index] !== null && day < first.on) };
 }

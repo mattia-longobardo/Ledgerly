@@ -371,8 +371,9 @@ describe("deriveMonthEnds", () => {
     expect(deriveMonthEnds([july, reading], daily)).toEqual([
       // From the July reading: 2.500 + 100.
       { on: "2026-06-30", cents: 260_000n, derived: true },
-      // July has a reading of its own; August is between two and comes from the later one.
-      { on: "2026-08-31", cents: 522_000n, derived: true },
+      // July has a reading of its own; August is between two and walks on from the earlier one:
+      // 2.500 + 2.500 − 300.
+      { on: "2026-08-31", cents: 470_000n, derived: true },
     ]);
   });
 
@@ -437,7 +438,7 @@ describe("dailySeries", () => {
     expect(series.estimated).toEqual([true, true, true, false, false]);
   });
 
-  it("takes the next reading when there is one, so a correction is never walked over", () => {
+  it("never walks over a reading, and shows a gap between two readings on the later one's day", () => {
     const series = dailySeries(
       [
         { on: "2026-09-02", cents: 50_000n },
@@ -447,7 +448,22 @@ describe("dailySeries", () => {
       days,
       "movements",
     );
-    expect(series.values.slice(1, 4)).toEqual([50_000n, 70_000n, 70_000n]);
+    expect(series.values.slice(1, 4)).toEqual([50_000n, 80_000n, 70_000n]);
+  });
+
+  it("does not spread a movement the bank has not listed yet back to the earlier reading", () => {
+    // Read at 0 on the 1st and at 0 on the 5th, with 881,77 € in on the 5th and its way out not
+    // listed yet: the days between stay at 0 instead of −881,77.
+    const series = dailySeries(
+      [
+        { on: "2026-09-01", cents: 0n },
+        { on: "2026-09-05", cents: 0n },
+      ],
+      [{ on: "2026-09-05", cents: 88_177n }],
+      days,
+      "movements",
+    );
+    expect(series.values).toEqual([0n, 0n, 0n, 0n, 0n]);
   });
 
   it("holds a manual account's last entry until the next one, and knows nothing before the first", () => {
