@@ -118,6 +118,19 @@ export async function pricedMarkets(
   });
 }
 
+/**
+ * Whether a portfolio holds an automatic asset whose market has no close yet (PERS-694): a market
+ * just entered, whose first read should not wait for the daily job.
+ * shortcut: a market the source never answers (`no_data`) asks again at each purchase in the portfolio;
+ * one more run of the job each time. Keep a «first read asked» day on the listing if it ever costs.
+ */
+export async function hasUnpricedMarket(ctx: Pick<Ctx, "userId" | "timeZone">, accountId: string) {
+  const rows = (await automaticHoldings(ctx)).filter((row) => row.accountId === accountId);
+  const listingIds = [...new Set((await pricedListingOf(rows.map((row) => row.asset))).values())];
+  const closes = await marketPrices().lastCloses(listingIds, today(ctx.timeZone));
+  return listingIds.some((listingId) => !closes.has(listingId));
+}
+
 /** After a run of the job: every portfolio of the person on a market whose closes changed, rewritten from the oldest day. */
 export async function revalueAfterPrices(
   ctx: WriteCtx,

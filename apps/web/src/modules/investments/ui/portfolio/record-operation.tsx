@@ -20,31 +20,24 @@ import { type ActionResult, AUTOMATIC, recordOperation, recordPortfolioOperation
 import { PriceOrAmount, type PriceFields } from "../price-fields";
 import { FORM_GRID, NoteField, type ServiceContext, useErrorText } from "../dialog-kit";
 import { CounterpartField } from "./counterpart-field";
+import { EMPTY, KINDS, type Kind, type OperationStart } from "./edit-start";
 import { FxRateField, InstrumentField, type PickedInstrument } from "./instrument-field";
-
-const KINDS = ["buy", "sell", "deposit", "withdrawal", "income"] as const;
-type Kind = (typeof KINDS)[number];
-
-/** The kind and the day the form opens on: a purchase today, or the deposit an instalment asks for (P2). */
-export interface OperationStart {
-  kind: Kind;
-  day?: string;
-}
 
 /** What the dialog holds while it is typed: one field each, read by the kind chosen. */
 function useOperationForm(context: ServiceContext, start: OperationStart) {
+  const init = start.typed ?? EMPTY;
   const [kind, setKind] = useState<Kind>(start.kind);
   const [day, setDay] = useState(start.day ?? context.today);
-  const [instrument, setInstrument] = useState<PickedInstrument | null>(null);
-  const [holdingId, setHoldingId] = useState("");
-  const [how, setHow] = useState<"price" | "amount">("price");
-  const [quantity, setQuantity] = useState("");
-  const [unitPrice, setUnitPrice] = useState("");
-  const [amount, setAmount] = useState("");
-  const [fee, setFee] = useState("");
-  const [fxRate, setFxRate] = useState("");
-  const [note, setNote] = useState("");
-  const [counterpart, setCounterpart] = useState(AUTOMATIC);
+  const [instrument, setInstrument] = useState<PickedInstrument | null>(init.instrument);
+  const [holdingId, setHoldingId] = useState(init.holdingId);
+  const [how, setHow] = useState<"price" | "amount">(init.how);
+  const [quantity, setQuantity] = useState(init.quantity);
+  const [unitPrice, setUnitPrice] = useState(init.unitPrice);
+  const [amount, setAmount] = useState(init.amount);
+  const [fee, setFee] = useState(init.fee);
+  const [fxRate, setFxRate] = useState(init.fxRate);
+  const [note, setNote] = useState(init.note);
+  const [counterpart, setCounterpart] = useState(init.counterpart);
   const typed = {
     day,
     instrument,
@@ -86,45 +79,51 @@ function useOperationForm(context: ServiceContext, start: OperationStart) {
 
 type OperationForm = ReturnType<typeof useOperationForm>;
 
-/** The write of the kind chosen. */
-function save(context: ServiceContext, form: OperationForm): Promise<ActionResult> {
+/** The write of the kind chosen; with `eventId`, the rewrite of that operation. */
+function save(context: ServiceContext, form: OperationForm, eventId?: string): Promise<ActionResult> {
   const { kind, typed } = form;
   const { accountId } = context;
   // A sale by amount names neither a quantity nor a price; an income its amount only.
   const byPrice = kind === "sell" && typed.how === "price";
   if (kind === "sell" || kind === "income")
-    return recordOperation(accountId, {
-      kind,
-      on: typed.day,
-      holdingId: typed.holdingId || null,
-      quantity: byPrice ? typed.quantity : "",
-      unitPrice: byPrice ? typed.unitPrice : "",
-      amount: byPrice ? "" : typed.amount,
-      fee: typed.fee,
-      note: typed.note,
-    });
+    return recordOperation(
+      accountId,
+      {
+        kind,
+        on: typed.day,
+        holdingId: typed.holdingId || null,
+        quantity: byPrice ? typed.quantity : "",
+        unitPrice: byPrice ? typed.unitPrice : "",
+        amount: byPrice ? "" : typed.amount,
+        fee: typed.fee,
+        note: typed.note,
+      },
+      eventId,
+    );
   if (kind !== "buy")
-    return recordPortfolioOperation(accountId, {
-      kind,
-      on: typed.day,
-      amount: typed.amount,
-      note: typed.note,
-      counterpart: typed.counterpart,
-    });
+    return recordPortfolioOperation(
+      accountId,
+      { kind, on: typed.day, amount: typed.amount, note: typed.note, counterpart: typed.counterpart },
+      eventId,
+    );
   if (typed.instrument === null) return Promise.resolve({ ok: false, error: "invalid" });
-  return recordPortfolioOperation(accountId, {
-    kind,
-    instrumentId: typed.instrument.instrumentId,
-    mic: typed.instrument.mic,
-    on: typed.day,
-    how: typed.how,
-    quantity: typed.quantity,
-    unitPrice: typed.unitPrice,
-    amount: typed.amount,
-    fee: typed.fee,
-    fxRate: typed.fxRate,
-    note: typed.note,
-  });
+  return recordPortfolioOperation(
+    accountId,
+    {
+      kind,
+      instrumentId: typed.instrument.instrumentId,
+      mic: typed.instrument.mic,
+      on: typed.day,
+      how: typed.how,
+      quantity: typed.quantity,
+      unitPrice: typed.unitPrice,
+      amount: typed.amount,
+      fee: typed.fee,
+      fxRate: typed.fxRate,
+      note: typed.note,
+    },
+    eventId,
+  );
 }
 
 /** The portfolio's open positions, for a sale or a dividend. */
@@ -188,7 +187,7 @@ function BuyFields({ id, context, form }: { id: string; context: ServiceContext;
   const currency = typed.instrument?.currency ?? context.currency;
   return (
     <>
-      <InstrumentField id={id} onChange={set.setInstrument} />
+      <InstrumentField id={id} initial={typed.instrument} onChange={set.setInstrument} />
       <PriceOrAmount
         id={id}
         currency={currency}
@@ -286,7 +285,7 @@ function KindFields({ id, context, form }: { id: string; context: ServiceContext
 }
 
 /** «Save»: the write, or the refusal kept by its code; `negative_cash` offers a deposit. */
-function useRecord(context: ServiceContext, form: OperationForm, onClose: () => void) {
+function useRecord(context: ServiceContext, form: OperationForm, onClose: () => void, eventId?: string) {
   const text = useTranslations("investments");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -294,7 +293,7 @@ function useRecord(context: ServiceContext, form: OperationForm, onClose: () => 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
-      const result = await save(context, form);
+      const result = await save(context, form, eventId);
       if (!result.ok) {
         setRefused(result.error);
         return;
@@ -324,13 +323,25 @@ function useRecord(context: ServiceContext, form: OperationForm, onClose: () => 
   };
 }
 
-function KindField({ id, kind, onChange }: { id: string; kind: Kind; onChange: (kind: Kind) => void }) {
+function KindField({
+  id,
+  kind,
+  fixed,
+  onChange,
+}: {
+  id: string;
+  kind: Kind;
+  /** An «Edit» keeps the kind: the server refuses another one. */
+  fixed: boolean;
+  onChange: (kind: Kind) => void;
+}) {
   const text = useTranslations("investments.portfolioOps");
   return (
     <Field label={text("kind")} htmlFor={id}>
       <Select
         id={id}
         value={kind}
+        disabled={fixed}
         onChange={(event) => onChange(KINDS.find((one) => one === event.target.value) ?? "buy")}
       >
         {KINDS.map((one) => (
@@ -358,12 +369,13 @@ export function RecordOperationDialog({
   const errorText = useErrorText();
   const id = useId();
   const form = useOperationForm(context, start);
-  const record = useRecord(context, form, onClose);
+  const record = useRecord(context, form, onClose, start.eventId);
+  const editing = start.eventId !== undefined;
   const { kind, typed, set } = form;
   return (
     <FormDialog
       onClose={onClose}
-      title={text("portfolioOps.title", { name: context.name })}
+      title={text(editing ? "portfolioOps.editTitle" : "portfolioOps.title", { name: context.name })}
       description={text(`portfolioOps.descriptions.${kind}`)}
       width={520}
       className={FORM_GRID}
@@ -374,7 +386,7 @@ export function RecordOperationDialog({
       submitLabel={text("form.save")}
       finalFocus={opener}
     >
-      <KindField id={`${id}-kind`} kind={kind} onChange={record.pickKind} />
+      <KindField id={`${id}-kind`} kind={kind} fixed={editing} onChange={record.pickKind} />
       <DateField
         id={`${id}-on`}
         label={text("form.date")}

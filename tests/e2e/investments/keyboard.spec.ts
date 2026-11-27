@@ -83,6 +83,37 @@ test.describe("a manual portfolio (R5d)", () => {
   });
 });
 
+test.describe("«Edit» of an operation (PERS-693)", () => {
+  test.use({ storageState: sessionState("editOps") });
+
+  test("«Edit» opens from the operation's menu by keyboard, and Escape gives the focus back", async ({
+    page,
+  }) => {
+    await page.goto("/investments?preset=all");
+    const service = page.getByRole("link", { name: "Broker", exact: true }).filter({ visible: true }).first();
+    await page.goto((await service.getAttribute("href"))!);
+    // By address: a click before the focus would leave the ring to the mouse's modality.
+    await page.goto(`${new URL(page.url()).pathname}/activity?preset=all`);
+    const menu = page
+      .getByRole("button", { name: /^Actions for the operation of / })
+      .filter({ visible: true })
+      .first();
+    await focusOn(menu);
+    expect(await focusIsVisible(page), "the menu draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    const edit = page.getByRole("menuitem", { name: "Edit", exact: true });
+    // Opened from the keyboard, the menu starts on its first item: «Edit», before «Delete».
+    await expect(edit).toBeFocused();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "Edit operation · Broker" });
+    await expect(dialog).toBeVisible();
+    await dialogHasFocus(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(menu).toBeFocused();
+  });
+});
+
 test.describe("the purchase plans (PERS-681)", () => {
   test.use({ storageState: sessionState("plans") });
 

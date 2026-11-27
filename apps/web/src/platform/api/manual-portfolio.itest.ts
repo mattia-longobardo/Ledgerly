@@ -17,14 +17,25 @@ const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition"
 const { apiRoutes } = await import("@ledgerly/api");
 const { refreshPrices, searchInstruments } = await import("@ledgerly/domain/instruments");
 const { createAccount } = await import("@domain/modules/accounts/service");
-const { runDuePlans } = await import("@ledgerly/domain/investments");
+const { pricedMarkets, revalueAfterPrices, runDuePlans } = await import("@ledgerly/domain/investments");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the answers are read as JSON
 type Json = any;
 
+/** The first reads of a market the routes queued (PERS-694); `queueFails`: the queue is down. */
+let queuedPrices = 0;
+let queueFails = false;
+
 async function send(ctx: Ctx, method: string, path: string, body?: unknown) {
   const routes = apiRoutes({
     ...adapters,
+    investments: {
+      ...adapters.investments,
+      async queuePrices() {
+        if (queueFails) throw new Error("queue down");
+        queuedPrices += 1;
+      },
+    },
     guard: () => async (context, next) => {
       context.set("ctx", ctx);
       await next();
@@ -62,6 +73,8 @@ beforeEach(async () => {
   alice = contextFor((await createTestUser()).id);
   signedIn = alice;
   todayOn = today(alice.timeZone);
+  queuedPrices = 0;
+  queueFails = false;
   instrumentId = (await searchInstruments(ISIN, { fetch: REGISTERS, priceSourceId: null })).items[0]
     .instrumentId;
 });
@@ -139,6 +152,194 @@ describe("a manual portfolio on /api/v1", () => {
       mode: "auto",
     });
     expect(auto).toMatchObject({ status: 409, body: { error: "conflict", reason: "not_editable" } });
+  });
+
+  it("edits a purchase and a deposit as new ones, and refuses what a new one is refused (PERS-683)", async () => {
+    const accountId = await portfolio();
+    const ops = `/investments/${accountId}/operations`;
+    const deposit = await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1500.00" });
+    const bought = await send(alice, "POST", ops, buy("10", "100"));
+    const cash = async () => (await send(alice, "GET", `/investments/${accountId}/holdings`)).body.cash;
+    expect(await cash()).toBe("498.00");
+
+    const edited = { ...buy("8", "110"), fee: "1.00" };
+    expect(await send(alice, "PATCH", `${ops}/${bought.body.id}`, edited)).toEqual({
+      status: 204,
+      body: null,
+    });
+    // 1,500 − 880 − 1, and the same position a new purchase of 8 at 110 makes.
+    expect(await cash()).toBe("619.00");
+    const holdings = (await send(alice, "GET", `/investments/${accountId}/holdings`)).body.holdings;
+    expect(holdings).toHaveLength(1);
+    const listed = await send(alice, "GET", "/investments?period=all");
+    expect(listed.body.services.find((one: Json) => one.accountId === accountId).value).toBe("1499.00");
+
+    const patch = (eventId: string, body: unknown) => send(alice, "PATCH", `${ops}/${eventId}`, body);
+    expect(await patch(deposit.body.id, { kind: "deposit", on: todayOn, amount: "1000.00" })).toEqual({
+      status: 204,
+      body: null,
+    });
+    expect(await cash()).toBe("119.00");
+    // Less money than the purchase spends, another kind, a day in the future, a body that is not one.
+    expect(await patch(deposit.body.id, { kind: "deposit", on: todayOn, amount: "800.00" })).toMatchObject({
+      status: 409,
+      body: { reason: "negative_cash" },
+    });
+    expect(await patch(bought.body.id, { kind: "fee", on: todayOn, amount: "1.00" })).toMatchObject({
+      status: 409,
+      body: { reason: "not_editable" },
+    });
+    expect(await patch(bought.body.id, { ...edited, on: "2999-01-01" })).toMatchObject({
+      status: 400,
+      body: { reason: "future_date" },
+    });
+    expect((await patch(bought.body.id, { kind: "buy" })).status).toBe(400);
+    // Under another portfolio, or another person's: not found.
+    const other = await portfolio();
+    expect(
+      (await send(alice, "PATCH", `/investments/${other}/operations/${bought.body.id}`, edited)).status,
+    ).toBe(404);
+    const bob = contextFor((await createTestUser()).id);
+    expect((await send(bob, "PATCH", `${ops}/${bought.body.id}`, edited)).status).toBe(404);
+    expect(await cash()).toBe("119.00");
+  });
+
+  it("reads each operation as the body of its edit, and that body sent back changes nothing (PERS-695)", async () => {
+    const accountId = await portfolio();
+    const bank = await createAccount(alice, { name: "Bank", type: "checking", currency: "EUR" });
+    const ops = `/investments/${accountId}/operations`;
+    const write = async (body: Json) => {
+      const made = await send(alice, "POST", ops, body);
+      expect(made.status).toBe(201);
+      return made.body.id as string;
+    };
+    const deposit = await write({
+      kind: "deposit",
+      on: todayOn,
+      amount: "1500.00",
+      counterpart: { kind: "account", accountId: bank.id },
+      note: "Top up",
+    });
+    const withdrawal = await write({
+      kind: "withdrawal",
+      on: todayOn,
+      amount: "10.00",
+      counterpart: { kind: "none" },
+    });
+    const bought = await write(buy("10", "100"));
+    const holdingId = await holdingIdOf(accountId);
+    const others = [
+      await write({ kind: "fee", on: todayOn, amount: "1.50" }),
+      await write({ kind: "income", holdingId, on: todayOn, amount: "3.00" }),
+      await write({ kind: "valuation", holdingId, on: todayOn, unitPrice: "101.5" }),
+      await write({ kind: "sell", holdingId, on: todayOn, quantity: "2", unitPrice: "105", fee: "1.00" }),
+    ];
+    const read = (eventId: string) => send(alice, "GET", `${ops}/${eventId}`);
+    expect(await read(deposit)).toEqual({
+      status: 200,
+      body: {
+        kind: "deposit",
+        body: {
+          kind: "deposit",
+          on: todayOn,
+          amount: "1500.00",
+          transactionId: null,
+          counterpart: { kind: "account", accountId: bank.id },
+          note: "Top up",
+        },
+      },
+    });
+    expect((await read(withdrawal)).body.body.counterpart).toEqual({ kind: "none" });
+    expect((await read(bought)).body).toEqual({
+      kind: "buy",
+      body: {
+        kind: "buy",
+        instrumentId,
+        mic: "XMIL",
+        on: todayOn,
+        quantity: "10",
+        unitPrice: "100",
+        amount: null,
+        fee: "2.00",
+        fxRate: null,
+        note: null,
+      },
+    });
+    expect((await read(others[3])).body.body).toMatchObject({ quantity: "2", unitPrice: "105", fee: "1.00" });
+
+    const state = async () => ({
+      holdings: (await send(alice, "GET", `/investments/${accountId}/holdings`)).body,
+      rows: (await send(alice, "GET", `/investments/${accountId}/activity?period=all`)).body.rows,
+      movements: (await send(alice, "GET", "/transactions")).body,
+    });
+    const before = await state();
+    expect(before.rows.every((row: Json) => row.editable)).toBe(true);
+    for (const eventId of [deposit, withdrawal, bought, ...others]) {
+      const { body } = await read(eventId);
+      expect(await send(alice, "PATCH", `${ops}/${eventId}`, body.body)).toEqual({ status: 204, body: null });
+      expect((await read(eventId)).body).toEqual(body);
+    }
+    expect(await state()).toEqual(before);
+  });
+
+  it("reads a purchase's fee in the instrument's currency, at the rate typed (PERS-695)", async () => {
+    const made = await send(alice, "POST", "/investments", {
+      kind: "portfolio",
+      name: "Dollars",
+      currency: "USD",
+    });
+    const ops = `/investments/${made.body.accountId}/operations`;
+    expect((await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1000.00" })).status).toBe(
+      201,
+    );
+    const bought = await send(alice, "POST", ops, { ...buy("1", "100"), fxRate: "1.1" });
+    const cash = async () =>
+      (await send(alice, "GET", `/investments/${made.body.accountId}/holdings`)).body.cash;
+    // 1,000 − 110 − 2.20, in dollars.
+    expect(await cash()).toBe("887.80");
+    const { body } = await send(alice, "GET", `${ops}/${bought.body.id}`);
+    expect(body.body).toMatchObject({ quantity: "1", unitPrice: "100", fee: "2.00", fxRate: "1.1" });
+    expect((await send(alice, "PATCH", `${ops}/${bought.body.id}`, body.body)).status).toBe(204);
+    expect(await cash()).toBe("887.80");
+  });
+
+  it("refuses the read where the edit is refused, and another's operation is not found (PERS-695)", async () => {
+    const account = await createAccount(alice, {
+      name: "Titles",
+      type: "investment",
+      currency: "EUR",
+      openingBalance: { on: "2026-01-01", cents: 3_000_00n },
+    });
+    await send(alice, "POST", "/investments", { accountId: account.id, category: "broker" });
+    const position = { instrumentId, mic: "XMIL", quantity: "10", unitPrice: "100", fxRate: null };
+    await send(alice, "POST", `/investments/${account.id}/conversion`, {
+      on: todayOn,
+      positions: [position],
+      note: null,
+    });
+    // What «Switch to positions» wrote is no operation the person typed.
+    const rows = (await send(alice, "GET", `/investments/${account.id}/activity?period=all`)).body.rows;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row: Json) => !row.editable)).toBe(true);
+    expect(await send(alice, "GET", `/investments/${account.id}/operations/${rows[0].id}`)).toMatchObject({
+      status: 409,
+      body: { error: "conflict", reason: "not_editable" },
+    });
+
+    const accountId = await portfolio();
+    const deposit = await send(alice, "POST", `/investments/${accountId}/operations`, {
+      kind: "deposit",
+      on: todayOn,
+      amount: "10.00",
+    });
+    const path = `/investments/${accountId}/operations/${deposit.body.id}`;
+    expect((await send(alice, "GET", path)).status).toBe(200);
+    expect(
+      (await send(alice, "GET", `/investments/${account.id}/operations/${deposit.body.id}`)).status,
+    ).toBe(404);
+    expect((await send(alice, "GET", `/investments/${accountId}/operations/${rows[0].id}`)).status).toBe(404);
+    const bob = contextFor((await createTestUser()).id);
+    expect((await send(bob, "GET", path)).status).toBe(404);
   });
 
   it("refuses the money in and out and a purchase on a service that is not a portfolio", async () => {
@@ -430,5 +631,90 @@ describe("the purchase plans on /api/v1 (R5d, step 2; baskets since PERS-681)", 
     expect((await send(alice, "GET", base)).body).toEqual({ accountId: made.body.accountId, plans: [] });
     const unknown = "00000000-0000-4000-8000-000000000000";
     expect((await send(alice, "GET", `/investments/${unknown}/plans`)).status).toBe(404);
+  });
+});
+
+describe("the first price of a market just entered (PERS-694)", () => {
+  /** An instrument whose market the instance's source of prices reads. */
+  async function pricedInstrument(): Promise<string> {
+    const registers = (async (input: string | URL | Request) => {
+      const answer = await REGISTERS(input);
+      const text = (await answer.text()).replace("BBG000000001", "BBG000000003");
+      return new Response(text.replace('"EXA"', '"EXB"').replace("Example ETF", "Other ETF"));
+    }) as typeof globalThis.fetch;
+    const [hit] = (await searchInstruments("US5949181045", { fetch: registers, priceSourceId: "prices" }))
+      .items;
+    return hit.instrumentId;
+  }
+
+  /** A portfolio with money in, and the operations' path. */
+  async function funded(): Promise<{ accountId: string; ops: string }> {
+    const accountId = await portfolio();
+    const ops = `/investments/${accountId}/operations`;
+    await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1000.00" });
+    return { accountId, ops };
+  }
+
+  /** What the queued `instrument-prices` does, with a fake source: every close at 50 today. */
+  async function runPricesJob(): Promise<void> {
+    const run = await refreshPrices({
+      source: {
+        id: "prices",
+        closes: async (request) => ({
+          bars: request.listings.map((one) => ({ key: one.key, on: todayOn, close: "50", currency: "EUR" })),
+          errors: [],
+        }),
+      },
+      markets: await pricedMarkets(alice),
+      today: todayOn,
+      cap: 10,
+    });
+    await revalueAfterPrices(alice, run);
+  }
+
+  it("queues the read of a new market once, and none for a market already priced", async () => {
+    const { accountId, ops } = await funded();
+    const pricedId = await pricedInstrument();
+    expect((await send(alice, "POST", ops, { ...buy("1", "40"), instrumentId: pricedId })).status).toBe(201);
+    expect(queuedPrices).toBe(1);
+    await runPricesJob();
+    const holdings = await send(alice, "GET", `/investments/${accountId}/holdings`);
+    expect(holdings.body.holdings[0]).toMatchObject({
+      value: "50.00",
+      asset: { price: { mode: "auto", on: todayOn } },
+    });
+    expect((await send(alice, "POST", ops, { ...buy("1", "40"), instrumentId: pricedId })).status).toBe(201);
+    expect(queuedPrices).toBe(1);
+    // A market no source reads has no read to queue.
+    expect(await send(alice, "POST", ops, buy("1", "40"))).toMatchObject({
+      status: 201,
+      body: { id: expect.any(String) },
+    });
+    expect(queuedPrices).toBe(1);
+  });
+
+  it("queues the read when an edit moves a purchase to a new market", async () => {
+    const { ops } = await funded();
+    const bought = await send(alice, "POST", ops, buy("1", "40"));
+    expect(queuedPrices).toBe(0);
+    const pricedId = await pricedInstrument();
+    const edited = await send(alice, "PATCH", `${ops}/${bought.body.id}`, {
+      ...buy("1", "40"),
+      instrumentId: pricedId,
+    });
+    expect(edited).toMatchObject({ status: 204, body: null });
+    expect(queuedPrices).toBe(1);
+  });
+
+  it("keeps the purchase when the read cannot be queued: the daily job reads it", async () => {
+    const { accountId, ops } = await funded();
+    queueFails = true;
+    const bought = await send(alice, "POST", ops, {
+      ...buy("1", "40"),
+      instrumentId: await pricedInstrument(),
+    });
+    expect(bought.status).toBe(201);
+    const activity = await send(alice, "GET", `/investments/${accountId}/activity?period=all`);
+    expect(activity.body.rows.map((row: Json) => row.id)).toContain(bought.body.id);
   });
 });

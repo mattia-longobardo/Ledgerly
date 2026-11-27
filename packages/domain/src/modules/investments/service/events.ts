@@ -241,17 +241,52 @@ export async function buyWithin(
   const { account, input: parsed } = buy;
   const planRunId = buy.planRunId ?? null;
   notFuture(ctx, parsed.on);
-  if (parsed.quantity === null ? parsed.totalCents === null : parsed.unitPrice === null) {
-    throw new RangeError("A buy needs a quantity and a price, or a total");
-  }
   const locked = await lockInvestmentAccount(ctx, account.id, transaction);
   const investment = await startPortfolioBy(ctx, locked, parsed.on, transaction);
   const book = await loadBook(ctx, investment, account.currency, transaction);
+  const legs = await buyLegs(ctx, transaction, {
+    investmentId: investment.id,
+    book,
+    account,
+    parsed,
+    planRunId,
+  });
+  const event = await insertEvent(ctx, transaction, investment.id, {
+    on: parsed.on,
+    occurredAt: new Date(),
+    origin: "manual",
+    note: parsed.note,
+    legs,
+  });
+  await checkPortfolio(ctx, investment, account.currency, transaction);
+  await rebuild(ctx, investment, account.currency, parsed.on, transaction);
+  return { eventId: event.id };
+}
+
+/**
+ * The legs of a purchase, checked against the book of its day: the position, and the fee as its own
+ * leg. Shared by a new purchase and an edited one (PERS-683).
+ */
+export async function buyLegs(
+  ctx: WriteCtx,
+  transaction: Tx,
+  buy: {
+    investmentId: string;
+    book: LoadedBook;
+    account: { currency: string };
+    parsed: z.output<typeof buyInputSchema>;
+    planRunId: string | null;
+  },
+): Promise<LegInput[]> {
+  const { book, account, parsed, planRunId } = buy;
+  if (parsed.quantity === null ? parsed.totalCents === null : parsed.unitPrice === null) {
+    throw new RangeError("A buy needs a quantity and a price, or a total");
+  }
   const period = periodOn(book, parsed.on);
   if (period === null) throw new InvestmentError("before_period");
   if (period.mode !== "assets") throw new InvestmentError("wrong_mode");
   const asset = await assetOf(ctx, transaction, parsed.asset);
-  const holding = await holdingFor(ctx, transaction, investment.id, asset.id, parsed.product, parsed.on);
+  const holding = await holdingFor(ctx, transaction, buy.investmentId, asset.id, parsed.product, parsed.on);
   const rate = await rateOf(asset.currency, account.currency, parsed.on, parsed.fxRate);
   const native =
     parsed.quantity !== null && parsed.unitPrice !== null
@@ -275,14 +310,5 @@ export async function buyWithin(
   ];
   if (parsed.feeCents > 0n)
     legs.push({ leg: "fee", kind: "fee", amountCents: -rate.inAccount(parsed.feeCents) });
-  const event = await insertEvent(ctx, transaction, investment.id, {
-    on: parsed.on,
-    occurredAt: new Date(),
-    origin: "manual",
-    note: parsed.note,
-    legs,
-  });
-  await checkPortfolio(ctx, investment, account.currency, transaction);
-  await rebuild(ctx, investment, account.currency, parsed.on, transaction);
-  return { eventId: event.id };
+  return legs;
 }

@@ -169,6 +169,22 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
+    // PERS-693: «Edit» of an operation, the same form filled from the server.
+    name: "the edit operation dialog",
+    session: "editOps",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await serviceTab(page, "Broker", "activity");
+      await page
+        .getByRole("button", { name: /^Actions for the operation of / })
+        .filter({ visible: true })
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+      await settledDialog(page);
+    },
+  },
+  {
     name: "the switch to positions dialog",
     session: "portfolio",
     roots: ['[role="dialog"]'],
