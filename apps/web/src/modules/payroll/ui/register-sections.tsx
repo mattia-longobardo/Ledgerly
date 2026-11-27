@@ -82,12 +82,14 @@ export function RegisterKpis({ year, format }: { year: Year; format: Format }) {
     <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-5">
       <KpiTile
         testId="kpi-gross-effective"
+        wrapNote
         label={text("kpis.grossEffective", { year: year.year })}
         value={moneyOf(year.totals.gross, format)}
         note={span ? text("kpis.grossEffectiveNote", { from: month(span.from), to: month(span.to), count: span.count }) : undefined}
       />
       <KpiTile
         testId="kpi-gross-theoretical"
+        wrapNote
         label={text("kpis.grossTheoretical", { year: year.year })}
         value={moneyOf(theoretical?.amount, format)}
         note={
