@@ -20,6 +20,17 @@ const PAGES: Screen[] = [
     session: "layout",
     open: go("/investments?preset=all&view=value&by=class"),
   },
+  // The chart of the pension funds alone, as bars and as the value held from one reading to the next.
+  {
+    name: "/investments · Pension funds, the P&L chart",
+    session: "layout",
+    open: go("/investments?preset=all&group=pension_funds"),
+  },
+  {
+    name: "/investments · Pension funds, the value chart",
+    session: "layout",
+    open: go("/investments?preset=all&group=pension_funds&view=value"),
+  },
   // The tabs of a service (§3.2–§3.6, U3): the three of the two manual accounts, which keep no
   // positions (PERS-335), and the four of the two connected ones.
   ...(

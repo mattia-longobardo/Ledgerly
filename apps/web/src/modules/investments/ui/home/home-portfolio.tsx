@@ -12,7 +12,7 @@ import { Link } from "@ledgerly/ui/router";
 import { toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@ledgerly/ui/url";
 import { centsOf } from "../present";
-import { CHIPS, type HomeContext } from "./home-view";
+import { chipKpis, CHIPS, type HomeContext } from "./home-view";
 
 type Group = HomeContext["home"]["groups"][number];
 type Row = Group["rows"][number];
@@ -151,7 +151,7 @@ function GroupCard({ group, context }: { group: Group; context: HomeContext }) {
 export function HomePortfolio({ context }: { context: HomeContext }) {
   const { home, chip } = context;
   const groups = home.groups.filter((group) => chip === "all" || group.id === chip);
-  const kpis = chip === "all" ? home.total : (groups[0]?.kpis ?? null);
+  const kpis = chipKpis(home, chip);
   return (
     <section className="flex flex-col gap-4">
       <Chips context={context} />

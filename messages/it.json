@@ -4953,9 +4953,9 @@
         "value": "Valore",
         "return": "Rendimento %",
         "pnlNote": {
-          "week": "P&L per settimana e per servizio · la linea è il cumulato di {period}",
-          "month": "P&L per mese e per servizio · la linea è il cumulato di {period}",
-          "year": "P&L per anno e per servizio · la linea è il cumulato di {period}"
+          "week": "P&L per settimana e per riga della lista · la linea è il totale progressivo di {period}",
+          "month": "P&L per mese e per riga della lista · la linea è il totale progressivo di {period}",
+          "year": "P&L per anno e per riga della lista · la linea è il totale progressivo di {period}"
         },
         "valueNote": {
           "day": "Valore per giorno e per servizio",
@@ -4963,15 +4963,15 @@
         },
         "returnNote": "Ogni barra è la parte del rendimento del periodo fatta nel suo intervallo · la linea le somma fino al rendimento in testata",
         "returnEmpty": "Il rendimento di questo periodo non è determinabile.",
-        "line": "Cumulato",
-        "legend": "I colori sono i servizi della lista sotto.",
-        "cumulative": "cumulato {amount}",
+        "line": "Totale progressivo",
+        "legend": "I colori sono le righe della lista sotto.",
+        "cumulative": "totale progressivo {amount}",
         "summary": "P&L {period}: {total}. Migliore {best}, peggiore {worst}. {services}.",
         "returnSummary": "Rendimento {period}: {total}. Migliore {best}, peggiore {worst}.",
         "valueSummary": "Valore a fine periodo {value}.",
         "data": "Dati del grafico",
         "interval": "Intervallo",
-        "cumulativeHeader": "Cumulato"
+        "cumulativeHeader": "Totale progressivo"
       },
       "services": {
         "note": "Ordinati per contributo · stesso periodo e stessi colori del grafico",

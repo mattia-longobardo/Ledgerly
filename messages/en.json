@@ -4953,9 +4953,9 @@
         "value": "Value",
         "return": "Return %",
         "pnlNote": {
-          "week": "P&L by week and by service · the line is the running total of {period}",
-          "month": "P&L by month and by service · the line is the running total of {period}",
-          "year": "P&L by year and by service · the line is the running total of {period}"
+          "week": "P&L by week and by row of the list · the line is the running total of {period}",
+          "month": "P&L by month and by row of the list · the line is the running total of {period}",
+          "year": "P&L by year and by row of the list · the line is the running total of {period}"
         },
         "valueNote": {
           "day": "Value by day and by service",
@@ -4964,7 +4964,7 @@
         "returnNote": "Each bar is the part of the period's return its interval made · the line adds them up to the return in the header",
         "returnEmpty": "The return of this period cannot be determined.",
         "line": "Running total",
-        "legend": "The colours are the services of the list below.",
+        "legend": "The colours are the rows of the list below.",
         "cumulative": "running total {amount}",
         "summary": "P&L {period}: {total}. Best {best}, worst {worst}. {services}.",
         "returnSummary": "Return {period}: {total}. Best {best}, worst {worst}.",
