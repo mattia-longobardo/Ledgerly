@@ -82,6 +82,9 @@ export const USERS = {
   // PERS-651: a manual portfolio with no operation and a bank account with two transfers out to it,
   // for the journey of a deposit paired with its bank transaction and its leg in Expenses and Accounts.
   legs: { email: "legs@example.test", name: "Legs" },
+  // PERS-693: a manual portfolio with three deposits written out of date order and two accounts of
+  // its own, for «Edit» of an operation and the order of the Activity.
+  editOps: { email: "edit-ops@example.test", name: "Edit Ops" },
   // R5d, step 2: two manual portfolios with purchase plans and an instalment of today proposed — one
   // with its bank transaction found, one with no cash (P2) — for the screen check; `plansJourney` has the
   // same and the journey writes on it.
@@ -312,6 +315,7 @@ export const SESSIONS = {
   portfolio: { user: "portfolio", file: "portfolio-session.json" },
   portfolioJourney: { user: "portfolioJourney", file: "portfolio-journey-session.json" },
   legs: { user: "legs", file: "legs-session.json" },
+  editOps: { user: "editOps", file: "edit-ops-session.json" },
   plans: { user: "plans", file: "plans-session.json" },
   plansJourney: { user: "plansJourney", file: "plans-journey-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },

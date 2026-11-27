@@ -508,6 +508,28 @@ export async function seedLegs(): Promise<void> {
 }
 
 /**
+ * «Edit» of an operation and the Activity's order (PERS-693): «Broker», a manual portfolio, with three
+ * deposits written out of date order — 5.000 € ten days ago from «Conto deposito», then 100 € twenty
+ * days ago, then 200 € ten days ago — and two accounts of the person, «Conto deposito» and «Conto
+ * corrente». By day the Activity lists 200, 5.000, 100; by the moment of writing it would list 200, 100, 5.000.
+ */
+export async function seedEditOps(): Promise<void> {
+  const ctx = await contextOf(USERS.editOps.email);
+  const on = today(ctx.timeZone);
+  const savings = await createAccount(ctx, { name: "Conto deposito", type: "savings", currency: "EUR" });
+  await createAccount(ctx, { name: "Conto corrente", type: "checking", currency: "EUR" });
+  const { accountId } = await createPortfolioWithAccount(ctx, { name: "Broker", currency: "EUR", url: null });
+  const deposit = (
+    days: number,
+    amountCents: bigint,
+    counterpart: { kind: "account"; accountId: string } | null,
+  ) => recordOperation(ctx, accountId, { kind: "deposit", on: addDays(on, -days), amountCents, counterpart });
+  await deposit(10, 500_000n, { kind: "account", accountId: savings.id });
+  await deposit(20, 10_000n, null);
+  await deposit(10, 20_000n, null);
+}
+
+/**
  * The instrument of the plans (R5d, step 2): a public example ISIN (ISO 6166) of its own, priced by a
  * source of the seed's, so its close of today is known without the instance's prices plugin. The
  * registers are answered here, as for the portfolio's instrument.
