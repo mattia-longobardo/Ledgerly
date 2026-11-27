@@ -616,7 +616,8 @@ describe("the purchase plans on /api/v1 (R5d, step 2; baskets since PERS-681)", 
     ]);
   });
 
-  it("confirms a line with no price at 0 shares, and refuses shares with no price (PERS-714)", async () => {
+  /** A basket proposed with one line with no price (§6): the confirm path, that line and a priced one. */
+  async function proposalWithNoPrice() {
     const other = await otherInstrument();
     await closeToday(other.listingId, "40");
     const accountId = await portfolio();
@@ -652,8 +653,17 @@ describe("the purchase plans on /api/v1 (R5d, step 2; baskets since PERS-681)", 
     const missing = run.lines.find((line: Json) => line.state === "price_missing");
     const priced = run.lines.find((line: Json) => line.state === "buy");
     expect(run.state).toBe("proposed");
-    const confirm = `${base}/${made.body.id}/runs/${run.id}/confirm`;
-    const bought = { assetId: priced.assetId, quantity: "1", unitPrice: "40" };
+    return {
+      base,
+      planId: made.body.id as string,
+      confirm: `${base}/${made.body.id}/runs/${run.id}/confirm`,
+      missing,
+      bought: { assetId: priced.assetId, quantity: "1", unitPrice: "40" },
+    };
+  }
+
+  it("confirms a line with no price at 0 shares, and refuses shares with no price (PERS-714)", async () => {
+    const { base, planId, confirm, missing, bought } = await proposalWithNoPrice();
     expect(
       await send(alice, "POST", confirm, { lines: [{ assetId: missing.assetId, quantity: "1" }, bought] }),
     ).toMatchObject({ status: 400, body: { error: "invalid" } });
@@ -661,8 +671,21 @@ describe("the purchase plans on /api/v1 (R5d, step 2; baskets since PERS-681)", 
       lines: [{ assetId: missing.assetId, quantity: "0" }, bought],
     });
     expect(confirmed).toMatchObject({ status: 201, body: { ids: [expect.any(String)] } });
-    const [recorded] = (await send(alice, "GET", `${base}/${made.body.id}/runs`)).body.runs;
+    const [recorded] = (await send(alice, "GET", `${base}/${planId}/runs`)).body.runs;
     expect(recorded).toMatchObject({ state: "recorded", carryOut: "60.00" });
+  });
+
+  it("refuses a fee on a line with 0 shares, and takes a fee of 0 (PERS-729)", async () => {
+    const { confirm, missing, bought } = await proposalWithNoPrice();
+    expect(
+      await send(alice, "POST", confirm, {
+        lines: [{ assetId: missing.assetId, quantity: "0", fee: "1.00" }, bought],
+      }),
+    ).toMatchObject({ status: 400, body: { error: "invalid" } });
+    const confirmed = await send(alice, "POST", confirm, {
+      lines: [{ assetId: missing.assetId, quantity: "0", fee: "0.00" }, bought],
+    });
+    expect(confirmed).toMatchObject({ status: 201, body: { ids: [expect.any(String)] } });
   });
 
   it("is refused on a service that is not a portfolio, and lists none there", async () => {

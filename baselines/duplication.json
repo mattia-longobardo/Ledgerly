@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 122171,
-    "duplicatedLines": 16878,
-    "percent": 13.82,
-    "blocks": 1348
+    "lines": 122183,
+    "duplicatedLines": 16865,
+    "percent": 13.8,
+    "blocks": 1347
   },
   "units": {
     "api": {
@@ -48,8 +48,8 @@
     },
     "modules/funds": {
       "lines": 12709,
-      "duplicatedLines": 1794,
-      "percent": 14.12,
+      "duplicatedLines": 1793,
+      "percent": 14.11,
       "blocks": 143
     },
     "modules/imports": {
@@ -71,10 +71,10 @@
       "blocks": 29
     },
     "modules/investments": {
-      "lines": 20157,
-      "duplicatedLines": 3119,
-      "percent": 15.47,
-      "blocks": 250
+      "lines": 20169,
+      "duplicatedLines": 3107,
+      "percent": 15.4,
+      "blocks": 249
     },
     "modules/payroll": {
       "lines": 4993,
@@ -630,7 +630,7 @@
     "modules/funds/schema/sources.ts": 93,
     "modules/funds/service/accounts.ts": 28,
     "modules/funds/service/contribution-sources.ts": 15,
-    "modules/funds/service/debits.ts": 37,
+    "modules/funds/service/debits.ts": 36,
     "modules/funds/service/fees.ts": 13,
     "modules/funds/service/fund.ts": 14,
     "modules/funds/service/legs.ts": 34,
@@ -707,7 +707,7 @@
     "modules/investments/service/periods.ts": 24,
     "modules/investments/service/plan-baskets.ts": 56,
     "modules/investments/service/plan-instruments.ts": 13,
-    "modules/investments/service/plan-runs.ts": 42,
+    "modules/investments/service/plan-runs.ts": 30,
     "modules/investments/service/plan-views.ts": 15,
     "modules/investments/service/plans.ts": 70,
     "modules/investments/service/portfolio.ts": 8,

@@ -277,19 +277,25 @@ async function proposeDebit(ctx: WriteCtx, plan: InvestmentPlan, run: Investment
     amountCents,
   });
   if (found.length === 0) return;
-  const taken = await getDb()
+  const ids = found.map((one) => one.id);
+  // A movement already linked to an event, or proposed on another execution still open or recorded, is
+  // not free: one skipped or expired gives its proposal back.
+  const linked = await getDb()
     .select({ id: investmentEvents.transactionId })
     .from(investmentEvents)
+    .where(and(userScoped(ctx).owns(investmentEvents), inArray(investmentEvents.transactionId, ids)));
+  const proposed = await getDb()
+    .select({ id: investmentPlanRuns.debitTransactionId })
+    .from(investmentPlanRuns)
     .where(
       and(
-        userScoped(ctx).owns(investmentEvents),
-        inArray(
-          investmentEvents.transactionId,
-          found.map((one) => one.id),
-        ),
+        userScoped(ctx).owns(investmentPlanRuns),
+        inArray(investmentPlanRuns.debitTransactionId, ids),
+        inArray(investmentPlanRuns.state, ["proposed", "recorded"]),
       ),
     );
-  const free = found.find((one) => !taken.some((row) => row.id === one.id));
+  const taken = new Set([...linked, ...proposed].map((row) => row.id));
+  const free = found.find((one) => !taken.has(one.id));
   if (!free) return;
   await getDb()
     .update(investmentPlanRuns)
@@ -344,6 +350,7 @@ async function activePlans(ctx: Pick<Ctx, "userId">): Promise<InvestmentPlan[]> 
 export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promise<{ advanced: number }> {
   const todayOn = today(ctx.timeZone, now);
   let advanced = 0;
+  const debits: { plan: InvestmentPlan; run: InvestmentPlanRun }[] = [];
   for (const plan of await activePlans(ctx)) {
     if (!runsThePlan(plan)) continue;
     const own = await getDb().select().from(investmentPlanRuns).where(eq(investmentPlanRuns.planId, plan.id));
@@ -362,7 +369,7 @@ export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promis
       .from(investmentPlanRuns)
       .where(eq(investmentPlanRuns.planId, plan.id));
     for (const run of after)
-      if (run.state === "proposed" || run.state === "recorded") await proposeDebit(ctx, plan, run);
+      if (run.state === "proposed" || run.state === "recorded") debits.push({ plan, run });
     if (endedBy(scheduleOf(plan), todayOn) && after.every((run) => run.dueOn <= todayOn)) {
       await getDb()
         .update(investmentPlans)
@@ -370,6 +377,14 @@ export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promis
         .where(eq(investmentPlans.id, plan.id));
     }
   }
+  // Oldest first, across the plans: of two executions that match one movement, the older gets it.
+  debits.sort(
+    (left, right) =>
+      left.run.dueOn.localeCompare(right.run.dueOn) ||
+      left.run.createdAt.getTime() - right.run.createdAt.getTime() ||
+      left.run.id.localeCompare(right.run.id),
+  );
+  for (const { plan, run } of debits) await proposeDebit(ctx, plan, run);
   return { advanced };
 }
 
