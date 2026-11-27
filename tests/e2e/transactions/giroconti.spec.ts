@@ -110,11 +110,13 @@ test("a movement with a time shows it, one without shows the day alone", async (
   await expect(row(page, "Morning bakery")).toContainText(/1[34]:32/);
   await expect(row(page, "Corner kiosk")).not.toContainText(/\d\d:\d\d/);
 
-  await row(page, "Morning bakery").dblclick({ position: { x: 300, y: 10 } });
+  // One click opens the row: a second one would land on the dialog's backdrop and close it.
+  await row(page, "Morning bakery").click({ position: { x: 300, y: 10 } });
   const details = page.getByRole("dialog");
   await expect(details).toContainText(/\d{1,2} \w{3} \d{4} · 1[34]:32/);
   await page.keyboard.press("Escape");
-  await row(page, "Corner kiosk").dblclick({ position: { x: 300, y: 10 } });
+  await expect(details).toBeHidden();
+  await row(page, "Corner kiosk").click({ position: { x: 300, y: 10 } });
   await expect(page.getByRole("dialog")).not.toContainText(/\d\d:\d\d/);
 });
 
