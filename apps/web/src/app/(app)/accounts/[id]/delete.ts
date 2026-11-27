@@ -139,7 +139,7 @@ export async function moveDependent(
  * page of the integration (a bank's account is no longer tied once deleted, and a bank reads tied
  * accounts only).
  */
-export async function deleteAccount(ctx: Pick<Ctx, "userId">, accountId: string): Promise<void> {
+export async function deleteAccount(ctx: Pick<Ctx, "userId" | "timeZone">, accountId: string): Promise<void> {
   if ((await accountDependents(ctx, accountId)).length > 0) throw new DeleteError("in_use");
   let deleted;
   try {

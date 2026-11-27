@@ -3,6 +3,8 @@
 // opposite amount, in the account's currency, at the same moment, paired at once. The written leg
 // follows the leg it was written for — its amount and day, and goes when that leg goes or stops
 // being a giroconto with that account — until the person changes it by hand: then it is theirs.
+// A leg the source stops returning keeps its twin: the mark is undone when the source sends it
+// again, and the deletion for good takes the twin with it (`twin_of` cascades).
 import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { getAccount, rebuildDerivedBalances } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -153,17 +155,21 @@ export async function writeTwin(ctx: WhoWhere, id: string): Promise<void> {
   if (written) await rebuildTwinBalances(ctx, [account.id]);
 }
 
-/** The twin still belongs to its leg: a giroconto with the twin's account, there or paired to it. */
+/**
+ * The twin still belongs to its leg: a giroconto with the twin's account, there or paired to it. The
+ * pair is the twin's id: while the source leaves the leg out, the rules see the twin alone and free
+ * it, and the pair is made again when the leg is back.
+ */
 const follows = (leg: Leg, twin: { id: string; accountId: string; transferGroupId: string | null }) =>
   leg.type === "transfer" &&
-  leg.removedUpstreamAt === null &&
   (leg.transferAccountId === twin.accountId ||
+    leg.transferGroupId === twin.id ||
     (leg.transferGroupId !== null && leg.transferGroupId === twin.transferGroupId));
 
 /**
  * Keeps the written legs of `ids` (of every leg, without) in line with them: the amount and the
  * moment follow, the pair is made again after the leg left it to the same account, and the twin goes
- * when its leg went to another account, to none, or upstream. A twin the person changed is no longer
+ * when its leg went to another account or to none. A twin the person changed is no longer
  * one (`twinOf` is cleared by every change by hand) and is never touched here.
  */
 export async function refreshTwins(ctx: WhoWhere, ids?: readonly string[]): Promise<void> {
@@ -224,7 +230,7 @@ export async function refreshTwins(ctx: WhoWhere, ids?: readonly string[]): Prom
 }
 
 /** The accounts of the written legs of `ids`: the caller rebuilds them after `ids` go. */
-export async function twinAccountsOf(ctx: WhoWhere, ids: readonly string[]): Promise<string[]> {
+export async function twinAccountsOf(ctx: Pick<Ctx, "userId">, ids: readonly string[]): Promise<string[]> {
   const rows = await getDb()
     .select({ accountId: transactions.accountId })
     .from(transactions)

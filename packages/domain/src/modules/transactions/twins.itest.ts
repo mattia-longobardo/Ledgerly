@@ -4,7 +4,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { listAccounts, readingsAt } from "../accounts/queries";
-import { applyProviderAccounts, createAccount } from "../accounts/service";
+import { applyProviderAccounts, createAccount, removeAccount } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { fxRates } from "../../platform/fx/schema";
@@ -14,7 +14,14 @@ import { createTestUser } from "../../../../../test/users";
 import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 import { createManualTransaction, deleteManualTransaction, updateManualTransaction } from "./manual";
 import type { IncomingTransaction } from "./rules";
-import { chooseTransferSide, pairByHand, upsertFromProvider } from "./service";
+import {
+  chooseTransferSide,
+  deleteHiddenTransactions,
+  hideTransactions,
+  pairByHand,
+  purgeRemovedUpstream,
+  upsertFromProvider,
+} from "./service";
 import { transactions } from "./schema";
 
 vi.useFakeTimers({ toFake: ["Date"], now: new Date() });
@@ -315,5 +322,71 @@ describe("a giroconto to a manual account in another currency", () => {
       currency: "USD",
       twinOf: waiting.id,
     });
+  });
+});
+
+// PERS-737: a leg the source leaves out for a while, and the deletions the twin falls with.
+describe("the written leg and the deletions around it", () => {
+  async function bankLegToSavings(ctx: Ctx) {
+    const bank = await syncedAccount(ctx, "Bank");
+    const savings = await manualAccount(ctx, "Savings");
+    await read(ctx, bank, [bankMovement("b1", -50_000n)]);
+    const leg = await only(ctx, bank);
+    await chooseTransferSide(ctx, leg.id, { kind: "account", accountId: savings });
+    expect(await balance(ctx, savings)).toBe(50_000n);
+    return { bank, savings, leg };
+  }
+
+  it("stays while the source leaves the leg out of a reading, and the pair holds when it is back", async () => {
+    const ctx = await newContext();
+    const { bank, savings, leg } = await bankLegToSavings(ctx);
+    const window = { from: day(5), to: TODAY };
+
+    await upsertFromProvider(ctx, bank, [], { provider: WALLET_PROVIDER, window });
+    expect((await only(ctx, bank)).removedUpstreamAt).not.toBeNull();
+    await upsertFromProvider(ctx, bank, [bankMovement("b1", -50_000n)], {
+      provider: WALLET_PROVIDER,
+      window,
+    });
+
+    const twin = await only(ctx, savings);
+    expect(twin.twinOf).toBe(leg.id);
+    expect((await only(ctx, bank)).transferGroupId).toBe(twin.transferGroupId);
+    expect(await balance(ctx, savings)).toBe(50_000n);
+  });
+
+  it("goes with a leg the source removed for good, and the balance follows", async () => {
+    const ctx = await newContext();
+    const { bank, savings } = await bankLegToSavings(ctx);
+    await upsertFromProvider(ctx, bank, [], {
+      provider: WALLET_PROVIDER,
+      window: { from: day(5), to: TODAY },
+    });
+
+    await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
+
+    expect(await rowsOf(ctx, savings)).toHaveLength(0);
+    expect(await balance(ctx, savings)).toBe(0n);
+  });
+
+  it("goes with a hidden leg deleted for good, and the balance follows", async () => {
+    const ctx = await newContext();
+    const { savings, leg } = await bankLegToSavings(ctx);
+    await hideTransactions(ctx, [leg.id]);
+
+    await deleteHiddenTransactions(ctx, [leg.id]);
+
+    expect(await rowsOf(ctx, savings)).toHaveLength(0);
+    expect(await balance(ctx, savings)).toBe(0n);
+  });
+
+  it("goes with the account of its leg, and the balance follows", async () => {
+    const ctx = await newContext();
+    const { bank, savings } = await bankLegToSavings(ctx);
+
+    await removeAccount(ctx, bank);
+
+    expect(await rowsOf(ctx, savings)).toHaveLength(0);
+    expect(await balance(ctx, savings)).toBe(0n);
   });
 });

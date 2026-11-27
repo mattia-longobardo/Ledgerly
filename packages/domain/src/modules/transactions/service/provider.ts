@@ -278,8 +278,8 @@ export async function upsertFromProvider(
     }
     await retypeMovements(tx, ctx);
   });
-  // The legs written on manual accounts follow what the reading changed (PERS-733).
-  await refreshTwins(ctx);
+  // The legs written on manual accounts follow the legs the reading changed (PERS-733).
+  await refreshTwins(ctx, [...patches.map((one) => one.id), ...assignments.map((one) => one.id)]);
   // A reading is a write that can make a giroconto: the legs of this pass find their twins now.
   await linkOwnTransfers(ctx);
 

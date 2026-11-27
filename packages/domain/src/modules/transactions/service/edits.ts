@@ -14,6 +14,7 @@ import { retypeMovements } from "../macro";
 import type { TransactionsProvider } from "../ports";
 import { type Transaction, transactionsByIds } from "../queries";
 import { transactions } from "../schema";
+import { rebuildTwinBalances, twinAccountsOf } from "./twins";
 import {
   TRANSACTION_ENTITY,
   TransactionError,
@@ -174,12 +175,14 @@ export async function restoreTransactions(ctx: Pick<Ctx, "userId">, ids: readonl
  * and loses the link (`on delete set null`).
  */
 async function deleteRows(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   ids: readonly string[],
   condition: ReturnType<typeof isNotNull>,
 ) {
   if (ids.length === 0) return [];
-  return getDb().transaction(async (tx) => {
+  // Their written legs go with them (`twin_of` cascades): those accounts' balances change too.
+  const twinAccounts = await twinAccountsOf(ctx, ids);
+  const deletedIds = await getDb().transaction(async (tx) => {
     const deleted = await tx
       .delete(transactions)
       .where(and(inArray(transactions.id, [...ids]), condition, userScoped(ctx).owns(transactions)))
@@ -193,6 +196,8 @@ async function deleteRows(
     }
     return deleted.map((row) => row.id);
   });
+  await rebuildTwinBalances(ctx, twinAccounts);
+  return deletedIds;
 }
 
 /**
@@ -201,7 +206,7 @@ async function deleteRows(
  * deleted, so nothing leaves the totals without having been hidden first.
  */
 export async function deleteHiddenTransactions(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   ids: readonly string[],
 ): Promise<number> {
   const wanted = parseIds(ids);
@@ -217,7 +222,7 @@ export async function deleteHiddenTransactions(
  * sync would import a second time.
  */
 export async function purgeRemovedUpstream(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId" | "timeZone">,
   source: Pick<TransactionsProvider, "provider">,
 ): Promise<number> {
   const gone = await getDb()

@@ -12,6 +12,7 @@ import { manualOccurredAt } from "../manual-rules";
 import { girocontoProposals, transactions } from "../schema";
 import { chooseTransferSide, linkOwnTransfers, PAIRED_BY_HAND, pairByHand, unpair } from "./giroconti";
 import { TransactionError } from "./guards";
+import { rebuildTwinBalances, refreshTwins } from "./twins";
 
 type Who = Pick<Ctx, "userId" | "timeZone">;
 type Account = { id: string; currency: string };
@@ -59,10 +60,27 @@ async function insertLeg(trx: Tx, ctx: Who, account: Account, leg: WantedLeg): P
   return inserted.id;
 }
 
+/** The pair is the leg's written twin (PERS-733): the twin follows the new amount, the pair stays. */
+async function pairedToTwin(trx: Tx, ctx: Who, row: LegRow): Promise<boolean> {
+  if (row.transferGroupId === null) return false;
+  const [twin] = await trx
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.id, row.transferGroupId),
+        eq(transactions.twinOf, row.id),
+        userScoped(ctx).owns(transactions),
+      ),
+    );
+  return twin !== undefined;
+}
+
 /**
  * A leg follows its operation's amount and day. A pair the new amount no longer fits comes apart
- * (its bank movement waits again) and the leg is the rules' again; same amount on another day, the
- * pair stays. Returns the rows to settle (none when nothing changed) and the markers it has now.
+ * (its bank movement waits again) and the leg is the rules' again; same amount on another day, or a
+ * pair with the leg's written twin, the pair stays. Returns the rows to settle (none when nothing
+ * changed) and the markers it has now.
  */
 async function followLeg(
   trx: Tx,
@@ -74,7 +92,7 @@ async function followLeg(
   const moved = row.amountCents !== leg.amountCents;
   if (!moved && row.occurredAt.getTime() === occurredAt.getTime())
     return { touched: [], locallyEdited: row.locallyEdited };
-  const unpaired = moved && row.transferGroupId !== null;
+  const unpaired = moved && row.transferGroupId !== null && !(await pairedToTwin(trx, ctx, row));
   const partners = unpaired ? await unpair(trx, ctx, row.transferGroupId) : [];
   const locallyEdited = unpaired
     ? row.locallyEdited.filter((field) => field !== "type" && field !== PAIRED_BY_HAND)
@@ -86,9 +104,32 @@ async function followLeg(
   return { touched: [row.id, ...partners.filter((id) => id !== row.id)], locallyEdited };
 }
 
-/** Legs whose operation is gone go; their partners wait again. Returns the partners. */
-async function dropLegs(trx: Tx, ctx: Who, rows: readonly LegRow[]): Promise<string[]> {
+/**
+ * Legs whose operation is gone go; their partners wait again, and their written twins go with them
+ * (`twin_of` cascades). Returns the partners; the twins' accounts go to `twinAccounts`.
+ */
+async function dropLegs(
+  trx: Tx,
+  ctx: Who,
+  rows: readonly LegRow[],
+  twinAccounts: string[],
+): Promise<string[]> {
   const partners: string[] = [];
+  if (rows.length > 0) {
+    const twins = await trx
+      .select({ accountId: transactions.accountId })
+      .from(transactions)
+      .where(
+        and(
+          userScoped(ctx).owns(transactions),
+          inArray(
+            transactions.twinOf,
+            rows.map((row) => row.id),
+          ),
+        ),
+      );
+    twinAccounts.push(...twins.map((twin) => twin.accountId));
+  }
   for (const row of rows) {
     partners.push(...(await unpair(trx, ctx, row.transferGroupId)).filter((id) => id !== row.id));
     await trx
@@ -123,7 +164,7 @@ export async function writeLegs(
     wanted.flatMap((leg) => (leg.legId === null ? [] : [leg.legId])),
   );
   const here = new Map(current.filter((row) => row.accountId === account.id).map((row) => [row.id, row]));
-  const written: WrittenLegs = { legIds: [], touched: [], choices: new Map() };
+  const written: WrittenLegs = { legIds: [], touched: [], choices: new Map(), twinAccounts: [] };
   for (const leg of wanted) {
     const row = leg.legId === null ? undefined : here.get(leg.legId);
     const placed = row
@@ -145,7 +186,7 @@ export async function writeLegs(
   }
   const kept = new Set(written.legIds);
   const gone = current.filter((row) => !kept.has(row.id));
-  written.touched.push(...(await dropLegs(trx, ctx, gone)));
+  written.touched.push(...(await dropLegs(trx, ctx, gone, written.twinAccounts)));
   const goneIds = new Set(gone.map((row) => row.id));
   written.touched = [...new Set(written.touched)].filter((id) => !goneIds.has(id));
   return written;
@@ -159,8 +200,11 @@ export async function writeLegs(
  */
 export async function settleLegs(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  written: Pick<WrittenLegs, "touched" | "choices">,
+  written: Pick<WrittenLegs, "touched" | "choices" | "twinAccounts">,
 ): Promise<void> {
+  // The twins of dropped legs left their accounts after the commit; changed legs move their twins.
+  await rebuildTwinBalances(ctx, written.twinAccounts);
+  await refreshTwins(ctx, written.touched);
   for (const [id, choice] of written.choices) {
     if (choice.kind === "pair") {
       // A movement that cannot be the other leg (same sign, same account) leaves the leg to the rules.

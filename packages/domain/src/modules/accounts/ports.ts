@@ -20,6 +20,8 @@ interface MovementsPort {
   ): Promise<Map<string, { id: string; on: CivilDate; cents: Cents; writtenAt: Date }[]>>;
   /** The ids of an account's movements. */
   transactionIdsOfAccount(ctx: Pick<Ctx, "userId">, accountId: string): Promise<string[]>;
+  /** The accounts of the legs the server wrote for `transactionIds` (PERS-733). */
+  twinAccountsOf(ctx: Pick<Ctx, "userId">, transactionIds: readonly string[]): Promise<string[]>;
   /** Joins the giroconti the IBANs of the accounts make of the movements already stored. */
   linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number>;
   /** The first of `candidates` whose movements hold every movement of the account (H58), or null. */

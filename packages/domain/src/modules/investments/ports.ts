@@ -70,7 +70,7 @@ interface CashLegs {
   ): Promise<WrittenLegs>;
   settleLegs(
     ctx: Pick<Ctx, "userId" | "timeZone">,
-    written: Pick<WrittenLegs, "touched" | "choices">,
+    written: Pick<WrittenLegs, "touched" | "choices" | "twinAccounts">,
   ): Promise<void>;
 }
 

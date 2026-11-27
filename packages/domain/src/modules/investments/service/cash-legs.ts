@@ -26,7 +26,7 @@ export async function writeCashLegs(
   currency: string,
 ): Promise<{ written: WrittenLegs; legOf: Map<string, string> }> {
   if (investment.provider === MANUAL_PROVIDER)
-    return { written: { legIds: [], touched: [], choices: new Map() }, legOf: new Map() };
+    return { written: { legIds: [], touched: [], choices: new Map(), twinAccounts: [] }, legOf: new Map() };
   const events = await trx
     .select({
       id: investmentEvents.id,

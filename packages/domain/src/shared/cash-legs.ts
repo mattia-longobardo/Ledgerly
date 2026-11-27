@@ -43,4 +43,6 @@ export interface WrittenLegs {
   touched: string[];
   /** The bank movement a new leg, or one in no pair, goes with. */
   choices: Map<string, LegChoice>;
+  /** The manual accounts whose written legs went with a dropped leg: their balances change. */
+  twinAccounts: string[];
 }
