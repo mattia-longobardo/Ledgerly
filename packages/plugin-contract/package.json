@@ -1,6 +1,6 @@
 {
   "name": "@ledgerly/plugin-contract",
-  "version": "0.80.2",
+  "version": "0.81.0",
   "private": true,
   "type": "module",
   "exports": {
