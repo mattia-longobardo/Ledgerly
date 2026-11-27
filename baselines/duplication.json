@@ -4,22 +4,22 @@
     "minLines": 6
   },
   "total": {
-    "lines": 122144,
+    "lines": 122171,
     "duplicatedLines": 16878,
     "percent": 13.82,
     "blocks": 1348
   },
   "units": {
     "api": {
-      "lines": 6844,
+      "lines": 6853,
       "duplicatedLines": 1278,
-      "percent": 18.67,
+      "percent": 18.65,
       "blocks": 126
     },
     "app": {
-      "lines": 22397,
+      "lines": 22386,
       "duplicatedLines": 2549,
-      "percent": 11.38,
+      "percent": 11.39,
       "blocks": 217
     },
     "global.d": {
@@ -221,9 +221,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 2391,
+      "lines": 2415,
       "duplicatedLines": 478,
-      "percent": 19.99,
+      "percent": 19.79,
       "blocks": 39
     },
     "platform/integrations/ccxt": {
@@ -431,7 +431,7 @@
       "blocks": 0
     },
     "ui": {
-      "lines": 251,
+      "lines": 256,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
