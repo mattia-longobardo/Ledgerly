@@ -377,7 +377,9 @@ describe("the written leg and the deletions around it", () => {
     expect(await balance(ctx, savings)).toBe(50_000n);
   });
 
-  it("goes with a leg the source removed for good, and the balance follows", async () => {
+  // PERS-744 (D1): the source may only have replaced the leg with a new id, so the written leg
+  // stays as one kept by hand, as before PERS-733.
+  it("stays, kept by hand, when the source removes its leg for good", async () => {
     const ctx = await newContext();
     const { bank, savings } = await bankLegToSavings(ctx);
     await upsertFromProvider(ctx, bank, [], {
@@ -387,8 +389,65 @@ describe("the written leg and the deletions around it", () => {
 
     await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
 
-    expect(await rowsOf(ctx, savings)).toHaveLength(0);
-    expect(await balance(ctx, savings)).toBe(0n);
+    expect(await rowsOf(ctx, bank)).toHaveLength(0);
+    expect((await only(ctx, savings)).twinOf).toBeNull();
+    expect(await balance(ctx, savings)).toBe(50_000n);
+  });
+
+  async function pendingLegToSavings(ctx: Ctx) {
+    const bank = await syncedAccount(ctx, "Bank");
+    const savings = await manualAccount(ctx, "Savings");
+    await upsertFromProvider(ctx, bank, [{ ...bankMovement("p1", -50_000n), state: "pending" }], {
+      provider: WALLET_PROVIDER,
+      window: { from: day(5), to: TODAY },
+    });
+    await chooseTransferSide(ctx, (await only(ctx, bank)).id, { kind: "account", accountId: savings });
+    expect(await balance(ctx, savings)).toBe(50_000n);
+    return { bank, savings };
+  }
+
+  async function expectPairedWithBooked(ctx: Ctx, bank: string, savings: string) {
+    const booked = await only(ctx, bank);
+    const twin = await only(ctx, savings);
+    expect(booked.type).toBe("transfer");
+    expect(booked.transferGroupId).not.toBeNull();
+    expect(twin.transferGroupId).toBe(booked.transferGroupId);
+    expect(await balance(ctx, savings)).toBe(50_000n);
+  }
+
+  it("pairs with the booked movement that replaces its pending leg in the same reading", async () => {
+    const ctx = await newContext();
+    const { bank, savings } = await pendingLegToSavings(ctx);
+    const window = { from: day(5), to: TODAY };
+
+    await upsertFromProvider(ctx, bank, [bankMovement("k1", -50_000n)], {
+      provider: WALLET_PROVIDER,
+      window,
+    });
+    await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
+    await expectPairedWithBooked(ctx, bank, savings);
+    // The next reading keeps the pair.
+    await upsertFromProvider(ctx, bank, [bankMovement("k1", -50_000n)], {
+      provider: WALLET_PROVIDER,
+      window,
+    });
+    await expectPairedWithBooked(ctx, bank, savings);
+  });
+
+  it("pairs with the booked movement that comes in a later reading", async () => {
+    const ctx = await newContext();
+    const { bank, savings } = await pendingLegToSavings(ctx);
+    const window = { from: day(5), to: TODAY };
+
+    await upsertFromProvider(ctx, bank, [], { provider: WALLET_PROVIDER, window });
+    await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
+    expect(await balance(ctx, savings)).toBe(50_000n);
+    await upsertFromProvider(ctx, bank, [bankMovement("k1", -50_000n)], {
+      provider: WALLET_PROVIDER,
+      window,
+    });
+    await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
+    await expectPairedWithBooked(ctx, bank, savings);
   });
 
   it("goes with a hidden leg deleted for good, and the balance follows", async () => {

@@ -187,7 +187,18 @@ async function deleteRows(
       .delete(transactions)
       .where(and(inArray(transactions.id, [...ids]), condition, userScoped(ctx).owns(transactions)))
       .returning({ id: transactions.id, transferGroupId: transactions.transferGroupId });
-    const groups = [...new Set(deleted.flatMap((row) => (row.transferGroupId ? [row.transferGroupId] : [])))];
+    const touched = [
+      ...new Set(deleted.flatMap((row) => (row.transferGroupId ? [row.transferGroupId] : []))),
+    ];
+    const left =
+      touched.length === 0
+        ? []
+        : await tx
+            .select({ group: transactions.transferGroupId })
+            .from(transactions)
+            .where(and(inArray(transactions.transferGroupId, touched), userScoped(ctx).owns(transactions)));
+    // A group that still has two legs holds: the deleted row's leg may already be paired anew (PERS-744).
+    const groups = touched.filter((group) => left.filter((row) => row.group === group).length < 2);
     if (groups.length > 0) {
       await tx
         .update(transactions)
@@ -230,11 +241,17 @@ export async function purgeRemovedUpstream(
     .from(transactions)
     .where(and(isNotNull(transactions.removedUpstreamAt), userScoped(ctx).owns(transactions)))
     .orderBy(asc(transactions.id));
-  const deleted = await deleteRows(
-    ctx,
-    gone.map((row) => row.id),
-    isNotNull(transactions.removedUpstreamAt),
-  );
+  const ids = gone.map((row) => row.id);
+  // Their written legs stay as legs kept by hand, as before PERS-733: the source may have only
+  // replaced the movement with a new id (pending → booked), and the leg pairs with that one.
+  // Outside the delete's transaction: a failure in between leaves the legs detached, the wanted end state.
+  if (ids.length > 0) {
+    await getDb()
+      .update(transactions)
+      .set({ twinOf: null })
+      .where(and(inArray(transactions.twinOf, ids), userScoped(ctx).owns(transactions)));
+  }
+  const deleted = await deleteRows(ctx, ids, isNotNull(transactions.removedUpstreamAt));
   if (deleted.length > 0) await unlinkEntities(ctx, source.provider, TRANSACTION_ENTITY, deleted);
   return deleted.length;
 }
