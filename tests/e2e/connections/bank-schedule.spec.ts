@@ -16,9 +16,12 @@ test.use({ storageState: sessionState("bankSchedule") });
 const BANKS = "/settings/plugins/enablebanking";
 const BANK = "Beta Bank";
 const RECOMMENDED = "At 07:10, 13:10, 19:10";
+// The outcome of «Choose accounts» names no count of readings: it stays true with any schedule.
+const OUTCOME_SCHEDULE =
+  'Settings shows when Ledgerly reads the bank: "Change" sets the times, "Update now" reads it right now.';
 
 /** Puts the schedule of Beta Bank's connection through the API, as the dialog would. */
-async function scheduleTimes(page: Page, times: string[]): Promise<void> {
+async function scheduleTimes(page: Page, times: string[]): Promise<string> {
   const list = await page.request.get("/api/v1/connections");
   expect(list.status()).toBe(200);
   const { connections }: { connections: { id: string; name: string }[] } = await list.json();
@@ -31,6 +34,7 @@ async function scheduleTimes(page: Page, times: string[]): Promise<void> {
     headers: { origin: new URL(BASE_URL).origin, [SESSION_CSRF_HEADER]: "1" },
   });
   expect(saved.status(), await saved.text()).toBe(204);
+  return id as string;
 }
 
 /** Beta Bank's line under «Schedule», hydrated. */
@@ -145,5 +149,15 @@ test("choosing the accounts again keeps the schedule chosen", async ({ page }) =
   await hydrated(submit);
   await submit.click();
   await expect(page.getByRole("heading", { level: 1, name: `${BANK} is connected` })).toBeVisible();
+  await expect(page.getByText(OUTCOME_SCHEDULE)).toBeVisible();
+  await expect(page.getByText(/times a day/)).toHaveCount(0);
   await expect((await scheduleRow(page)).getByText("At 06:30, 12:30, 18:30")).toBeVisible();
+});
+
+test("the outcome of «Choose accounts» is true with the recommended schedule too", async ({ page }) => {
+  const id = await scheduleTimes(page, ["07:10", "13:10", "19:10"]);
+  await page.goto(`/banks/connect?step=done&c=${id}`);
+  await expect(page.getByRole("heading", { level: 1, name: `${BANK} is connected` })).toBeVisible();
+  await expect(page.getByText(OUTCOME_SCHEDULE)).toBeVisible();
+  await expect(page.getByText(/times a day/)).toHaveCount(0);
 });

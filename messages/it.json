@@ -6489,7 +6489,7 @@
         "toSettings": "Torna alle impostazioni",
         "renewed": "Accesso a {bank} rinnovato",
         "account": "{count, plural, =0 {Nessun movimento} one {# movimento dal {date}} other {# movimenti dal {date}}} · saldo {balance}",
-        "schedule": "Ledgerly legge la banca 3 volte al giorno. Per una lettura subito usa «Aggiorna ora» in Impostazioni.",
+        "schedule": "Impostazioni mostra quando Ledgerly legge la banca: con «Cambia» scegli gli orari, con «Aggiorna ora» la leggi subito.",
         "toAccounts": "Vai ai conti",
         "syncFailedHeading": "{bank} è collegata, ma la prima lettura non è riuscita",
         "syncFailed": "I conti sono collegati, ma i movimenti non sono stati letti. Riprova ora: una banca dà lo storico completo solo nei primi minuti.",
