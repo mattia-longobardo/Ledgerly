@@ -4,6 +4,18 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · A giroconto with a manual account writes its other leg (additive)
+
+- Added to `POST /transactions/manual` and `PUT /transactions/manual/{id}`: the optional
+  `transferAccountId`, another account of the person's. With it the movement is a giroconto with that
+  account (`kind` still gives the sign, `categoryId` is ignored); without it, or `null`, the answer of
+  before. Another person's account, or the movement's own, is `invalid_reference`.
+- Changed: when the other account of a giroconto is a manual one — chosen with
+  `PUT /transactions/{id}/transfer` (`kind: "account"`) or written as above — and no leg there pairs
+  with it, the server writes the opposite leg on that account (same moment, opposite amount at the day's
+  rate, no category) and pairs the two. The written leg follows its leg's amount and day and goes with
+  it, until the person changes it. Nothing for an account a source reads, nor without the day's rate.
+
 ## Unreleased · «Try the reading again» says when the reading is refused (additive)
 
 - Changed: `POST /connections/{id}/read` answers `204` only when the reading ran. A reading the server
