@@ -98,7 +98,7 @@ describe("the import of a CSV file", () => {
     const done = await importFile(alice, imported);
     expect(done).toEqual({
       status: 200,
-      body: { created: 3, duplicates: 0, refused: [{ row: 5, reason: "bad_date" }] },
+      body: { created: 3, duplicates: 0, refused: [{ row: 5, reason: "bad_date" }], beforeOpening: null },
     });
     for (const [kind, amount, on, payee] of [
       ["expense", "12.50", "2026-02-10", "Corner shop"],
@@ -134,7 +134,12 @@ describe("the import of a CSV file", () => {
     await importFile(alice, account);
     const balance = await balanceOf(alice, account);
     const again = await importFile(alice, account);
-    expect(again.body).toEqual({ created: 0, duplicates: 3, refused: [{ row: 5, reason: "bad_date" }] });
+    expect(again.body).toEqual({
+      created: 0,
+      duplicates: 3,
+      refused: [{ row: 5, reason: "bad_date" }],
+      beforeOpening: null,
+    });
     expect(await balanceOf(alice, account)).toBe(balance);
     // A file with one row more writes only that row.
     const longer = await importFile(alice, account, `${FILE}\r\n12/02/2026;Bar;-2,00`);

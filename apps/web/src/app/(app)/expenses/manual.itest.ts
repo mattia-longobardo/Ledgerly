@@ -180,10 +180,10 @@ describe("an account kept by hand", () => {
     await updateManual(ctx, transaction.id, movement(account.id, { amountCents: 1_000n }));
     expect(await balance(ctx, account.id)).toBe(7_000n);
 
-    expect(await changeVisibility(ctx, [transaction.id], "hide")).toBe(1);
+    expect((await changeVisibility(ctx, [transaction.id], "hide")).count).toBe(1);
     expect(await balance(ctx, account.id)).toBe(8_000n);
 
-    expect(await changeVisibility(ctx, [transaction.id], "restore")).toBe(1);
+    expect((await changeVisibility(ctx, [transaction.id], "restore")).count).toBe(1);
     expect(await balance(ctx, account.id)).toBe(7_000n);
 
     await deleteManual(ctx, transaction.id);
@@ -335,7 +335,11 @@ describe("the balance line of the dialog", () => {
       amountCents: 450n,
       on: TODAY,
     });
-    expect(preview).toEqual({ account: "Cash", effect: { kind: "change", before: 8_000n, after: 7_550n } });
+    expect(preview).toEqual({
+      account: "Cash",
+      effect: { kind: "change", before: 8_000n, after: 7_550n },
+      opening: false,
+    });
 
     await createManual(ctx, movement(account.id));
     expect(await balance(ctx, account.id)).toBe(7_550n);

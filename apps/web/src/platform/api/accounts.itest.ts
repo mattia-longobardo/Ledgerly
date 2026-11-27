@@ -395,6 +395,7 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
         interestRules: [],
         switch: null,
         switchOffer: "none",
+        beforeOpening: null,
       },
     });
     const candidates = await send(alice, "GET", `/accounts/${account.id}/switch/candidates`);

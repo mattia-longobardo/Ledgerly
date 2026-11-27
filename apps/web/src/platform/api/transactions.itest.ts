@@ -114,7 +114,13 @@ describe("the manual movement", () => {
       payee: "Refund",
       note: "",
     });
-    expect(changed.body).toEqual({ id: first.id, created: false, on: "2026-02-11", accountId: account });
+    expect(changed.body).toEqual({
+      id: first.id,
+      created: false,
+      on: "2026-02-11",
+      accountId: account,
+      beforeOpening: null,
+    });
     expect(await balanceOf(alice, account)).toBe("120.00");
     expect((await send(bob, "DELETE", `/transactions/manual/${first.id}`)).status).toBe(404);
     expect((await send(alice, "DELETE", `/transactions/manual/${first.id}`)).status).toBe(204);
@@ -215,7 +221,7 @@ describe("the movements", () => {
           change,
           rebuildBalances,
         });
-        expect(done.body).toEqual({ count: 1 });
+        expect(done.body).toEqual({ count: 1, beforeOpening: null });
         expect(await balanceOf(alice, account), `${change}, rebuildBalances ${rebuildBalances}`).toBe(
           expected,
         );
