@@ -1,33 +1,17 @@
-// tests/e2e/investments/plans.spec.ts — the purchase plans of a manual portfolio at 1440 px (rewrite plan
-// R5d, step 2): «Da fare» opens the plans of the portfolio; an instalment with no cash asks for a
-// deposit (P2) and then goes through; an instalment is confirmed and its bank transaction linked (E7),
-// another is skipped; past instalments are recorded together (P4), and refused before a «Switch to
-// positions»; a plan is created, changed and paused. The figures are the API's: the client computes
-// none of them.
+// tests/e2e/investments/plans.spec.ts — the basket purchase plans of a manual portfolio
+// (docs/design/investments-plans-whole-shares.md §7, §8.2): one test per state of the screen. The
+// figures are the server's: the proposal of the seed is example 1, run 1 of the design, the skipped
+// line example 2; a correction asks the server's preview; a discard passes the whole budget on (D2);
+// fees are outside the amount (D1). The client computes none of them.
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
-import { TODAY } from "../_shared/helpers";
 
-// Its own user: «Piani» and «Senza liquidità», each with an instalment of today proposed
-// (scripts/seed-e2e/investments.ts, seedPlans).
+// Its own user (scripts/seed-e2e/investments.ts, seedPlans): «Piani», «Senza liquidità», «Vuoto».
 test.use({ storageState: sessionState("plansJourney") });
 test.describe.configure({ mode: "serial" });
 
-/** A day before today: a due date of the weekly plans, which fall on today's weekday. */
-function daysAgo(days: number): string {
-  const day = new Date(`${TODAY}T12:00:00Z`);
-  day.setUTCDate(day.getUTCDate() - days);
-  return day.toISOString().slice(0, 10);
-}
-
-/** A day as the screens write it in English: «2 Nov 2026». */
-const longDate = (day: string) =>
-  new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+/** An amount as the screens write it, in either separator. */
+const money = (amount: string) => new RegExp(amount.replace(".", "[.,]"));
 
 async function openPlans(page: Page, portfolio: string): Promise<void> {
   await page.goto("/investments");
@@ -36,7 +20,10 @@ async function openPlans(page: Page, portfolio: string): Promise<void> {
   await expect(page.getByRole("heading", { name: portfolio, level: 1 })).toBeVisible();
 }
 
-/** The instalments shown: the table's rows at this width. */
+const planRow = (page: Page, name: string): Locator =>
+  page.getByTestId("plans-table").getByRole("row").filter({ hasText: name });
+
+/** The executions shown: the table's rows at this width. */
 const runs = (page: Page): Locator => page.getByTestId("plan-run").filter({ visible: true });
 
 async function choosePlan(page: Page, name: string): Promise<void> {
@@ -44,136 +31,204 @@ async function choosePlan(page: Page, name: string): Promise<void> {
     .getByTestId("plans-table")
     .getByRole("link", { name: new RegExp(`^${name}`) })
     .click();
-  await expect(page.getByRole("heading", { name: `Instalments · ${name}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Executions · ${name}` })).toBeVisible();
 }
 
-async function planCommand(page: Page, name: string, command: string): Promise<void> {
-  await page
-    .getByTestId("plans-table")
-    .getByRole("button", { name: `Commands of ${name}` })
+/** «Review» of the plan's open proposal, and its dialog once the server's preview answered. */
+async function review(page: Page, plan: string): Promise<Locator> {
+  await choosePlan(page, plan);
+  await runs(page)
+    .first()
+    .getByRole("button", { name: /^Review the proposal of/ })
     .click();
-  await page.getByRole("menuitem", { name: command, exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: new RegExp(`^Review the proposal of .* · ${plan}$`) });
+  await expect(dialog.getByTestId("review-carry")).not.toContainText("…");
+  return dialog;
 }
 
-test("«Da fare» opens the plans; an instalment with no cash asks for a deposit, then goes through", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.getByRole("link", { name: /has no cash\. Record a deposit, then confirm it\./ }).click();
-  await expect(page).toHaveURL(/\/investments\/[0-9a-f-]+\/plans$/);
-  await expect(page.getByRole("heading", { name: "Senza liquidità", level: 1 })).toBeVisible();
-  const run = runs(page).first();
-  await expect(run.getByTestId("run-reason")).toContainText("Not enough cash");
+const shares = (dialog: Locator, name: string) => dialog.getByLabel(`Shares of ${name}`);
 
-  await run.getByRole("button", { name: /^Confirm the instalment of/ }).click();
-  const confirm = page.getByRole("dialog", { name: /^Confirm the instalment of/ });
-  // The form is the proposal of the server, filled in.
-  await expect(confirm.getByLabel("Unit price")).not.toHaveValue("");
-  await confirm.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(confirm.getByRole("alert")).toContainText("Not enough cash on that day");
-  await confirm.getByRole("button", { name: "Record a deposit" }).click();
+/** Picks an instrument of the registry in the plan's form and adds it to the basket. */
+async function addInstrument(dialog: Locator, isin: string): Promise<void> {
+  await dialog.getByRole("searchbox", { name: "Instrument" }).fill(isin);
+  await dialog.getByTestId("instrument-hit").first().click();
+  await dialog.getByRole("button", { name: "Add instrument" }).click();
+}
 
-  const deposit = page.getByRole("dialog", { name: "Record operation · Senza liquidità" });
-  await expect(deposit.getByLabel("Type")).toHaveValue("deposit");
-  await expect(deposit.getByLabel("Date")).toHaveValue(TODAY);
-  await deposit.getByLabel("Amount").fill("500");
-  await deposit.getByRole("button", { name: "Save" }).click();
-  await expect(deposit).toBeHidden();
-
-  await run.getByRole("button", { name: /^Confirm the instalment of/ }).click();
-  await confirm.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(confirm).toBeHidden();
-  await expect(runs(page).first()).toHaveAttribute("data-state", "recorded");
+test("empty: a portfolio with no plan says so, and «New plan» opens the form", async ({ page }) => {
+  await openPlans(page, "Vuoto");
+  await expect(page.getByText("No purchase plan yet")).toBeVisible();
+  await page.getByRole("button", { name: "New plan" }).click();
+  await expect(page.getByRole("dialog", { name: "New purchase plan · Vuoto" })).toBeVisible();
 });
 
-test("an instalment is confirmed and its bank transaction linked; another is skipped", async ({ page }) => {
+test("form error: percentages of 60 and 30 are refused with the sum's message", async ({ page }) => {
   await openPlans(page, "Piani");
-  await choosePlan(page, "ETF settimanale");
-  const run = runs(page).first();
-  await expect(run).toContainText("Found:");
-  // Each figure in its currency: the asset's and the bank account's.
-  await expect(run).toContainText("€");
-  await run.getByRole("button", { name: /^Confirm the instalment of/ }).click();
-  const confirm = page.getByRole("dialog", { name: /^Confirm the instalment of/ });
-  await confirm.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(confirm).toBeHidden();
-  await expect(run).toHaveAttribute("data-state", "recorded");
-
-  await run.getByRole("button", { name: /^Link the transaction of the instalment/ }).click();
-  const link = page.getByRole("dialog", { name: "Link the bank transaction?" });
-  await link.getByRole("button", { name: "Link", exact: true }).click();
-  await expect(link).toBeHidden();
-  await expect(run).toContainText("Linked:");
-
-  await choosePlan(page, "ETF da saltare");
-  const other = runs(page).first();
-  await other.getByRole("button", { name: /^Skip the instalment of/ }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Skip", exact: true }).click();
-  await expect(other).toHaveAttribute("data-state", "skipped");
+  await page.getByRole("button", { name: "New plan" }).click();
+  const dialog = page.getByRole("dialog", { name: "New purchase plan · Piani" });
+  await dialog.getByLabel("Name").fill("Piano sbagliato");
+  await dialog.getByLabel("Amount of each execution").fill("100");
+  await addInstrument(dialog, "US5949181045");
+  await addInstrument(dialog, "US02079K3059");
+  await dialog.getByLabel("Percentage of Alfa World ETF").fill("60");
+  await dialog.getByLabel("Percentage of Beta Bond ETF").fill("30");
+  await dialog.getByLabel("Day of the month").fill("10");
+  await expect(dialog.getByTestId("weights-sum")).toContainText("Total 90 %");
+  await dialog.getByRole("button", { name: "Create" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("The percentages must make 100 %");
+  await expect(dialog).toBeVisible();
 });
 
-// The server lists the past due dates with their proposal (P4); a portfolio made today takes past
-// purchases, and they are written all together.
-test("«Record the past instalments» proposes every past due date and records them together", async ({
+test("active plan: a plan of 2 instruments shows its percentages, amount, cadence and next date", async ({
   page,
 }) => {
-  await openPlans(page, "Piani");
-  await planCommand(page, "ETF settimanale", "Record the past instalments");
-  const dialog = page.getByRole("dialog", { name: "Record the past instalments · ETF settimanale" });
-  const rows = dialog.getByTestId("backfill-row");
-  await expect(rows).toHaveCount(3);
-  await expect(rows.first()).toContainText(`Due date ${longDate(daysAgo(21))}`);
-  await expect(rows.first().getByLabel("Unit price")).not.toHaveValue("");
-  await expect(dialog.getByTestId("backfill-more")).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Record 3 instalments" }).click();
-  await expect(dialog).toBeHidden();
-  await choosePlan(page, "ETF settimanale");
-  await expect(runs(page)).toHaveCount(4);
-  await expect(runs(page).nth(3)).toHaveAttribute("data-state", "recorded");
-});
-
-test("a past purchase before «Switch to positions» is refused: the days before were a value only", async ({
-  page,
-}) => {
-  await openPlans(page, "Titoli a valore");
-  await planCommand(page, "ETF dopo il passaggio", "Record the past instalments");
-  const dialog = page.getByRole("dialog", { name: "Record the past instalments · ETF dopo il passaggio" });
-  const first = dialog.getByTestId("backfill-row").first();
-  await first.getByLabel("Day of the purchase").fill(daysAgo(14));
-  await dialog.getByRole("button", { name: /^Record \d+ instalments?$/ }).click();
-  await expect(dialog.getByRole("alert")).toContainText("Before that date the portfolio had its value only");
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(runs(page)).toHaveCount(1);
-});
-
-test("a new plan, changed to automatic, then paused", async ({ page }) => {
   await openPlans(page, "Piani");
   await page.getByRole("button", { name: "New plan" }).click();
   const dialog = page.getByRole("dialog", { name: "New purchase plan · Piani" });
   await dialog.getByLabel("Name").fill("PAC mensile");
-  await dialog.getByRole("searchbox", { name: "Instrument" }).fill("IE00BK5BQT80");
-  await dialog.getByTestId("instrument-hit").first().click();
-  // Fractions are on by default (P3).
-  await expect(dialog.getByLabel("Buy fractions of a unit")).toBeChecked();
-  await dialog.getByLabel("Amount").fill("50");
+  await dialog.getByLabel("Amount of each execution").fill("150");
+  await addInstrument(dialog, "US5949181045");
+  await addInstrument(dialog, "US02079K3059");
+  await dialog.getByLabel("Percentage of Alfa World ETF").fill("60");
+  await dialog.getByLabel("Percentage of Beta Bond ETF").fill("40");
   await dialog.getByLabel("Day of the month").fill("10");
   await dialog.getByRole("button", { name: "Create" }).click();
   await expect(dialog).toBeHidden();
-  const plan = page.getByTestId("plans-table").getByRole("row").filter({ hasText: "PAC mensile" });
-  await expect(plan).toContainText("To confirm");
-  await expect(plan).toContainText("every month on day 10");
+  const row = planRow(page, "PAC mensile");
+  await expect(row).toContainText("Alfa World ETF 60 % · Beta Bond ETF 40 %");
+  await expect(row).toContainText(money("150.00"));
+  await expect(row).toContainText("every month on day 10");
+  await expect(row).toContainText(/\d{1,2} \w{3} \d{4}/);
+});
 
-  await planCommand(page, "PAC mensile", "Edit");
-  const edit = page.getByRole("dialog", { name: "Edit PAC mensile" });
-  await edit
-    .getByRole("radio", { name: "Automatic" })
-    .or(edit.getByRole("button", { name: "Automatic" }))
-    .click();
-  await edit.getByRole("button", { name: "Save" }).click();
-  await expect(edit).toBeHidden();
-  await expect(plan).toContainText("Automatic");
+test("to complete: «To do» opens the converted plan, and its amount saved clears the warning", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "A purchase plan has no amount yet. Type it." }).click();
+  await expect(page).toHaveURL(/\/investments\/[0-9a-f-]+\/plans/);
+  const row = planRow(page, "Convertito");
+  await expect(row).toContainText("Amount to type");
+  await row.getByRole("button", { name: "Set the amount of Convertito" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit Convertito" });
+  await dialog.getByLabel("Amount of each execution").fill("50");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(row).not.toContainText("Amount to type");
+  await expect(row).toContainText(money("50.00"));
+});
 
-  await planCommand(page, "PAC mensile", "Pause");
-  await expect(plan).toContainText("Paused");
+test("proposal: the shares and the carry are the design's example 1, run 1; a share too dear is skipped", async ({
+  page,
+}) => {
+  await openPlans(page, "Piani");
+  let dialog = await review(page, "Tre ETF");
+  await expect(shares(dialog, "Alfa World ETF")).toHaveValue("2");
+  await expect(shares(dialog, "Beta Bond ETF")).toHaveValue("3");
+  await expect(shares(dialog, "Gamma Gold ETC")).toHaveValue("4");
+  await expect(dialog.getByTestId("review-budget")).toContainText(money("200.00"));
+  await expect(dialog.getByTestId("review-spentTotal")).toContainText(money("175.25"));
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("24.75"));
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  // Example 2, run 1: Epsilon's 30 € buy no share at 38 €.
+  dialog = await review(page, "Due ETF");
+  const epsilon = dialog.getByTestId("review-line").filter({ hasText: "Epsilon EM ETF" });
+  await expect(epsilon).toContainText("Skipped: one share costs more than its part");
+  await expect(shares(dialog, "Delta Europe ETF")).toHaveValue("1");
+  await expect(shares(dialog, "Epsilon EM ETF")).toHaveValue("0");
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("45.00"));
+});
+
+test("modify: a price typed gives the shares and the carry of the server's preview", async ({ page }) => {
+  await openPlans(page, "Piani");
+  const dialog = await review(page, "Tre ETF");
+  await dialog.getByLabel("Unit price of Alfa World ETF").fill("30");
+  // 100 € at 30 €: 3 shares, 90 €; the others stay as proposed.
+  await expect(shares(dialog, "Alfa World ETF")).toHaveValue("3");
+  await expect(dialog.getByTestId("review-spentTotal")).toContainText(money("182.65"));
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("17.35"));
+});
+
+test("price missing: the line to type blocks «Confirm» until its price is there; another waits", async ({
+  page,
+}) => {
+  await openPlans(page, "Piani");
+  const dialog = await review(page, "Prezzo mancante");
+  const zeta = dialog.getByTestId("review-line").filter({ hasText: "Zeta Small Cap ETF" });
+  await expect(zeta).toContainText("Price to type");
+  const confirm = dialog.getByRole("button", { name: "Confirm", exact: true });
+  await expect(confirm).toBeDisabled();
+  await expect(dialog.getByTestId("review-blocked")).toBeVisible();
+  await dialog.getByLabel("Unit price of Zeta Small Cap ETF").fill("20");
+  await expect(shares(dialog, "Zeta Small Cap ETF")).toHaveValue("2");
+  await expect(confirm).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  await choosePlan(page, "In attesa");
+  await expect(runs(page).first()).toHaveAttribute("data-state", "waiting_price");
+  await expect(runs(page).first()).toContainText("Prices not available yet: new try tomorrow.");
+});
+
+test("cash error: with no cash «Confirm» is refused, offers a deposit, and writes nothing", async ({
+  page,
+}) => {
+  await openPlans(page, "Senza liquidità");
+  const dialog = await review(page, "Senza cassa");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Not enough cash on that day");
+  await expect(dialog.getByRole("button", { name: "Record a deposit" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(runs(page).first()).toHaveAttribute("data-state", "proposed");
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await expect(page.getByText("Alfa World ETF")).toHaveCount(0);
+});
+
+test("confirmed: «Confirm» records two purchases, shown in Activity, and the plan shows its carry", async ({
+  page,
+}) => {
+  await openPlans(page, "Piani");
+  const dialog = await review(page, "Da confermare");
+  // 100 € each: 2 × 41,30 and 5 × 18,75 = 176,35 €; 23,65 € to the next.
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("23.65"));
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const run = runs(page).first();
+  await expect(run).toHaveAttribute("data-state", "recorded");
+  await expect(run).toContainText("Recorded");
+  await expect(run.getByTestId("run-budget")).toContainText(money("23.65"));
+  await expect(planRow(page, "Da confermare")).toContainText(money("23.65"));
+
+  await run.getByRole("link", { name: "See the operations in Activity" }).click();
+  const bought = page
+    .locator('[data-testid="activity-row"], [data-testid="activity-item"]')
+    .filter({ visible: true });
+  await expect(bought.filter({ hasText: "Alfa World ETF" })).toHaveCount(1);
+  await expect(bought.filter({ hasText: "Beta Bond ETF" })).toHaveCount(1);
+});
+
+test("discarded: «Discard» closes the execution and passes its whole budget on", async ({ page }) => {
+  await openPlans(page, "Piani");
+  await choosePlan(page, "Due ETF");
+  const run = runs(page).first();
+  await run.getByRole("button", { name: /^Discard the execution of/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(run).toHaveAttribute("data-state", "skipped");
+  await expect(run).toContainText("Discarded");
+  await expect(run.getByTestId("run-budget")).toContainText(/Budget .*100[.,]00.* · to the next .*100[.,]00/);
+});
+
+test.describe("below md", () => {
+  test.use({ viewport: { width: 400, height: 860 } });
+
+  test("the plans are a list with the same commands", async ({ page }) => {
+    await openPlans(page, "Piani");
+    await expect(page.getByTestId("plans-table")).toBeHidden();
+    const list = page.getByTestId("plans-list");
+    await expect(list).toBeVisible();
+    await expect(list.getByRole("button", { name: "Commands of Tre ETF" })).toBeVisible();
+    await expect(list.getByRole("button", { name: "Set the amount of Convertito" })).toHaveCount(0);
+  });
 });

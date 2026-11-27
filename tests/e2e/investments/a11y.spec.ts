@@ -45,8 +45,9 @@ const PAGES: Screen[] = [
     session: "portfolio" as const,
     open: (page: Page) => serviceTab(page, "Broker", tab),
   })),
-  // The purchase plans of a manual portfolio (R5d, step 2): the plans and the instalments of one.
-  ...(["Piani", "Senza liquidità"] as const).map((portfolio) => ({
+  // The basket plans of a manual portfolio (PERS-681 §7): every state of a plan and of an execution,
+  // and a portfolio with none.
+  ...(["Piani", "Senza liquidità", "Vuoto"] as const).map((portfolio) => ({
     name: `/investments/[accountId]/plans, ${portfolio}`,
     session: "plans" as const,
     open: (page: Page) => plansTab(page, portfolio),
@@ -78,7 +79,7 @@ const PAGES: Screen[] = [
 ];
 
 /** «Add investment» on the home, and then one of its choices when named (rewrite plan R5b, B1c). */
-/** The Plans tab of a manual portfolio (R5d, step 2). */
+/** The Plans tab of a manual portfolio (PERS-681). */
 async function plansTab(page: Page, portfolio: string) {
   await follow(page, "/investments", new RegExp(`^${portfolio}$`));
   await page.goto(`${page.url().split("?")[0]}/plans`);
@@ -88,7 +89,7 @@ async function plansTab(page: Page, portfolio: string) {
 /** A command of a plan's `⋯` menu. */
 async function planCommand(page: Page, command: string) {
   await plansTab(page, "Piani");
-  await page.getByRole("button", { name: "Commands of ETF settimanale" }).filter({ visible: true }).click();
+  await page.getByRole("button", { name: "Commands of Tre ETF" }).filter({ visible: true }).click();
   await page.getByRole("menuitem", { name: command, exact: true }).click();
   await settledDialog(page);
 }
@@ -178,14 +179,17 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
-    name: "the new purchase plan dialog, with its instrument found",
+    name: "the new purchase plan dialog, with two instruments",
     session: "plans",
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await plansTab(page, "Piani");
       await page.getByRole("button", { name: "New plan" }).click();
-      await page.getByRole("searchbox", { name: "Instrument" }).fill("IE00BK5BQT80");
-      await page.getByTestId("instrument-hit").first().click();
+      for (const isin of ["US5949181045", "US02079K3059"]) {
+        await page.getByRole("searchbox", { name: "Instrument" }).fill(isin);
+        await page.getByTestId("instrument-hit").first().click();
+        await page.getByRole("button", { name: "Add instrument" }).click();
+      }
       await settledDialog(page);
     },
   },
@@ -195,26 +199,25 @@ const OVERLAYS: Screen[] = [
     roots: ['[role="dialog"]'],
     open: (page) => planCommand(page, "Edit"),
   },
-  {
-    name: "the past instalments dialog",
-    session: "plans",
+  // «Review the proposal» with a line skipped, and with a line whose price is to type.
+  ...(["Due ETF", "Prezzo mancante"] as const).map((plan) => ({
+    name: `the review proposal dialog, ${plan}`,
+    session: "plans" as const,
     roots: ['[role="dialog"]'],
-    open: (page) => planCommand(page, "Record the past instalments"),
-  },
-  {
-    name: "the confirm instalment dialog, with no cash",
-    session: "plans",
-    roots: ['[role="dialog"]'],
-    open: async (page) => {
-      await plansTab(page, "Senza liquidità");
+    open: async (page: Page) => {
+      await plansTab(page, "Piani");
       await page
-        .getByRole("button", { name: /^Confirm the instalment of/ })
+        .getByRole("link", { name: new RegExp(`^${plan}`) })
+        .filter({ visible: true })
+        .click();
+      await page
+        .getByRole("button", { name: /^Review the proposal of/ })
         .filter({ visible: true })
         .first()
         .click();
       await settledDialog(page);
     },
-  },
+  })),
   {
     name: "the connect a service dialog",
     session: "admin",

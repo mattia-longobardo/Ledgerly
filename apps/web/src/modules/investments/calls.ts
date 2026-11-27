@@ -14,7 +14,8 @@ import { refusal, type WriteResult } from "@/platform/writes";
 export type ActionResult = WriteResult;
 export type Failure = Extract<ActionResult, { ok: false }>;
 
-function failed(error: unknown): Failure {
+/** The refusal of a call in the dialogs' words: `invalid` for a field the client cannot read. */
+export function failure(error: unknown): Failure {
   // A field the client cannot read: `invalid`, as the Server Action answered.
   if (error instanceof RangeError) return { ok: false, error: "invalid" };
   return refusal(error);
@@ -34,7 +35,7 @@ export async function attempt<T extends object>(
     changed();
     return { ...answer, ok: true as const };
   } catch (error) {
-    return failed(error);
+    return failure(error);
   }
 }
 

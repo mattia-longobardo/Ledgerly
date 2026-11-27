@@ -1,7 +1,8 @@
 "use client";
 
-// The commands of a plan (R5d, step 2): change it, pause it or start it again, end it, and «Record the
-// past instalments» of a plan that started before today (P4). An ended plan is read only.
+// The commands of a plan (R5d; PERS-681 §7): change it, pause it or start it again, end it (asked
+// first). An ended plan is read only. A basket has no «Record the past instalments» (§10): a past
+// purchase is recorded by hand.
 import { useTranslations } from "next-intl";
 import { lazy, Suspense, useState } from "react";
 import { ActionMenu } from "@ledgerly/ui/menu";
@@ -11,11 +12,8 @@ import type { ServicePage } from "../service/service-view";
 import type { Plan } from "./plan-words";
 
 const PlanDialog = lazy(() => import("./plan-dialog").then((one) => ({ default: one.PlanDialog })));
-const BackfillDialog = lazy(() =>
-  import("./backfill-dialog").then((one) => ({ default: one.BackfillDialog })),
-);
 
-type MenuDialog = "edit" | "end" | "backfill";
+type MenuDialog = "edit" | "end";
 
 function useItems(page: ServicePage, plan: Plan, open: (dialog: MenuDialog) => void) {
   const text = useTranslations("investments.plans");
@@ -28,9 +26,6 @@ function useItems(page: ServicePage, plan: Plan, open: (dialog: MenuDialog) => v
     plan.state === "active"
       ? { label: text("pause"), onSelect: () => void state("paused") }
       : { label: text("resume"), onSelect: () => void state("active") },
-    ...(plan.startOn < page.say.todayOn
-      ? [{ label: text("backfill.open"), onSelect: () => open("backfill") }]
-      : []),
     { label: text("end"), onSelect: () => open("end"), danger: true },
   ];
 }
@@ -65,11 +60,7 @@ function MenuDialogs({
   if (open === null) return null;
   return (
     <Suspense fallback={null}>
-      {open === "edit" ? (
-        <PlanDialog context={page.context} plan={plan} onClose={close} />
-      ) : (
-        <BackfillDialog page={page} plan={plan} onClose={close} />
-      )}
+      <PlanDialog context={page.context} plan={plan} onClose={close} />
     </Suspense>
   );
 }

@@ -1,20 +1,19 @@
 "use client";
 
-// The fields of a plan's form (R5d, step 2; §11.3.1): what each instalment buys, how often, until
-// when, from which account it is paid, its fee and its mode. Each field writes the text as typed;
-// `plan-calls.ts` reads it.
+// The fields of a plan's form (R5d; baskets, PERS-681 §7): the amount of each execution, how often,
+// until when, from which account it is paid and its fee. Each field writes the text as typed;
+// `plan-calls.ts` reads it. The instruments and their weights are `plan-instruments.tsx`.
 import { useTranslations } from "next-intl";
 import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { AccountSelect } from "@ledgerly/ui/account-select";
 import { useApi } from "@ledgerly/ui/data";
 import { Field } from "@ledgerly/ui/field";
 import { MoneyField, NumberField } from "@ledgerly/ui/form-fields";
-import { Checkbox, Input, Select } from "@ledgerly/ui/input";
-import { Segmented } from "@ledgerly/ui/segmented";
-import type { PlanEdit, PlanForm } from "../../plan-calls";
+import { Input, Select } from "@ledgerly/ui/input";
+import type { PlanForm } from "../../plan-calls";
 import { WEEKDAYS } from "./plan-words";
 
-const FREQUENCIES = ["week", "month", "quarter"] as const;
+const FREQUENCIES = ["day", "week", "month"] as const;
 const ENDS = ["never", "date", "count"] as const;
 const FEES = ["none", "amount", "rate"] as const;
 
@@ -53,29 +52,38 @@ function ChoiceField<T extends string>({
   );
 }
 
-/** A day with no bound: a plan may start or end in the past or in the future. */
+/** A day of the plan: its start (today or later) or its last day. */
 function DayInput({
   id,
   label,
   hint,
+  min,
   value,
   onChange,
 }: {
   id: string;
   label: string;
   hint?: string;
+  min?: string;
   value: string;
   onChange: (value: string) => void;
 }) {
   return (
     <Field label={label} htmlFor={id} hint={hint}>
-      <Input id={id} type="date" required value={value} onChange={(event) => onChange(event.target.value)} />
+      <Input
+        id={id}
+        type="date"
+        required
+        min={min}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </Field>
   );
 }
 
-/** An amount or a quantity per instalment; an amount buys fractions unless the person says no (P3). */
-export function SizeFields({
+/** The amount of each execution, in the portfolio's currency: fees are on top (D1). */
+export function AmountField({
   id,
   form,
   set,
@@ -88,50 +96,21 @@ export function SizeFields({
 }) {
   const text = useTranslations("investments.plans.form");
   return (
-    <>
-      <div className="col-span-full">
-        <Segmented
-          label={text("size")}
-          value={form.size}
-          onChange={(size) => set({ size })}
-          options={[
-            { value: "amount", label: text("byAmount") },
-            { value: "quantity", label: text("byQuantity") },
-          ]}
-        />
-      </div>
-      {form.size === "amount" ? (
-        <>
-          <MoneyField
-            id={`${id}-amount`}
-            label={text("amount")}
-            value={form.amount}
-            onChange={(amount) => set({ amount })}
-            currency={currency}
-          />
-          <div className="flex items-end">
-            <Checkbox
-              label={text("fractions")}
-              checked={form.fractions}
-              onChange={(event) => set({ fractions: event.target.checked })}
-            />
-          </div>
-        </>
-      ) : (
-        <NumberField
-          id={`${id}-quantity`}
-          label={text("quantity")}
-          value={form.quantity}
-          onChange={(quantity) => set({ quantity })}
-        />
-      )}
-    </>
+    <MoneyField
+      id={`${id}-amount`}
+      label={text("amount")}
+      hint={text("amountHint")}
+      value={form.amount}
+      onChange={(amount) => set({ amount })}
+      currency={currency}
+    />
   );
 }
 
-/** The day of the instalment: a day of the week, or of the month (the month's last when shorter). */
+/** The day of the execution: a day of the week, or of the month (the month's last when shorter). */
 function DayField({ id, form, set }: { id: string; form: PlanForm; set: Patch<PlanForm> }) {
   const text = useTranslations("investments.plans");
+  if (form.frequency === "day") return null;
   if (form.frequency === "week")
     return (
       <ChoiceField
@@ -155,8 +134,19 @@ function DayField({ id, form, set }: { id: string; form: PlanForm; set: Patch<Pl
   );
 }
 
-/** How often, on which day, from when. A start in the past leaves its instalments to «Record the past instalments». */
-export function ScheduleFields({ id, form, set }: { id: string; form: PlanForm; set: Patch<PlanForm> }) {
+/** How often, on which day, and, for a new plan, from when: today or later. */
+export function ScheduleFields({
+  id,
+  form,
+  set,
+  today,
+}: {
+  id: string;
+  form: PlanForm;
+  set: Patch<PlanForm>;
+  /** A new plan's first day; a plan made keeps its start. */
+  today: string | null;
+}) {
   const text = useTranslations("investments.plans");
   return (
     <>
@@ -166,7 +156,7 @@ export function ScheduleFields({ id, form, set }: { id: string; form: PlanForm; 
         value={form.frequency}
         options={FREQUENCIES.map((one) => ({ value: one, label: text(`frequencies.${one}`) }))}
         // A day of the month is no day of the week: the choice starts again.
-        onChange={(frequency) => set({ frequency, day: frequency === "week" ? "1" : "" })}
+        onChange={(frequency) => set({ frequency, day: frequency === "month" ? "" : "1" })}
       />
       <NumberField
         id={`${id}-interval`}
@@ -175,19 +165,22 @@ export function ScheduleFields({ id, form, set }: { id: string; form: PlanForm; 
         onChange={(interval) => set({ interval })}
       />
       <DayField id={id} form={form} set={set} />
-      <DayInput
-        id={`${id}-start`}
-        label={text("form.startOn")}
-        hint={text("form.startOnHint")}
-        value={form.startOn}
-        onChange={(startOn) => set({ startOn })}
-      />
+      {today !== null && (
+        <DayInput
+          id={`${id}-start`}
+          label={text("form.startOn")}
+          hint={text("form.startOnHint")}
+          min={today}
+          value={form.startOn}
+          onChange={(startOn) => set({ startOn })}
+        />
+      )}
     </>
   );
 }
 
-/** Until when: never, a day, or a number of instalments. */
-export function EndFields({ id, form, set }: { id: string; form: PlanEdit; set: Patch<PlanEdit> }) {
+/** Until when: never, a day, or a number of executions. */
+export function EndFields({ id, form, set }: { id: string; form: PlanForm; set: Patch<PlanForm> }) {
   const text = useTranslations("investments.plans.form");
   return (
     <>
@@ -218,7 +211,7 @@ export function EndFields({ id, form, set }: { id: string; form: PlanEdit; set: 
   );
 }
 
-/** The fee of each instalment (E3): none, an amount, or a percentage of what it spends. */
+/** The fee of each purchase (E3), outside the amount (D1): none, an amount, or a percentage. */
 export function FeeFields({
   id,
   form,
@@ -226,8 +219,8 @@ export function FeeFields({
   currency,
 }: {
   id: string;
-  form: PlanEdit;
-  set: Patch<PlanEdit>;
+  form: PlanForm;
+  set: Patch<PlanForm>;
   currency: string;
 }) {
   const text = useTranslations("investments.plans.form");
@@ -254,8 +247,8 @@ export function FeeFields({
   );
 }
 
-/** The account the instalment is paid from: only to propose its bank movement, never a deposit (P1 B). */
-export function DebitField({ id, form, set }: { id: string; form: PlanEdit; set: Patch<PlanEdit> }) {
+/** The account the purchases are paid from: only to propose their bank movement, never a deposit (P1 B). */
+export function DebitField({ id, form, set }: { id: string; form: PlanForm; set: Patch<PlanForm> }) {
   const text = useTranslations("investments.plans.form");
   const list = useApi(accountRoutes.listAccounts, { query: {} }).data?.accounts ?? [];
   return (
@@ -269,25 +262,6 @@ export function DebitField({ id, form, set }: { id: string; form: PlanEdit; set:
           onChange={(event) => set({ debitAccountId: event.target.value })}
         />
       </Field>
-    </div>
-  );
-}
-
-/** Proposed for confirmation (the default, ST-5), or written by the job with the «automatic» mark. */
-export function ModeField({ form, set }: { form: PlanEdit; set: Patch<PlanEdit> }) {
-  const text = useTranslations("investments.plans");
-  return (
-    <div className="col-span-full flex flex-col gap-1">
-      <Segmented
-        label={text("form.mode")}
-        value={form.mode}
-        onChange={(mode) => set({ mode })}
-        options={[
-          { value: "propose", label: text("modes.propose") },
-          { value: "auto", label: text("modes.auto") },
-        ]}
-      />
-      <p className="text-sm text-muted">{text(`form.modeHints.${form.mode}`)}</p>
     </div>
   );
 }

@@ -82,9 +82,9 @@ export const USERS = {
   // PERS-651: a manual portfolio with no operation and a bank account with two transfers out to it,
   // for the journey of a deposit paired with its bank transaction and its leg in Expenses and Accounts.
   legs: { email: "legs@example.test", name: "Legs" },
-  // R5d, step 2: two manual portfolios with purchase plans and an instalment of today proposed — one
-  // with its bank transaction found, one with no cash (P2) — for the screen check; `plansJourney` has the
-  // same and the journey writes on it.
+  // PERS-681: manual portfolios with basket plans in every state — proposals of today, one with a
+  // price to type, one waiting for its price, a converted plan with no amount, a portfolio with no cash
+  // and one with no plan — for the screen check; `plansJourney` has the same and the journey writes on it.
   plans: { email: "plans@example.test", name: "Plans" },
   plansJourney: {
     email: "plans-journey@example.test",

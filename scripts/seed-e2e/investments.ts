@@ -3,15 +3,17 @@ import { createAccount, saveBalanceEntry, saveProviderBalance } from "@domain/mo
 import { refreshPrices, searchInstruments } from "@domain/modules/instruments";
 import {
   addAsset,
-  convertToPortfolio,
+  createBasketPlan,
   createManualService,
-  createPlan,
   createPortfolioWithAccount,
   PRICE_SCALE,
   QUANTITY_SCALE,
   recordOperation,
   runDuePlans,
 } from "@domain/modules/investments";
+import { eq } from "drizzle-orm";
+import { investmentPlanRuns, investmentPlans } from "@domain/modules/investments/schema";
+import { getDb } from "@domain/platform/db/client";
 import { pricesPlugin } from "@domain/platform/plugins";
 import { parseDecimal } from "@domain/shared/money";
 import { connectInvestmentProvider, setSourcesForTests } from "@domain/modules/investments/sync";
@@ -508,96 +510,139 @@ export async function seedLegs(): Promise<void> {
 }
 
 /**
- * The instrument of the plans (R5d, step 2): a public example ISIN (ISO 6166) of its own, priced by a
- * source of the seed's, so its close of today is known without the instance's prices plugin. The
- * registers are answered here, as for the portfolio's instrument.
+ * The instruments of the basket plans (PERS-681, docs/design/investments-plans-whole-shares.md §2.3):
+ * public example ISINs (ISO 6166) of their own, priced by a source of the seed's, so their close of
+ * today is known without the instance's prices plugin. The closes are the design's examples 1 and 2;
+ * «Zeta» has none. The registers are answered here, as for the portfolio's instrument.
  */
-const PLAN_ISIN = "US0378331005";
 const PLAN_SOURCE = "e2e-prices";
-const PLAN_REGISTERS = (async (input: string | URL | Request) => {
-  const figi = [
-    { data: [{ ticker: "EXA", exchCode: "IM", shareClassFIGI: "BBG000000001", securityType: "ETP" }] },
-  ];
-  const firds = {
-    response: {
-      docs: [{ gnr_full_name: "Example ETF", gnr_cfi_code: "CEOGLS", gnr_notional_curr_code: "EUR" }],
-    },
-  };
-  return new Response(JSON.stringify(new URL(String(input)).host === "api.openfigi.com" ? figi : firds));
-}) as typeof globalThis.fetch;
+const BASKET = [
+  { key: "alfa", isin: "US5949181045", name: "Alfa World ETF", close: "41.30" },
+  { key: "beta", isin: "US02079K3059", name: "Beta Bond ETF", close: "18.75" },
+  { key: "gamma", isin: "US0231351067", name: "Gamma Gold ETC", close: "9.10" },
+  { key: "delta", isin: "US88160R1014", name: "Delta Europe ETF", close: "55" },
+  { key: "epsilon", isin: "US30303M1027", name: "Epsilon EM ETF", close: "38" },
+  { key: "zeta", isin: "DE0007164600", name: "Zeta Small Cap ETF", close: null },
+] as const;
+type BasketKey = (typeof BASKET)[number]["key"];
 
-/** The plans' instrument, closing at 40 € today on Borsa Italiana. */
-async function planInstrument(on: string): Promise<string> {
-  const [hit] = (await searchInstruments(PLAN_ISIN, { fetch: PLAN_REGISTERS, priceSourceId: PLAN_SOURCE }))
-    .items;
-  const { listingId } = hit.listings[0];
+function registersOf(one: (typeof BASKET)[number], index: number): typeof globalThis.fetch {
+  return (async (input: string | URL | Request) => {
+    const figi = [
+      {
+        data: [
+          {
+            ticker: `E2E${index}`,
+            exchCode: "IM",
+            shareClassFIGI: `BBG00000E2E${index}`,
+            securityType: "ETP",
+          },
+        ],
+      },
+    ];
+    const firds = {
+      response: {
+        docs: [{ gnr_full_name: one.name, gnr_cfi_code: "CEOGLS", gnr_notional_curr_code: "EUR" }],
+      },
+    };
+    return new Response(JSON.stringify(new URL(String(input)).host === "api.openfigi.com" ? figi : firds));
+  }) as typeof globalThis.fetch;
+}
+
+/** The basket's instruments by key, each with today's close on Borsa Italiana when it has one. */
+async function basketInstruments(on: string): Promise<Record<BasketKey, string>> {
+  const found = await Promise.all(
+    BASKET.map(async (one, index) => {
+      const [hit] = (
+        await searchInstruments(one.isin, { fetch: registersOf(one, index), priceSourceId: PLAN_SOURCE })
+      ).items;
+      return { one, hit };
+    }),
+  );
+  const closes = new Map(
+    found.flatMap(({ one, hit }) => (one.close === null ? [] : [[hit.listings[0].listingId, one.close]])),
+  );
   await refreshPrices({
     source: {
       id: PLAN_SOURCE,
       closes: async (request) => ({
-        bars: request.listings.map((one) => ({ key: one.key, on, close: "40", currency: "EUR" })),
+        bars: request.listings.map((one) => ({
+          key: one.key,
+          on,
+          close: closes.get(one.key) ?? "0",
+          currency: "EUR",
+        })),
         errors: [],
       }),
     },
-    markets: [{ listingId, neededFrom: on }],
+    markets: [...closes.keys()].map((listingId) => ({ listingId, neededFrom: on })),
     today: on,
     cap: 10,
   });
-  return hit.instrumentId;
+  return Object.fromEntries(found.map(({ one, hit }) => [one.key, hit.instrumentId])) as Record<
+    BasketKey,
+    string
+  >;
 }
 
 /**
- * One person's plans: «Piani», a portfolio made today with 1.000 € of cash from three weeks ago, a
- * weekly plan of 100 € (fee 1 €) due today, started three weeks ago, paid from a bank account whose
- * transaction of 101 € the job finds, and a second one from today the journey skips; and «Senza liquidità», with no cash
- * and an automatic plan the job could not buy (P2); «Titoli a valore», kept by value until today's
- * «Switch to positions», with a plan started two weeks ago. The daily job runs once: every instalment
- * of today is proposed.
+ * One person's basket plans, all weekly on today's weekday from today, with no fee: the daily job runs
+ * once, so each with every price has today's proposal.
+ * «Piani», with 1.000 € of cash: «Tre ETF» (example 1, run 1), «Due ETF» (example 2: Epsilon skipped),
+ * «Da confermare» (Alfa and Beta at 50 %), «Prezzo mancante» (Zeta has no close, proposed after 5
+ * working days), «In attesa» (Zeta only, waiting for its price) and «Convertito» (a plan of R5d after
+ * the conversion: no amount). «Senza liquidità», with no cash and one proposal; «Vuoto», with no plan.
  */
-async function planUser(email: string, instrumentId: string, key: string): Promise<void> {
+async function planUser(email: string, ids: Record<BasketKey, string>): Promise<void> {
   const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
-  const day = dayOfWeek(on) === 0 ? 7 : dayOfWeek(on);
-  const instrument = { instrumentId, mic: "XMIL" };
-  const bank = await syncedAccount(ctx, `e2e-plans-${key}`, "Conto corrente");
-  const debit = walletMovement(`e2e-plans-${key}-tx-1`, on, -10_100n, "BROKER SPA", null);
-  await upsertFromProvider(ctx, bank, [debit], { provider: WALLET_PROVIDER });
-  const piani = await createPortfolioWithAccount(ctx, { name: "Piani", currency: "EUR", url: null });
-  // The cash is there from the plan's start: «Record the past instalments» proposes each purchase on
-  // the first close on or after its due date, and the closes are shared, so a close another run left
-  // on an earlier day can be that day.
-  await recordOperation(ctx, piani.accountId, {
-    kind: "deposit",
-    on: addDays(on, -21),
-    amountCents: 1_000_00n,
-  });
-  const weekly = { amountCents: 100_00n, frequency: "week" as const, day, feeCents: 1_00n, instrument };
-  await createPlan(ctx, piani.accountId, {
+  const weekly = { frequency: "week" as const, day: dayOfWeek(on) === 0 ? 7 : dayOfWeek(on), startOn: on };
+  const basket = (name: string, amountCents: bigint, weights: Partial<Record<BasketKey, number>>) => ({
     ...weekly,
-    name: "ETF settimanale",
-    startOn: addDays(on, -21),
-    debitAccountId: bank,
+    name,
+    amountCents,
+    instruments: Object.entries(weights).map(([key, weight]) => ({
+      asset: { instrument: { instrumentId: ids[key as BasketKey], mic: "XMIL" } },
+      weightBp: (weight ?? 0) * 100,
+    })),
   });
-  await createPlan(ctx, piani.accountId, { ...weekly, name: "ETF da saltare", startOn: on });
+  const piani = await createPortfolioWithAccount(ctx, { name: "Piani", currency: "EUR", url: null });
+  await recordOperation(ctx, piani.accountId, { kind: "deposit", on, amountCents: 1_000_00n });
+  const plans = [
+    basket("Tre ETF", 200_00n, { alfa: 50, beta: 30, gamma: 20 }),
+    basket("Due ETF", 100_00n, { delta: 70, epsilon: 30 }),
+    basket("Da confermare", 200_00n, { alfa: 50, beta: 50 }),
+    basket("Prezzo mancante", 100_00n, { alfa: 50, zeta: 50 }),
+    basket("In attesa", 100_00n, { zeta: 100 }),
+    basket("Convertito", 100_00n, { alfa: 100 }),
+  ];
+  const made = new Map<string, string>();
+  for (const plan of plans) made.set(plan.name, (await createBasketPlan(ctx, piani.accountId, plan)).id);
+  // A plan of R5d after the migration: its instrument at 100 %, its amount to type again (M4).
+  await getDb()
+    .update(investmentPlans)
+    .set({ executionAmountCents: null })
+    .where(eq(investmentPlans.id, made.get("Convertito") ?? ""));
   const empty = await createPortfolioWithAccount(ctx, {
     name: "Senza liquidità",
     currency: "EUR",
     url: null,
   });
-  await createPlan(ctx, empty.accountId, { ...weekly, name: "ETF automatico", startOn: on, mode: "auto" });
-  // Kept by value until today's «Switch to positions»: the days before have no positions.
-  const switched = await createAccount(ctx, { name: "Titoli a valore", type: "investment", currency: "EUR" });
-  await saveBalanceEntry(ctx, switched.id, { on: addDays(on, -30), cents: 1_000_00n });
-  await createManualService(ctx, { accountId: switched.id, category: "broker", url: null });
-  await convertToPortfolio(ctx, switched.id, { on, positions: [] });
-  await createPlan(ctx, switched.id, { ...weekly, name: "ETF dopo il passaggio", startOn: addDays(on, -14) });
+  await createBasketPlan(ctx, empty.accountId, basket("Senza cassa", 100_00n, { alfa: 100 }));
+  await createPortfolioWithAccount(ctx, { name: "Vuoto", currency: "EUR", url: null });
+  await runDuePlans(ctx);
+  // No close for 5 working days: the job proposes the lines it has, Zeta's to type (§6).
+  await getDb()
+    .update(investmentPlanRuns)
+    .set({ waitingSince: addDays(on, -10) })
+    .where(eq(investmentPlanRuns.planId, made.get("Prezzo mancante") ?? ""));
   await runDuePlans(ctx);
 }
 
-/** The purchase plans (R5d, step 2): `plans` for the screen check, `plansJourney` for the journey. */
+/** The basket plans (PERS-681): `plans` for the screen check, `plansJourney` for the journey. */
 export async function seedPlans(): Promise<void> {
   const on = today((await contextOf(USERS.plans.email)).timeZone);
-  const instrumentId = await planInstrument(on);
-  await planUser(USERS.plans.email, instrumentId, "1");
-  await planUser(USERS.plansJourney.email, instrumentId, "2");
+  const ids = await basketInstruments(on);
+  await planUser(USERS.plans.email, ids);
+  await planUser(USERS.plansJourney.email, ids);
 }
