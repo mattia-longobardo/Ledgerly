@@ -1,9 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { GET as getHealth } from "@/app/api/health/route";
 import { GET as getMetrics } from "@/app/api/metrics/route";
-import { getDb, getPool } from "@domain/platform/db/client";
+import { getDb, getPool, MAX_OWN_HOLDS } from "@domain/platform/db/client";
 import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "@domain/platform/jobs/schema";
@@ -136,15 +136,14 @@ describe("readings at once and the pool (SEC-09)", () => {
   afterAll(closeDatabase);
 
   it("more readings than the pool has connections leave it free, and /api/health answers", async () => {
-    // Each reading holds two connections of its own: with the pool's 10, the readings alone would ask
-    // the shared Postgres for 30+ slots and fail on its limit, not on the pool. A pool of 2 proves the same.
+    // Readings past MAX_OWN_HOLDS wait in turn (the next test), so a pool of 1 makes them more than it.
     const pool = getPool();
     const max = pool.options.max;
-    pool.options.max = 2;
+    pool.options.max = 1;
     onTestFinished(() => {
       pool.options.max = max;
     });
-    const READINGS = 4;
+    const READINGS = MAX_OWN_HOLDS;
     const { id: userId } = await createTestUser();
     const ctx = { userId };
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
@@ -178,5 +177,50 @@ describe("readings at once and the pool (SEC-09)", () => {
       Array.from({ length: READINGS }, () => true),
     );
     expect(await getDb().$count(jobRuns)).toBe(READINGS);
+  });
+
+  it("holds no more than MAX_OWN_HOLDS readings at once: the next one waits, then reads", async () => {
+    const { id: userId } = await createTestUser();
+    const ctx = { userId };
+    const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
+    const own = async () =>
+      (
+        await getDb().execute<{ n: number }>(
+          sql`SELECT count(*)::int AS n FROM pg_stat_activity
+              WHERE datname = current_database() AND pid <> pg_backend_pid() AND query ILIKE '%advisory_lock%'`,
+        )
+      ).rows[0].n;
+    const started: number[] = [];
+    const releases: (() => void)[] = [];
+    let holding!: () => void;
+    const allHolding = new Promise<void>((resolve) => (holding = resolve));
+    // As a reading does: its lock, then its run held, nested on the same hold.
+    const reading = async (n: number) => {
+      const run = await recordRun(ctx, { connectionId: connection.id, kind: "transactions" });
+      return withJobLock(`plugin-sync:limit-${n}`, () =>
+        holdingRun(ctx, run.id, async () => {
+          started.push(n);
+          await new Promise<void>((resolve) => {
+            releases.push(resolve);
+            if (releases.length === MAX_OWN_HOLDS) holding();
+          });
+          return n;
+        }),
+      );
+    };
+    const readings = Array.from({ length: MAX_OWN_HOLDS + 1 }, (_, n) => reading(n));
+    await allHolding;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(started).toHaveLength(MAX_OWN_HOLDS);
+    expect(await own()).toBeLessThanOrEqual(MAX_OWN_HOLDS);
+    expect((await getHealth()).status).toBe(200);
+
+    releases.shift()?.();
+    await expect.poll(() => started.length).toBe(MAX_OWN_HOLDS + 1);
+    releases.forEach((release) => release());
+    expect((await Promise.all(readings)).map((outcome) => outcome.ran)).toEqual(
+      Array.from({ length: MAX_OWN_HOLDS + 1 }, () => true),
+    );
   });
 });

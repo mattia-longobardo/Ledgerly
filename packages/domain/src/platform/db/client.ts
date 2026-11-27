@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
 import { readEnv } from "../env";
@@ -32,6 +33,29 @@ export function getDb(): Db {
  * hold always find one, and the requests of everyone else too.
  */
 export async function withOwnConnection<T>(work: (db: Db) => Promise<T>): Promise<T> {
+  // A hold inside a hold (job → reading → run) never waits: it would wait for itself.
+  if (insideHold.getStore()) return connectOwn(work);
+  while (holds >= MAX_OWN_HOLDS) await new Promise<void>((resolve) => waiting.push(resolve));
+  holds++;
+  try {
+    return await insideHold.run(true, () => connectOwn(work));
+  } finally {
+    holds--;
+    waiting.shift()?.();
+  }
+}
+
+/**
+ * Holds at once in this process, the outermost ones only. A hold nests at most 3 connections (the
+ * lock of a job, the lock of a reading, its run), so a process opens at most 6 of its own: the
+ * Postgres is shared with the rest of the homelab. The others wait in turn.
+ */
+export const MAX_OWN_HOLDS = 2;
+let holds = 0;
+const waiting: (() => void)[] = [];
+const insideHold = new AsyncLocalStorage<true>();
+
+async function connectOwn<T>(work: (db: Db) => Promise<T>): Promise<T> {
   const client = new Client({
     connectionString: readEnv().DATABASE_URL,
     connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
