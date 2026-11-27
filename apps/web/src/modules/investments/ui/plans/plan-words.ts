@@ -73,6 +73,10 @@ export function basketProblem(
 export const weightsSum = (rows: readonly Pick<PlanInstrument, "weight">[], format: NumberFormat) =>
   rows.reduce((sum, row) => sum + (weightBp(row.weight, format) ?? 0), 0);
 
+/** Shares as typed are whole: a basket never buys a fraction (PERS-681 M2). */
+export const wholeShares = (typed: string, format: NumberFormat) =>
+  typed.trim() !== "" && /^\d+$/.test(plainDecimalOf(typed, format));
+
 /** A weight as typed («33,33») in basis points, or null when it is no percentage. */
 export function weightBp(typed: string, format: NumberFormat): number | null {
   if (typed.trim() === "") return null;

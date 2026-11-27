@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { basketProblem, weightBp } from "./plan-words";
+import { basketProblem, weightBp, wholeShares } from "./plan-words";
 
 const row = (weight: string, instrumentId: string | null, assetId: string | null = null) => ({
   weight,
@@ -29,5 +29,13 @@ describe("the form's check of a basket (PERS-681 §7)", () => {
         "it-IT",
       ),
     ).toBe("tooMany");
+  });
+
+  it("reads shares as whole only", () => {
+    expect(wholeShares("3", "it-IT")).toBe(true);
+    expect(wholeShares("0", "it-IT")).toBe(true);
+    expect(wholeShares("2,5", "it-IT")).toBe(false);
+    expect(wholeShares("", "it-IT")).toBe(false);
+    expect(wholeShares("-1", "it-IT")).toBe(false);
   });
 });

@@ -9,16 +9,26 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useId, useState, useTransition } from "react";
 import { priceText, quantityText } from "@ledgerly/domain/investments/client";
-import { formatDate, formatDecimalText } from "@ledgerly/format/format";
+import { formatDate, formatDecimalText, type NumberFormat } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
 import { FormDialog } from "@ledgerly/ui/form-dialog";
-import { DateField, MoneyField, NumberField } from "@ledgerly/ui/form-fields";
+import { Field } from "@ledgerly/ui/field";
+import { DateField, MoneyField } from "@ledgerly/ui/form-fields";
+import { Input } from "@ledgerly/ui/input";
 import { StatusBadge } from "@ledgerly/ui/status-badge";
 import { notify } from "@ledgerly/ui/toast";
 import { confirmRun, type LineTyped, previewRun, type RunPreview } from "../../plan-calls";
 import { useErrorText } from "../dialog-kit";
 import type { ServicePage } from "../service/service-view";
-import { amountText, LINE_TONES, type Plan, type PlansText, type Run, typedDecimal } from "./plan-words";
+import {
+  amountText,
+  LINE_TONES,
+  type Plan,
+  type PlansText,
+  type Run,
+  typedDecimal,
+  wholeShares,
+} from "./plan-words";
 
 /** The corrections ask for a preview once the typing stops. */
 const PREVIEW_MS = 300;
@@ -40,21 +50,27 @@ function typedOf(run: Run, page: ServicePage): Typed[] {
 }
 
 /** A line's corrections differ from the proposal: a price changed, or shares typed. */
-function corrections(typed: readonly Typed[], initial: readonly Typed[]): LineTyped[] {
+function corrections(typed: readonly Typed[], initial: readonly Typed[], format: NumberFormat): LineTyped[] {
   return typed.map((line, index) => ({
     assetId: line.assetId,
     unitPrice: line.unitPrice === initial[index].unitPrice ? "" : line.unitPrice,
-    quantity: line.touched ? line.quantity : "",
+    // Shares that are not whole stay on their field: the server would refuse them (`invalid`).
+    quantity: line.touched && wholeShares(line.quantity, format) ? line.quantity : "",
     fee: line.fee,
   }));
 }
 
 /** The server's preview of what was typed, and its refusal; the run's own figures until it answers. */
-function usePreview(ref: { accountId: string; planId: string; runId: string }, run: Run, typed: Typed[]) {
+function usePreview(
+  ref: { accountId: string; planId: string; runId: string },
+  run: Run,
+  typed: Typed[],
+  format: NumberFormat,
+) {
   const [initial] = useState(typed);
   const [preview, setPreview] = useState<RunPreview | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
-  const wanted = corrections(typed, initial);
+  const wanted = corrections(typed, initial, format);
   const asked = JSON.stringify(wanted);
   useEffect(() => {
     let live = true;
@@ -119,6 +135,41 @@ function LineHead({
   );
 }
 
+/** The shares of a line: the server's proposal until typed; whole only (PERS-681 M2). */
+function SharesField({
+  id,
+  line,
+  typed,
+  shown,
+  set,
+  page,
+}: {
+  id: string;
+  line: Line;
+  typed: Typed;
+  shown: Shown;
+  set: (patch: Partial<Typed>) => void;
+  page: ServicePage;
+}) {
+  const text = useTranslations("investments.plans.review");
+  const { format } = page.say;
+  return (
+    <Field
+      label={text("quantityOf", { name: line.name })}
+      htmlFor={id}
+      error={typed.touched && !wholeShares(typed.quantity, format) ? text("wholeShares") : undefined}
+    >
+      <Input
+        id={id}
+        inputMode="numeric"
+        numeric
+        value={typed.touched ? typed.quantity : typedDecimal(shown.quantity, format)}
+        onChange={(event) => set({ quantity: event.target.value, touched: true })}
+      />
+    </Field>
+  );
+}
+
 function ReviewLine({
   id,
   line,
@@ -155,12 +206,7 @@ function ReviewLine({
           onChange={(unitPrice) => set({ unitPrice })}
           currency={line.priceCurrency ?? currency}
         />
-        <NumberField
-          id={`${id}-quantity`}
-          label={text("review.quantityOf", { name: line.name })}
-          value={typed.touched ? typed.quantity : typedDecimal(shown.quantity, format)}
-          onChange={(quantity) => set({ quantity, touched: true })}
-        />
+        <SharesField id={`${id}-quantity`} line={line} typed={typed} shown={shown} set={set} page={page} />
         <MoneyField
           id={`${id}-fee`}
           label={text("review.feeOf", { name: line.name })}
@@ -234,12 +280,12 @@ function useConfirm(page: ServicePage, plan: Plan, run: Run, onClose: () => void
   const [typed, setTyped] = useState(() => typedOf(run, page));
   const [refused, setRefused] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const preview = usePreview(ref, run, typed);
+  const preview = usePreview(ref, run, typed, page.say.format);
   const set = (index: number) => (patch: Partial<Typed>) =>
     setTyped((current) => current.map((line, place) => (place === index ? { ...line, ...patch } : line)));
   // A line with no price cannot be bought, nor confirmed with none (§6); shares typed are needed.
   const blocked = typed.some(
-    (line) => line.unitPrice.trim() === "" || (line.touched && line.quantity.trim() === ""),
+    (line) => line.unitPrice.trim() === "" || (line.touched && !wholeShares(line.quantity, page.say.format)),
   );
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

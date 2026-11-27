@@ -151,6 +151,32 @@ test("modify: a price typed gives the shares and the carry of the server's previ
   await expect(dialog.getByTestId("review-carry")).toContainText(money("17.35"));
 });
 
+test("whole shares: a fraction stays on its field and blocks «Confirm»", async ({ page }) => {
+  await openPlans(page, "Piani");
+  const dialog = await review(page, "Tre ETF");
+  const field = shares(dialog, "Alfa World ETF");
+  await field.fill("2,5");
+  await expect(dialog.getByText("Shares are whole: type a number with no decimals.")).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeDisabled();
+  await field.fill("2");
+  await expect(dialog.getByRole("button", { name: "Confirm", exact: true })).toBeEnabled();
+});
+
+test("skipped line: a line confirmed with 0 shares buys nothing and says so", async ({ page }) => {
+  await openPlans(page, "Piani");
+  const dialog = await review(page, "Tre ETF");
+  await shares(dialog, "Gamma Gold ETC").fill("0");
+  // 82,60 + 56,25 = 138,85 €: 61,15 € to the next.
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("61.15"));
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const run = runs(page).first();
+  await expect(run).toHaveAttribute("data-state", "recorded");
+  await expect(run).toContainText("Gamma Gold ETC: Not bought: confirmed with 0 shares");
+  await expect(run.getByTestId("run-budget")).toContainText(money("61.15"));
+});
+
 test("price missing: the line to type blocks «Confirm» until its price is there; another waits", async ({
   page,
 }) => {

@@ -5595,7 +5595,8 @@
         "carry": "Alla prossima esecuzione",
         "submit": "Conferma",
         "priceMissing": "Scrivi il prezzo di ogni riga per confermare.",
-        "changed": "Il piano è cambiato in un'altra scheda: chiudi e riapri la proposta."
+        "changed": "Il piano è cambiato in un'altra scheda: chiudi e riapri la proposta.",
+        "wholeShares": "Le quote sono intere: scrivi un numero senza decimali."
       }
     }
   },

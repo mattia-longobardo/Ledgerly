@@ -5595,7 +5595,8 @@
         "carry": "To the next execution",
         "submit": "Confirm",
         "priceMissing": "Type the price of every line to confirm.",
-        "changed": "The plan changed in another tab: close and open the proposal again."
+        "changed": "The plan changed in another tab: close and open the proposal again.",
+        "wholeShares": "Shares are whole: type a number with no decimals."
       }
     }
   },
