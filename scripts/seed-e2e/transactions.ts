@@ -181,6 +181,21 @@ export async function seedManual(email: string = USERS.manual.email): Promise<vo
   });
 }
 
+/**
+ * PERS-732: the `manual` user's data and a second account kept by hand, "Salvadanaio", with 20,00 €
+ * five days ago: a giroconto written by hand between the two gets its other leg from the server.
+ */
+export async function seedManualTransfer(email: string): Promise<void> {
+  await seedManual(email);
+  const ctx = await contextOf(email);
+  await createAccount(ctx, {
+    name: "Salvadanaio",
+    type: "cash",
+    currency: "EUR",
+    openingBalance: { on: addDays(today(ctx.timeZone), -5), cents: 2_000n },
+  });
+}
+
 /** `activate`: false for a user whose Wallet is off with its data here («Needs cleanup», H56). */
 export async function seedSources(email: string = USERS.sources.email, activate = true): Promise<void> {
   const ctx = await contextOf(email);

@@ -189,6 +189,11 @@ export const USERS = {
     email: "manual-journey@example.test",
     name: "Manual Journey",
   },
+  // PERS-732: two accounts kept by hand, for a giroconto written by hand between them.
+  manualTransfer: {
+    email: "manual-transfer@example.test",
+    name: "Manual Transfer",
+  },
   // PERS-678: a movement imported before the opening, and «Move the opening».
   beforeOpening: {
     email: "before-opening@example.test",
@@ -361,6 +366,7 @@ export const SESSIONS = {
   reviewJourney: { user: "reviewJourney", file: "review-journey-session.json" },
   reviewNewJourney: { user: "reviewNewJourney", file: "review-new-journey-session.json" },
   manualJourney: { user: "manualJourney", file: "manual-journey-session.json" },
+  manualTransfer: { user: "manualTransfer", file: "manual-transfer-session.json" },
   beforeOpening: { user: "beforeOpening", file: "before-opening-session.json" },
   sendJourney: { user: "sendJourney", file: "send-journey-session.json" },
   sourceCategories: { user: "sourceCategories", file: "source-categories-session.json" },

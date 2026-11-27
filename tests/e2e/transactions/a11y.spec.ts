@@ -47,6 +47,26 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
+    // PERS-732: the same dialog as a giroconto — the direction and the other account in place of
+    // the category.
+    name: "the add transaction dialog as a giroconto",
+    session: "manual",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /^(Add transaction|Aggiungi movimento|Add|Aggiungi)$/ })
+        .first()
+        .click();
+      await settledDialog(page);
+      const form = page.getByTestId("manual-dialog");
+      await expect(form.getByLabel(/^(Account|Conto)$/)).toBeEnabled();
+      await form.getByRole("button", { name: /^(Transfer|Giroconto)$/ }).click();
+      await expect(form.getByLabel(/^(Other account|Altro conto)$/)).toBeVisible();
+    },
+  },
+  {
     // Release N3.1: the same dialog on an account whose source takes the movement — its group
     // under the source's name and the note that says when the movement goes.
     name: "the add transaction dialog on an account of a source",

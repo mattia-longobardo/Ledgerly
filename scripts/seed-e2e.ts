@@ -66,7 +66,14 @@ import {
 import { seedPockets } from "./seed-e2e/pockets";
 import { seedSubscriptions } from "./seed-e2e/subscriptions";
 import { seedTimeOff } from "./seed-e2e/timeoff";
-import { seedEditing, seedExpenses, seedGiroconti, seedManual, seedSources } from "./seed-e2e/transactions";
+import {
+  seedEditing,
+  seedExpenses,
+  seedGiroconti,
+  seedManual,
+  seedManualTransfer,
+  seedSources,
+} from "./seed-e2e/transactions";
 import { wireDomain } from "../apps/api/src/wiring";
 
 // The ports of the domain, as every process wires them (10-modularity.md §10.3).
@@ -214,6 +221,7 @@ const DATA: [Name[], () => Promise<unknown>][] = [
   [["rules"], () => seedRules(USERS.rules.email)],
   [["rulesJourney"], () => seedRules(USERS.rulesJourney.email)],
   [["manualJourney"], () => seedManual(USERS.manualJourney.email)],
+  [["manualTransfer"], () => seedManualTransfer(USERS.manualTransfer.email)],
   [["sendJourney"], () => seedSources(USERS.sendJourney.email)],
   [["sourceCategories"], () => seedSources(USERS.sourceCategories.email)],
   [["switchJourney"], () => seedSwitching(USERS.switchJourney.email)],
