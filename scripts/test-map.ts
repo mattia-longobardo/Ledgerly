@@ -80,6 +80,7 @@ export const FLOWS: Flow[] = [
       "investments-home",
       "investments-service",
       "investments-groups",
+      "investments-chart",
       "portfolio",
       "plans",
       "legs",

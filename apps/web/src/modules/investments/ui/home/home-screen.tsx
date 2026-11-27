@@ -4,7 +4,7 @@
 // list first — the chips, the four KPIs and the groups with their rows, the pension funds among them —
 // then, beside «Stocks and crypto», the P&L of the services with how far it can be trusted, its parts,
 // the chart of the period by service, the services ordered by what they added, and what the portfolio
-// holds today. The period and the chip are in the address (§1.2): the server measures the period.
+// holds today. Beside «Pension funds», or «All» with no service, the chart alone, with the funds' layers. The period and the chip are in the address (§1.2): the server measures the period.
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { investments } from "@ledgerly/api-contract/investments";
@@ -88,7 +88,15 @@ function HomeView({ context }: { context: HomeContext }) {
         />
       </div>
       <HomePortfolio context={context} />
-      {chip !== "pension_funds" && home.services.length > 0 && <ServicesView context={context} />}
+      {chip !== "pension_funds" && home.services.length > 0 ? (
+        <ServicesView context={context} />
+      ) : (
+        chip !== "stocks_crypto" && (
+          <HighlightScope className="flex flex-col gap-4">
+            <HomeChart context={context} />
+          </HighlightScope>
+        )
+      )}
     </>
   );
 }
@@ -97,10 +105,11 @@ function HomeRead({ say, section }: { say: Say; section: SectionQuery }) {
   const text = useTranslations("investments");
   const words = useTranslations("common.period");
   const query = useSearchParams();
-  const read = useLatest(useApi(investments.getInvestmentsHome, { query: section.api }));
   const view: ChartView = VIEWS.find((key) => key === query.get("view")) ?? "pnl";
   const grouping: GroupBy = GROUPS.find((key) => key === query.get("by")) ?? "service";
   const chip = CHIPS.find((key) => key === query.get("group")) ?? "all";
+  // The chip names the chart's layers: the server draws its groups only.
+  const read = useLatest(useApi(investments.getInvestmentsHome, { query: { ...section.api, group: chip } }));
   return (
     <Ready state={read} skeleton={<HomeSkeleton />}>
       {(home) => (
