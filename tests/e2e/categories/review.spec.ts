@@ -197,6 +197,7 @@ test.describe("the guided review of a person with no category", () => {
 
 for (const { width, height } of [
   { width: 1440, height: 900 },
+  { width: 768, height: 1024 },
   { width: 400, height: 860 },
 ]) {
   test.describe(`To review at ${width} px`, () => {
@@ -211,6 +212,24 @@ for (const { width, height } of [
         .click()
         .catch(() => undefined);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    });
+
+    // Under the @4xl container the summary goes above the groups and its counts go in a row.
+    test("puts the summary beside the groups only on a wide column", async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto(REVIEW);
+      const aside = page.locator("aside").filter({ has: page.locator("dl") });
+      await expect(page.getByTestId("review-group").first()).toBeVisible();
+      const asideBox = (await aside.boundingBox())!;
+      const groupBox = (await page.getByTestId("review-group").first().boundingBox())!;
+      const direction = await aside.locator("dl").evaluate((dl) => getComputedStyle(dl).flexDirection);
+      if (width >= 1440) {
+        expect(asideBox.x).toBeGreaterThan(groupBox.x);
+        expect(direction).toBe("column");
+      } else {
+        expect(asideBox.y).toBeLessThan(groupBox.y);
+        expect(direction).toBe("row");
+      }
     });
   });
 }

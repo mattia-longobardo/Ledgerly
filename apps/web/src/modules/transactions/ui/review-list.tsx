@@ -364,7 +364,7 @@ export function ReviewList({
         )}
       </div>
 
-      <aside className="flex min-w-0 flex-col gap-4 @4xl:sticky @4xl:top-16 max-@4xl:order-first">
+      <aside className="flex min-w-0 flex-col gap-4 @4xl:sticky @4xl:top-16 @max-4xl:order-first">
         <Card className="flex flex-col gap-2">
           <h2 className="font-semibold">{t("review.aside.title")}</h2>
           {guide && (
@@ -384,7 +384,7 @@ export function ReviewList({
               </p>
             </div>
           )}
-          <dl className="flex flex-col gap-1 text-sm max-@4xl:flex-row max-@4xl:flex-wrap max-@4xl:gap-x-4">
+          <dl className="flex flex-col gap-1 text-sm @max-4xl:flex-row @max-4xl:flex-wrap @max-4xl:gap-x-4">
             {(
               [
                 ["suggested", sections[0].groups.reduce((sum, group) => sum + group.count, 0)],
