@@ -31,6 +31,8 @@ instrument at 100 %, the amount to type again.
   confirm with a fraction of a share is `invalid`. The plan's fixed fee is in the portfolio's currency,
   converted at the ECB rate of the day for an instrument in another currency; the `fee` of a line is in
   the instrument's. A line the job proposed to buy, confirmed with 0 shares, is `skipped`.
+- `POST …/runs/{runId}/skip` on a basket's execution still `pending` or `waiting_price` while the proposal
+  before it is open: 409 `not_editable` (the proposal stays to confirm or skip first).
 - `POST …/plans/{planId}/backfill` on a basket: `invalid` (`plan_model_retired`).
 - Added: the event `plan_amount_missing` of «Da fare» (a converted plan with no amount yet).
 

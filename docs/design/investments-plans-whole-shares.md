@@ -163,7 +163,7 @@ Stati: si aggiunge `expired` (§4.3). Motivi (`PLAN_RUN_REASONS`): si aggiungono
 | `asset_id`, `weight_bp` | copia del piano al momento della proposta: cambiare il piano non cambia una proposta aperta |
 | `price`, `price_currency`, `price_on`, `fx_rate` | prezzo di chiusura usato e cambio BCE; `null` se manca |
 | `target_cents`, `quantity`, `spent_cents` | risultato di §2.2 (proposta); alla conferma i valori reali |
-| `state` | `buy`, `too_expensive`, `price_missing` |
+| `state` | `buy`, `too_expensive`, `price_missing`, `skipped` (riga confermata con 0 quote, §5) |
 | `event_id` | → `investment_events`, `on delete set null`, **unico**: l'acquisto registrato della riga |
 
 Vincoli: `unique (run_id, asset_id)`, `unique (event_id)`. `investment_operations.plan_run_id` resta solo per i piani
@@ -232,7 +232,7 @@ Il `resto_in` è il `carry_out_cents` dell'ultima esecuzione chiusa del piano. S
 |---|---|
 | **Conferma** | Un acquisto (`buyWithin`) per ogni riga con quote > 0, tutti o nessuno, in una transazione; `event_id` sulla riga; esecuzione `recorded`, `carry_out = budget − spesa reale`. Cassa insufficiente → errore `negative_cash`, niente scritto: Mattia registra prima il versamento |
 | **Modifica** | Solo nel dialog, prima della conferma: anteprima dal server (§5), nessuna scrittura |
-| **Scarta** | Esecuzione `skipped`, nessun acquisto, `carry_out = budget` (M1, D2: tutto il non speso passa) |
+| **Scarta** | Esecuzione `skipped`, nessun acquisto, `carry_out = budget` (M1, D2: tutto il non speso passa). Un'esecuzione ancora senza budget (`pending`, `waiting_price`) mentre la precedente è `proposed` → 409 `not_editable`: fissare il suo budget farebbe scadere la proposta senza una proposta nuova. Mattia conferma o scarta prima la proposta |
 | **Non confermata alla scadenza dopo** | Quando il job crea la proposta della scadenza seguente, la precedente ancora `proposed` diventa `expired` con `carry_out = budget`, e il budget nuovo la include. Così ogni proposta aperta ha un `resto_in` certo e ce n'è al massimo una per piano |
 
 Dopo la conferma un acquisto è un'operazione normale: si modifica con la modifica delle operazioni (PERS-683). La

@@ -267,7 +267,8 @@ export const skipPlanRun = defineRoute({
   capability: "investments",
   summary:
     "Skips an instalment: it stays in the list as skipped, and nothing brings it back by itself. A basket's " +
-    "execution carries its whole budget to the next one.",
+    "execution carries its whole budget to the next one; one still waiting for a price is not editable while " +
+    "the proposal before it is open.",
   actions: [],
   params: byRun,
   response: null,

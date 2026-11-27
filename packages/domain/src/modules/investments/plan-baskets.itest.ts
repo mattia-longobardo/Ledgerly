@@ -274,6 +274,64 @@ describe("a basket plan", () => {
     expect(runs.filter((run) => run.state === "expired")).toEqual([]);
   });
 
+  it("refuses to skip an execution with no budget while the proposal before it is open (§4.3)", async () => {
+    // A daily plan is due on working days: the first one from today, then the next one.
+    const working = (from: number) => {
+      let day = from;
+      while ([0, 6].includes(dayOfWeek(addDays(todayOn, day)))) day += 1;
+      return day;
+    };
+    const first = working(0);
+    const second = working(first + 1);
+    await closes(addDays(todayOn, first), [
+      { market: 0, close: "41.30" },
+      { market: 1, close: "18.75" },
+    ]);
+    const accountId = await portfolio(1_000_00n);
+    const { id: planId } = await createBasketPlan(ctx, accountId, weekly({ frequency: "day" }));
+    vi.useFakeTimers({ toFake: ["Date"], now: daysFrom(first) });
+    await runDuePlans(ctx);
+    // The next working day has no close yet: its execution waits for a price.
+    vi.useFakeTimers({ toFake: ["Date"], now: daysFrom(second) });
+    await runDuePlans(ctx);
+    const [waiting, proposal] = await listRuns(ctx, accountId, planId);
+    expect([waiting.run.state, proposal.run.state]).toEqual(["waiting_price", "proposed"]);
+    await expect(skipRun(ctx, { accountId, planId, runId: waiting.run.id })).rejects.toMatchObject({
+      code: "not_editable",
+    });
+    const [, still] = await listRuns(ctx, accountId, planId);
+    expect(still.run).toMatchObject({ state: "proposed", carryOutCents: null });
+    await confirmBasketRun(
+      ctx,
+      { accountId, planId, runId: proposal.run.id },
+      { lines: confirmation(proposal.lines) },
+    );
+    // Closed, the proposal gives its carry out to the skip, which carries its whole budget.
+    await skipRun(ctx, { accountId, planId, runId: waiting.run.id });
+    const [skipped, recorded] = await listRuns(ctx, accountId, planId);
+    expect(skipped.run).toMatchObject({
+      state: "skipped",
+      carryInCents: recorded.run.carryOutCents,
+      carryOutCents: 200_00n + (recorded.run.carryOutCents ?? 0n),
+    });
+  });
+
+  it("takes the ECB rate of the working day before for the fixed fee on a day with none", async () => {
+    await saveRates([{ on: addDays(todayOn, -1), currency: "USD", eurPerUnit: "0.9" }]);
+    await closes(todayOn, [{ market: 2, close: "30", currency: "USD" }]);
+    const accountId = await portfolio(1_000_00n);
+    const { id: planId } = await createBasketPlan(
+      ctx,
+      accountId,
+      weekly({ amountCents: 100_00n, instruments: [instrument(2, 10000)] }),
+    );
+    await runDuePlans(ctx);
+    const [run] = await listRuns(ctx, accountId, planId);
+    await confirmBasketRun(ctx, { accountId, planId, runId: run.run.id }, { lines: confirmation(run.lines) });
+    const fees = await getDb().select().from(investmentOperations).where(eq(investmentOperations.leg, "fee"));
+    expect(fees.map((leg) => leg.amountCents)).toEqual([-1_50n]);
+  });
+
   it("confirms a line set to 0 as skipped, and refuses a fraction of a share", async () => {
     await closes(todayOn, [
       { market: 0, close: "41.30" },

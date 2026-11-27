@@ -253,12 +253,26 @@ export async function linesOf(ctx: Pick<Ctx, "userId">, runIds: readonly string[
 
 /**
  * A skipped basket execution carries its whole budget to the next one (M1, D2); one still waiting
- * for a price fixes it first. An instalment of R5d carries nothing.
+ * for a price fixes it first. An instalment of R5d carries nothing. One with no budget yet is
+ * `not_editable` while a proposal before it is open: fixing its budget would expire that proposal,
+ * which only a new proposal does (§4.3).
  */
 export async function skippedCarry(transaction: Tx, plan: InvestmentPlan, run: InvestmentPlanRun) {
   if (plan.model !== "basket") return {};
-  const budgetCents = run.budgetCents ?? (await settleBudget(transaction, plan, run)).budgetCents;
-  return { carryOutCents: budgetCents };
+  if (run.budgetCents !== null) return { carryOutCents: run.budgetCents };
+  const [open] = await transaction
+    .select({ id: investmentPlanRuns.id })
+    .from(investmentPlanRuns)
+    .where(
+      and(
+        eq(investmentPlanRuns.planId, plan.id),
+        lt(investmentPlanRuns.dueOn, run.dueOn),
+        eq(investmentPlanRuns.state, "proposed"),
+      ),
+    )
+    .limit(1);
+  if (open) throw new InvestmentError("not_editable");
+  return { carryOutCents: (await settleBudget(transaction, plan, run)).budgetCents };
 }
 
 /** The carry of a plan now: the carry out of its last closed execution, 0 with none. */
