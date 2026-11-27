@@ -10,27 +10,26 @@ import { userScoped } from "../../../platform/db/scope";
 import { MANUAL_PROVIDER } from "../catalog";
 import { cashLegs } from "../ports";
 import { ADJUSTMENT_CLASSES, oldestDay, positionCents } from "../rules";
-import {
-  investmentAccounts,
-  investmentEvents,
-  investmentHoldings,
-  investmentOperationRevisions,
-  investmentOperations,
-} from "../schema";
+import { investmentEvents, investmentOperations } from "../schema";
 import { civilDate } from "../../../shared/inputs";
 import { currencyOf, loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
 import { writeCashLegs } from "./cash-legs";
-import { insertEvent, insertLegs, type LegInput, optionalNote, periodOn, positive, rateOf } from "./events";
-import { checkPortfolio } from "./guards";
-import { clearTransferGroup } from "./transfers";
 import {
-  type InvestmentAccount,
-  InvestmentError,
-  type InvestmentEvent,
-  notFuture,
-  translated,
-  type WriteCtx,
-} from "./types";
+  type BuyInput,
+  buyInputSchema,
+  buyLegs,
+  insertEvent,
+  insertLegs,
+  type LegInput,
+  optionalNote,
+  periodOn,
+  positive,
+  rateOf,
+} from "./events";
+import { checkPortfolio } from "./guards";
+import { dropUnusedHoldings, keepRevisions, requireEvent } from "./revisions";
+import { clearTransferGroup } from "./transfers";
+import { type InvestmentAccount, InvestmentError, notFuture, translated, type WriteCtx } from "./types";
 import { startPortfolioBy } from "./periods";
 
 /** The other side of a deposit's leg, as the person chose it (PERS-651). */
@@ -284,95 +283,123 @@ async function cashLegsOf(
   return written;
 }
 
-/** The person's event, of the service `ofAccount` when given: otherwise `not_found`. */
-export async function requireEvent(ctx: Pick<Ctx, "userId">, eventId: string, tx: Tx, ofAccount?: string) {
-  const [row] = await tx
-    .select({ event: investmentEvents, accountId: investmentAccounts.accountId })
-    .from(investmentEvents)
-    .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentEvents.investmentAccountId))
-    .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents)));
-  if (!row || (ofAccount !== undefined && row.accountId !== ofAccount))
-    throw new InvestmentError("not_found");
-  return row;
+/**
+ * A manual event changed (A2): the legs before go to the revisions, the new ones take their place,
+ * and the points are rewritten from the older of the two days. Its kind stays; an event a conversion
+ * or a provider wrote is not the person's to edit. With `ofAccount`, an event of another service is
+ * `not_found` (a route names the service in its path). A day before the portfolio was made moves its
+ * start back, as a new operation's does.
+ */
+export async function updateOperation(
+  ctx: WriteCtx,
+  eventId: string,
+  input: OperationInput,
+  ofAccount?: string,
+): Promise<void> {
+  const parsed = operationInputSchema.parse(input);
+  const cash = await rewriteEvent(
+    ctx,
+    { eventId, ofAccount, kind: parsed.kind, on: parsed.on },
+    {
+      legsFor: async (edit) => {
+        refuseValueChange(edit.investment);
+        const { legs, transactionId } = await legsOf(ctx, edit.book, parsed, edit.account);
+        return { legs, note: parsed.note, transactionId };
+      },
+      after: (tx, investment, currency) => cashLegsOf(ctx, tx, parsed, { investment, currency, eventId }),
+    },
+  );
+  if (cash) await cashLegs().settleLegs(ctx, cash);
 }
 
-/** Saves every leg of an event as it was (A2): an operation is never overwritten silently. */
-async function keepRevisions(
-  ctx: Pick<Ctx, "userId">,
-  tx: Tx,
-  event: InvestmentEvent,
-  reason: "edited" | "deleted",
+/**
+ * A purchase changed (PERS-683): its day, instrument, quantity, price, fee and note, checked as a new
+ * one is. It keeps the instalment of the plan that wrote it; a position nothing refers to any more
+ * goes, as after a deletion.
+ */
+export async function updateBuy(
+  ctx: WriteCtx,
+  eventId: string,
+  input: BuyInput,
+  ofAccount?: string,
 ): Promise<void> {
-  const legs = await tx
-    .select()
-    .from(investmentOperations)
-    .where(and(eq(investmentOperations.eventId, event.id), userScoped(ctx).owns(investmentOperations)));
-  if (legs.length === 0) return;
-  await tx.insert(investmentOperationRevisions).values(
-    legs.map((leg) =>
-      userScoped(ctx).stamp({
-        investmentAccountId: event.investmentAccountId,
-        eventId: event.id,
-        operationId: leg.id,
-        reason,
-        before: {
-          on: event.on,
-          note: event.note,
-          transactionId: event.transactionId,
-          leg: leg.leg,
-          kind: leg.kind,
-          holdingId: leg.holdingId,
-          quantity: leg.quantity,
-          unitPrice: leg.unitPrice,
-          priceCurrency: leg.priceCurrency,
-          fxRate: leg.fxRate,
-          fxSource: leg.fxSource,
-          amountCents: leg.amountCents.toString(),
-          validUntil: leg.validUntil,
-        },
-      }),
-    ),
+  const parsed = buyInputSchema.parse(input);
+  await rewriteEvent(
+    ctx,
+    { eventId, ofAccount, kind: "buy", on: parsed.on },
+    {
+      legsFor: async (edit) => {
+        const legs = await buyLegs(ctx, edit.tx, {
+          investmentId: edit.investment.id,
+          book: edit.book,
+          account: edit.account,
+          parsed,
+          planRunId: edit.before.planRunId,
+        });
+        return { legs, note: parsed.note, transactionId: null };
+      },
+      after: async () => null,
+    },
   );
 }
 
 /**
- * A manual event changed (A2): the legs before go to the revisions, the new ones take their place,
- * and the points are rewritten from the older of the two days. A buy keeps its asset and product;
- * an event a conversion or a provider wrote is not the person's to edit.
+ * The common steps of an edit, in one transaction: the event found and locked, its legs kept in the
+ * revisions and taken away, the new ones `legsFor` builds written, the portfolio checked, its points
+ * rewritten, and `after` run last (the account's leg of a deposit).
  */
-export async function updateOperation(ctx: WriteCtx, eventId: string, input: OperationInput): Promise<void> {
-  const parsed = operationInputSchema.parse(input);
-  notFuture(ctx, parsed.on);
-  const cash = await getDb().transaction(async (tx) => {
-    const { event, accountId } = await requireEvent(ctx, eventId, tx);
+async function rewriteEvent<T>(
+  ctx: WriteCtx,
+  edit: { eventId: string; ofAccount?: string; kind: string; on: CivilDate },
+  steps: {
+    legsFor: (state: {
+      tx: Tx;
+      investment: InvestmentAccount;
+      book: LoadedBook;
+      account: { currency: string };
+      before: { planRunId: string | null };
+    }) => Promise<{ legs: LegInput[]; note: string | null; transactionId: string | null }>;
+    after: (tx: Tx, investment: InvestmentAccount, currency: string) => Promise<T>;
+  },
+): Promise<T> {
+  notFuture(ctx, edit.on);
+  return getDb().transaction(async (tx) => {
+    const { event, accountId } = await requireEvent(ctx, edit.eventId, tx, edit.ofAccount);
     if (event.origin !== "manual") throw new InvestmentError("not_editable");
     const account = await getAccount(ctx, accountId);
     if (!account) throw new InvestmentError("not_found");
-    const investment = await lockInvestmentAccount(ctx, accountId, tx);
-    refuseValueChange(investment);
+    const locked = await lockInvestmentAccount(ctx, accountId, tx);
     const [main] = await tx
-      .select({ kind: investmentOperations.kind })
+      .select({ kind: investmentOperations.kind, planRunId: investmentOperations.planRunId })
       .from(investmentOperations)
-      .where(and(eq(investmentOperations.eventId, eventId), eq(investmentOperations.leg, "main")));
-    if (!main || main.kind !== parsed.kind) throw new InvestmentError("not_editable");
+      .where(and(eq(investmentOperations.eventId, edit.eventId), eq(investmentOperations.leg, "main")));
+    if (!main || main.kind !== edit.kind) throw new InvestmentError("not_editable");
+    const investment = await startPortfolioBy(ctx, locked, edit.on, tx);
     await keepRevisions(ctx, tx, event, "edited");
-    await tx
+    const removed = await tx
       .delete(investmentOperations)
-      .where(and(eq(investmentOperations.eventId, eventId), userScoped(ctx).owns(investmentOperations)));
+      .where(and(eq(investmentOperations.eventId, edit.eventId), userScoped(ctx).owns(investmentOperations)))
+      .returning({ holdingId: investmentOperations.holdingId });
     const book = await loadBook(ctx, investment, account.currency, tx);
-    const { legs, transactionId } = await legsOf(ctx, book, parsed, account);
+    const { legs, note, transactionId } = await steps.legsFor({
+      tx,
+      investment,
+      book,
+      account,
+      before: main,
+    });
     await translated(
       tx
         .update(investmentEvents)
-        .set({ on: parsed.on, note: parsed.note, transactionId })
-        .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents))),
+        .set({ on: edit.on, note, transactionId })
+        .where(and(eq(investmentEvents.id, edit.eventId), userScoped(ctx).owns(investmentEvents))),
     );
-    await insertLegs(ctx, tx, eventId, legs);
+    await insertLegs(ctx, tx, edit.eventId, legs);
+    await dropUnusedHoldings(ctx, tx, removed);
     await checkPortfolio(ctx, investment, account.currency, tx);
-    await rebuild(ctx, investment, account.currency, oldestDay(event.on, parsed.on) as CivilDate, tx);
-    return cashLegsOf(ctx, tx, parsed, { investment, currency: account.currency, eventId });
+    await rebuild(ctx, investment, account.currency, oldestDay(event.on, edit.on) as CivilDate, tx);
+    return steps.after(tx, investment, account.currency);
   });
-  if (cash) await cashLegs().settleLegs(ctx, cash);
 }
 
 /**
@@ -394,20 +421,7 @@ export async function deleteOperation(ctx: WriteCtx, eventId: string, ofAccount?
       .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents)));
     // The other leg of a transfer is a plain flow again: its partner is gone (§2.4).
     if (event.transferGroupId) await clearTransferGroup(ctx, tx, event.transferGroupId);
-    // A position nothing refers to any more goes with its last operation.
-    const holdingIds = [...new Set(legs.flatMap((leg) => (leg.holdingId ? [leg.holdingId] : [])))];
-    for (const holdingId of holdingIds) {
-      const [used] = await tx
-        .select({ id: investmentOperations.id })
-        .from(investmentOperations)
-        .where(eq(investmentOperations.holdingId, holdingId))
-        .limit(1);
-      if (!used) {
-        await tx
-          .delete(investmentHoldings)
-          .where(and(eq(investmentHoldings.id, holdingId), userScoped(ctx).owns(investmentHoldings)));
-      }
-    }
+    await dropUnusedHoldings(ctx, tx, legs);
     const currency = await currencyOf(ctx, accountId);
     await checkPortfolio(ctx, investment, currency, tx);
     await rebuild(ctx, investment, currency, event.on, tx);

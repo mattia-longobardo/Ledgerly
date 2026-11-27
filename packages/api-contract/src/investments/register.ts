@@ -175,6 +175,43 @@ export const convertToPortfolio = defineRoute({
   },
 });
 
+export const updateOperation = defineRoute({
+  id: "update_investment_operation",
+  method: "PATCH",
+  path: "/investments/{accountId}/operations/{eventId}",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "Rewrites an operation written by hand on a manual portfolio (PERS-683): the body of «Record " +
+    "operation», same kind, same checks. Its legs before are kept as revisions; positions, cash and " +
+    "P&L are rewritten from the older of the two days, and a deposit's or a withdrawal's leg in the " +
+    "accounts follows the new day, amount and `counterpart`. A purchase keeps the plan instalment that " +
+    "wrote it. `409` `not_editable` on a service that is not a manual portfolio (one a provider syncs, " +
+    "one kept by value), on an event a provider or a conversion wrote, or with another `kind`; " +
+    "`quantity_exceeded` and `negative_cash` as for a new operation.",
+  actions: [],
+  params: byEvent,
+  body: operationBody,
+  response: null,
+  status: 204,
+  errors: INVESTMENT_ERRORS,
+  example: {
+    params: { accountId: ACCOUNT_ID, eventId: EVENT_ID },
+    body: {
+      kind: "buy",
+      instrumentId: INSTRUMENT_ID,
+      mic: "XMIL",
+      on: "2026-11-03",
+      quantity: "3",
+      unitPrice: "61.2",
+      amount: null,
+      fee: "2.95",
+      fxRate: null,
+      note: null,
+    },
+  },
+});
+
 export const deleteOperation = defineRoute({
   id: "delete_investment_operation",
   method: "DELETE",

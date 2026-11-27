@@ -141,6 +141,56 @@ describe("a manual portfolio on /api/v1", () => {
     expect(auto).toMatchObject({ status: 409, body: { error: "conflict", reason: "not_editable" } });
   });
 
+  it("edits a purchase and a deposit as new ones, and refuses what a new one is refused (PERS-683)", async () => {
+    const accountId = await portfolio();
+    const ops = `/investments/${accountId}/operations`;
+    const deposit = await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1500.00" });
+    const bought = await send(alice, "POST", ops, buy("10", "100"));
+    const cash = async () => (await send(alice, "GET", `/investments/${accountId}/holdings`)).body.cash;
+    expect(await cash()).toBe("498.00");
+
+    const edited = { ...buy("8", "110"), fee: "1.00" };
+    expect(await send(alice, "PATCH", `${ops}/${bought.body.id}`, edited)).toEqual({
+      status: 204,
+      body: null,
+    });
+    // 1,500 − 880 − 1, and the same position a new purchase of 8 at 110 makes.
+    expect(await cash()).toBe("619.00");
+    const holdings = (await send(alice, "GET", `/investments/${accountId}/holdings`)).body.holdings;
+    expect(holdings).toHaveLength(1);
+    const listed = await send(alice, "GET", "/investments?period=all");
+    expect(listed.body.services.find((one: Json) => one.accountId === accountId).value).toBe("1499.00");
+
+    const patch = (eventId: string, body: unknown) => send(alice, "PATCH", `${ops}/${eventId}`, body);
+    expect(await patch(deposit.body.id, { kind: "deposit", on: todayOn, amount: "1000.00" })).toEqual({
+      status: 204,
+      body: null,
+    });
+    expect(await cash()).toBe("119.00");
+    // Less money than the purchase spends, another kind, a day in the future, a body that is not one.
+    expect(await patch(deposit.body.id, { kind: "deposit", on: todayOn, amount: "800.00" })).toMatchObject({
+      status: 409,
+      body: { reason: "negative_cash" },
+    });
+    expect(await patch(bought.body.id, { kind: "fee", on: todayOn, amount: "1.00" })).toMatchObject({
+      status: 409,
+      body: { reason: "not_editable" },
+    });
+    expect(await patch(bought.body.id, { ...edited, on: "2999-01-01" })).toMatchObject({
+      status: 400,
+      body: { reason: "future_date" },
+    });
+    expect((await patch(bought.body.id, { kind: "buy" })).status).toBe(400);
+    // Under another portfolio, or another person's: not found.
+    const other = await portfolio();
+    expect(
+      (await send(alice, "PATCH", `/investments/${other}/operations/${bought.body.id}`, edited)).status,
+    ).toBe(404);
+    const bob = contextFor((await createTestUser()).id);
+    expect((await send(bob, "PATCH", `${ops}/${bought.body.id}`, edited)).status).toBe(404);
+    expect(await cash()).toBe("119.00");
+  });
+
   it("refuses the money in and out and a purchase on a service that is not a portfolio", async () => {
     const made = await send(alice, "POST", "/investments", {
       name: "Bank",

@@ -41,7 +41,13 @@ export { assetInputSchema, createAsset, ensureAssetSeed } from "./assets";
 export type { AssetInput } from "./assets";
 export { addAsset, buyInputSchema, insertEvent, periodOn } from "./events";
 export type { BuyInput, LegInput } from "./events";
-export { deleteOperation, operationInputSchema, recordOperation, updateOperation } from "./operations";
+export {
+  deleteOperation,
+  operationInputSchema,
+  recordOperation,
+  updateBuy,
+  updateOperation,
+} from "./operations";
 export { linkAllCashLegs, linkCashLegs } from "./cash-legs";
 export type { OperationInput } from "./operations";
 export { confirmZeroReading, reconcileHolding, reconciliationInputSchema, saveReading } from "./readings";

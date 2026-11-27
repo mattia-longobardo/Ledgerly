@@ -13,6 +13,8 @@ import {
   RATE_SCALE,
   recordOperation,
   setPriceMode,
+  updateBuy,
+  updateOperation,
 } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { pricesPlugin } from "@ledgerly/domain/platform/plugins";
@@ -84,6 +86,74 @@ export async function writeOperation(
   return other(body);
 }
 
+/** An operation as the domain takes it: a price wins over an amount, as the form's (`operationOf`). */
+export function operationInput(body: OperationBody) {
+  switch (body.kind) {
+    case "valuation": {
+      const unitPrice = decimal(body.unitPrice, PRICE_SCALE);
+      return {
+        kind: body.kind,
+        holdingId: body.holdingId,
+        on: body.on,
+        unitPrice,
+        amountCents: unitPrice === null ? cents(body.amount) : null,
+        note: body.note,
+      };
+    }
+    case "sell":
+    case "close": {
+      const quantity = decimal(body.quantity, QUANTITY_SCALE);
+      const unitPrice = decimal(body.unitPrice, PRICE_SCALE);
+      return {
+        kind: body.kind,
+        holdingId: body.holdingId,
+        on: body.on,
+        quantity,
+        unitPrice: quantity === null ? null : unitPrice,
+        amountCents: quantity === null || unitPrice === null ? cents(body.amount) : null,
+        feeCents: cents(body.fee) ?? 0n,
+        note: body.note,
+      };
+    }
+    case "income":
+      return {
+        kind: body.kind,
+        holdingId: body.holdingId,
+        on: body.on,
+        amountCents: parseCents(body.amount),
+        note: body.note,
+      };
+    default:
+      throw new ApiRefusal("conflict", "not_editable");
+  }
+}
+
+/**
+ * «Edit» of an operation (PERS-683): only on a manual portfolio — a provider's service is the
+ * provider's to write — and with the checks of a new one.
+ */
+async function editOperation(
+  ctx: Ctx,
+  where: { accountId: string; eventId: string },
+  body: OperationBody,
+): Promise<void> {
+  const { accountId, eventId } = where;
+  if (NOT_TYPED.has(body.kind) || !(await isPortfolio(ctx, accountId)))
+    throw new ApiRefusal("conflict", "not_editable");
+  if (body.kind === "buy") return updateBuy(ctx, eventId, buyOf(body), accountId);
+  if (body.kind === "deposit" || body.kind === "withdrawal")
+    return updateOperation(ctx, eventId, moneyOf(body), accountId);
+  if (body.kind === "fee") {
+    return updateOperation(
+      ctx,
+      eventId,
+      { kind: "fee", on: body.on, amountCents: parseCents(body.amount), note: body.note },
+      accountId,
+    );
+  }
+  return updateOperation(ctx, eventId, operationInput(body), accountId);
+}
+
 export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, instruments.searchInstruments, async ({ query }) => {
     // A new market is read by the instance's prices plugin, when it has one.
@@ -96,6 +166,9 @@ export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
       })),
       complete: found.complete,
     };
+  });
+  serve(app, guard, register.updateOperation, async ({ ctx, params, body }) => {
+    await refusing(() => editOperation(ctx, params, body));
   });
   serve(app, guard, register.setPriceMode, async ({ ctx, params, body }) => {
     await refusing(() => setPriceMode(ctx, params.accountId, params.holdingId, body.mode));

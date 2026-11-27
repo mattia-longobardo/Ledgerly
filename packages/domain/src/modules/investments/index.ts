@@ -88,6 +88,8 @@ export {
   recordOperation,
   transfersToConfirm,
   unlinkTransfer,
+  updateBuy,
+  updateOperation,
   updateServiceUrl,
   updateServiceValue,
 } from "./service";

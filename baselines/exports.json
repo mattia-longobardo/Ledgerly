@@ -705,6 +705,8 @@
     "transfersToConfirm",
     "unitPriceOf",
     "unlinkTransfer",
+    "updateBuy",
+    "updateOperation",
     "updatePlan",
     "updateServiceUrl",
     "updateServiceValue",

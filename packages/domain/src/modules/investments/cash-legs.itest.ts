@@ -169,6 +169,58 @@ describe("the leg follows its deposit", () => {
     });
   });
 
+  it("follows the account the person chose: the old one's movement waits again, the new one's pairs (PERS-683)", async () => {
+    const savings = await anAccount(ctx, "Conto risparmio");
+    await readBank(-400_00n);
+    await upsertFromProvider(
+      ctx,
+      savings,
+      [
+        movement({
+          occurredAt: new Date(`${DAY}T09:00:00Z`),
+          amountCents: -400_00n,
+          type: "expense",
+          payee: "Risparmio",
+          categoryName: null,
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
+    const balances = async () => readingsAt(ctx, [bank, savings, broker], DAY);
+    const { eventId } = await deposit(400_00n, DAY, { counterpart: { kind: "account", accountId: bank } });
+    const before = await balances();
+    const [leg] = await legsOf(broker);
+    expect(leg.transferAccountId).toBe(bank);
+    expect(leg.transferGroupId).toBe((await bankRow()).transferGroupId);
+
+    await updateOperation(
+      ctx,
+      eventId,
+      {
+        kind: "deposit",
+        on: DAY,
+        amountCents: 400_00n,
+        counterpart: { kind: "account", accountId: savings },
+      },
+      broker,
+    );
+    const [moved] = await legsOf(broker);
+    expect(moved).toMatchObject({ id: leg.id, transferAccountId: savings, amountCents: 400_00n });
+    expect(moved.transferGroupId).not.toBeNull();
+    const savingsRow = (await listTransactions(ctx, { includeHidden: true, limit: 100 })).find(
+      (row) => row.accountId === savings,
+    )!;
+    expect(moved.transferGroupId).toBe(savingsRow.transferGroupId);
+    expect((await bankRow()).transferGroupId).toBeNull();
+    // Each account's balance is its own movements': the pairing moves, no money does.
+    expect(await balances()).toEqual(before);
+
+    // A new amount: the broker's leg and its value follow.
+    await updateOperation(ctx, eventId, { kind: "deposit", on: DAY, amountCents: 300_00n }, broker);
+    expect((await legsOf(broker))[0].amountCents).toBe(300_00n);
+    expect((await readingsAt(ctx, [broker], DAY)).get(broker)).toBe(300_00n);
+  });
+
   it("goes with its deposit; the bank's movement stays and waits", async () => {
     await readBank(-1_000_00n);
     const { eventId } = await deposit(1_000_00n);
