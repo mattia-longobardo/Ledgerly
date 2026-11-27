@@ -1,6 +1,6 @@
 // tests/e2e/investments/a11y.spec.ts — the screens of the flow `investments` in the layout and
 // accessibility check: what is measured, and why, is in tests/e2e/_shared/a11y.ts.
-import { type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
   audit,
   follow,
@@ -210,6 +210,8 @@ const OVERLAYS: Screen[] = [
         .getByRole("link", { name: new RegExp(`^${plan}`) })
         .filter({ visible: true })
         .click();
+      // The executions of the plan chosen, not of the one open before.
+      await expect(page.getByRole("heading", { name: `Executions · ${plan}` })).toBeVisible();
       await page
         .getByRole("button", { name: /^Review the proposal of/ })
         .filter({ visible: true })

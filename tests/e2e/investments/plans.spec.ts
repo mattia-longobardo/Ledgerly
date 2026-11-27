@@ -165,16 +165,18 @@ test("whole shares: a fraction stays on its field and blocks «Confirm»", async
 
 test("skipped line: a line confirmed with 0 shares buys nothing and says so", async ({ page }) => {
   await openPlans(page, "Piani");
-  const dialog = await review(page, "Tre ETF");
-  await shares(dialog, "Gamma Gold ETC").fill("0");
-  // 82,60 + 56,25 = 138,85 €: 61,15 € to the next.
-  await expect(dialog.getByTestId("review-carry")).toContainText(money("61.15"));
+  const dialog = await review(page, "Due ETF");
+  // Epsilon at 30 €: 1 share of its 30 €; Delta confirmed with none. 70 € to the next.
+  await dialog.getByLabel("Unit price of Epsilon EM ETF").fill("30");
+  await expect(shares(dialog, "Epsilon EM ETF")).toHaveValue("1");
+  await shares(dialog, "Delta Europe ETF").fill("0");
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("70.00"));
   await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(dialog).toBeHidden();
   const run = runs(page).first();
   await expect(run).toHaveAttribute("data-state", "recorded");
-  await expect(run).toContainText("Gamma Gold ETC: Not bought: confirmed with 0 shares");
-  await expect(run.getByTestId("run-budget")).toContainText(money("61.15"));
+  await expect(run).toContainText("Delta Europe ETF: Not bought: confirmed with 0 shares");
+  await expect(run.getByTestId("run-budget")).toContainText(money("70.00"));
 });
 
 test("price missing: the line to type blocks «Confirm» until its price is there; another waits", async ({
@@ -237,7 +239,7 @@ test("confirmed: «Confirm» records two purchases, shown in Activity, and the p
 
 test("discarded: «Discard» closes the execution and passes its whole budget on", async ({ page }) => {
   await openPlans(page, "Piani");
-  await choosePlan(page, "Due ETF");
+  await choosePlan(page, "Prezzo mancante");
   const run = runs(page).first();
   await run.getByRole("button", { name: /^Discard the execution of/ }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Discard", exact: true }).click();
