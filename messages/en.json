@@ -2830,7 +2830,7 @@
         "matched": "{count, plural, one {# transaction linked} other {# transactions linked}} to the bank.",
         "fresh": "{count, plural, one {# new transaction} other {# new transactions}} from the bank.",
         "transfers": "{count, plural, one {# transfer recognised} other {# transfers recognised}}.",
-        "sourceStops": "{source} no longer updates this account. Ledgerly reads the bank 3 times a day.",
+        "sourceStops": "{source} no longer updates this account. Settings shows when Ledgerly reads the bank: \"Change\" sets the times, \"Update now\" reads it right now.",
         "howToUndo": "To go back: account settings › “Undo switch”.",
         "theBank": "the bank",
         "goToAccount": "Go to the account",

@@ -2830,7 +2830,7 @@
         "matched": "{count, plural, one {# movimento collegato} other {# movimenti collegati}} alla banca.",
         "fresh": "{count, plural, one {# movimento nuovo} other {# movimenti nuovi}} dalla banca.",
         "transfers": "{count, plural, one {# giroconto riconosciuto} other {# giroconti riconosciuti}}.",
-        "sourceStops": "{source} non aggiorna più questo conto. Ledgerly legge la banca 3 volte al giorno.",
+        "sourceStops": "{source} non aggiorna più questo conto. Impostazioni mostra quando Ledgerly legge la banca: con «Cambia» scegli gli orari, con «Aggiorna ora» la leggi subito.",
         "howToUndo": "Per tornare indietro: Impostazioni del conto › «Annulla passaggio».",
         "theBank": "la banca",
         "goToAccount": "Vai al conto",
