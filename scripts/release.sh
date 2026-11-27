@@ -18,7 +18,8 @@
 #      (`preview-on-test.sh build`);
 #   6. the health of the site, the numbers "after" at the same instant, and their comparison;
 #   7. the `@smoke` tests on the site (docs/testing.md);
-#   8. the running plugins against the catalog of the official plugins (`scripts/plugins-check.sh`).
+#   8. the running plugins against the catalog of the official plugins (`scripts/plugins-check.sh`);
+#   9. the `pre-*` images of the releases older than the last 5 removed (docs/operations.md).
 #
 # The official plugins of the catalog and the egress proxy are services of every release: a
 # plugin's bundle carries the release's version, so its digest in the catalog changes with each
@@ -216,6 +217,18 @@ E2E_ORIGIN=127.0.0.1 npx playwright test --grep @smoke || failed "the @smoke tes
 
 # ——— 8. The plugins against the catalog ————————————————————————————————————————————————————————
 sh scripts/plugins-check.sh || failed "a plugin does not run the bundle of the catalog"
+
+# ——— 9. The rotation of the `pre-*` images —————————————————————————————————————————————————————
+# Keep the `pre-*` images of the last 5 releases (docs/operations.md): this release is the newest,
+# so the release in production and the one before it are always kept. A release is ordered by its
+# newest image. A tag a container still runs is only untagged; a failure does not fail the release.
+keep=${LEDGERLY_PRE_KEEP:-5}
+docker images --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' | grep -E '\|ledgerly[^:]*:pre-' |
+  sort -r | sed 's/.*:pre-//' | awk '!seen[$0]++' | tail -n +$((keep + 1)) > "$folder/pre-removed.txt" || true
+docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^ledgerly[^:]*:pre-' | while read -r ref; do
+  grep -qxF "${ref#*:pre-}" "$folder/pre-removed.txt" || continue
+  docker image rm "$ref" > /dev/null && echo "removed: $ref" || echo "warning: docker image rm $ref failed" >&2
+done
 
 echo "release $release deployed: $sha"
 echo "$folder"

@@ -254,7 +254,7 @@ checkout, outside this repository and outside the Homelab one. It has no compose
 | Check       | `pg_restore --list` right after the dump (the script does it and fails on an empty list)     |
 | Kept        | The last 5 releases that have a dump. Never delete the release in production or the one before it |
 | Who deletes | The agent that deploys, after a successful deploy, naming what it removed in the deploy comment |
-| `pre-*`     | Same window: the images of the last 5 releases. The Docker cleanup does not touch them while a rollback is possible |
+| `pre-*`     | Same window: the images of the last 5 releases. `scripts/release.sh` (step 9) removes the older ones after a successful release; the Docker cleanup does not touch them |
 | Secrets     | A dump and a numbers snapshot hold personal data and encrypted credentials: they never leave the server, and never go in a comment or an attachment |
 
 `MANIFEST.txt` says the release, the SHA, the tag before it, the date, the last migration and the

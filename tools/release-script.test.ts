@@ -22,7 +22,12 @@ const FAKES: Record<string, string> = {
   *) ;;
 esac`,
   // `docker inspect --format '{{.Image}}' <container>` answers the image the container runs.
-  docker: `echo "docker $*" >> "$FAKE_LOG"; [ "$1" = "inspect" ] && echo "sha256:run-$4"; exit 0`,
+  // `docker images` answers `$FAKE_IMAGES` ("<created>|<ref>" lines), with or without the date.
+  docker: `echo "docker $*" >> "$FAKE_LOG"; [ "$1" = "inspect" ] && echo "sha256:run-$4"
+if [ "$1" = "images" ]; then
+  case "$3" in *CreatedAt*) printf '%s\\n' $FAKE_IMAGES ;; *) printf '%s\\n' $FAKE_IMAGES | cut -d'|' -f2 ;; esac
+fi
+exit 0`,
   curl: `echo "curl" >> "$FAKE_LOG"; echo '{"status":"ok","db":"up"}'`,
   sleep: `:`,
   // The browser check before the build, and `npx playwright test --grep @smoke` after it.
@@ -240,6 +245,28 @@ describe("scripts/release.sh", () => {
     expect(run.stderr).toContain("FAILED after the build started: the @smoke tests are red on the site");
     expect(run.stderr).toContain("Rollback: docker tag ledgerly:pre-t1 ledgerly:latest");
     expect(run.stdout).not.toContain("deployed");
+  });
+
+  it("after the plugins, removes the pre-* images of the releases older than the last 5", () => {
+    const releases = ["r1", "r2", "r3", "r4", "r5", "r6", "r7"];
+    const images = releases.flatMap((id, day) => [
+      `2031-01-0${day + 1}T10:00|ledgerly:pre-${id}`,
+      `2031-01-0${day + 1}T09:00|ledgerly-web:pre-${id}`,
+    ]);
+    // An old image tagged again by a newer release dates that release by its newest image.
+    images.push("2030-12-01T00:00|ledgerly-plugin-prices:pre-r7");
+    const run = release("ok", [], "uguale", { FAKE_IMAGES: images.join(" ") });
+    expect(run.status).toBe(0);
+    const removed = run.calls.filter((call) => call.startsWith("docker image rm"));
+    expect(removed).toEqual([
+      "docker image rm ledgerly:pre-r1",
+      "docker image rm ledgerly-web:pre-r1",
+      "docker image rm ledgerly:pre-r2",
+      "docker image rm ledgerly-web:pre-r2",
+    ]);
+    expect(run.calls.indexOf(removed[0])).toBeGreaterThan(
+      run.calls.findIndex((c) => c.startsWith("npx playwright")),
+    );
   });
 
   it("ends with status 2, deployed, when the numbers differ", () => {
