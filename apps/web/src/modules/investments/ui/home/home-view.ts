@@ -31,7 +31,7 @@ export interface ChartLayer {
 
 /**
  * The chart's layers, in the order of the list: the services, then the pension funds the server drew
- * for the chip. A fund has no colour of its own here: the palette's, after the services'.
+ * for the chip. A fund has no colour of its own here: the palette's, skipping the services' colours.
  */
 export function chartLayers(home: Home): ChartLayer[] {
   const series = new Map(
@@ -41,6 +41,9 @@ export function chartLayers(home: Home): ChartLayer[] {
     const one = series.get(service.accountId);
     return one ? [{ key: service.accountId, label: service.name, color: colorOf(service), series: one }] : [];
   });
+  const used = new Set(home.services.map((service) => colorOf(service).toLowerCase()));
+  const unused = PALETTE.filter((color) => !used.has(color));
+  const free = unused.length > 0 ? unused : PALETTE;
   const funds = home.groups
     .filter((group) => group.id === "pension_funds")
     .flatMap((group) => group.rows)
@@ -48,7 +51,7 @@ export function chartLayers(home: Home): ChartLayer[] {
       const one = series.get(row.accountId);
       return one ? [{ key: row.accountId, label: row.name, series: one }] : [];
     })
-    .map((fund, index) => ({ ...fund, color: PALETTE[(home.services.length + index) % PALETTE.length]! }));
+    .map((fund, index) => ({ ...fund, color: free[index % free.length]! }));
   return [...services, ...funds];
 }
 

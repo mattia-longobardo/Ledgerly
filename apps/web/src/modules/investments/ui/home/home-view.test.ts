@@ -39,13 +39,14 @@ const home = {
 } as unknown as Home;
 
 describe("chartLayers", () => {
-  it("draws the services, then the funds in the list's order, a fund in the palette's colour after them", () => {
+  it("draws the services, then the funds in the list's order, a fund in a palette colour no service has", () => {
     const layers = chartLayers(home);
     expect(layers.map((layer) => [layer.key, layer.label, layer.color])).toEqual([
       ["s1", "Service A", "#123456"],
       ["s2", "Service B", PALETTE[1]],
-      ["f1", "Fund A", PALETTE[2 % PALETTE.length]],
-      ["f2", "Fund B", PALETTE[3 % PALETTE.length]],
+      // Not the palette's second colour: «Service B» has it.
+      ["f1", "Fund A", PALETTE[0]],
+      ["f2", "Fund B", PALETTE[2]],
     ]);
     // A month with no reading stays null: never a zero.
     expect(layers[2]!.series.bars).toEqual(["3.00", null]);
