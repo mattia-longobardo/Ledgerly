@@ -40,7 +40,12 @@ export interface EntryRow {
 
 /** A balance changed: the entries, the figures and the charts of the account are read again. */
 function reread() {
-  invalidate(balances.getAccountBalances, views.getNetWorth, views.getAccountDailyBalances);
+  invalidate(
+    balances.getAccountBalances,
+    views.getNetWorth,
+    views.getAccountDailyBalances,
+    views.getAccountContext,
+  );
 }
 
 /** What the form reads out of itself, the shape both Server Actions take. */

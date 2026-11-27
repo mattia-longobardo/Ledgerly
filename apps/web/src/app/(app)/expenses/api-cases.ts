@@ -36,11 +36,12 @@ export const transactionCases: TransactionCases = {
   manualAccounts: (ctx) => manualAccounts(ctx),
   previewManual: (ctx, input) => previewManual(ctx, input),
   async createManual(ctx, movement, key) {
-    const { transaction, created } = await createManual(ctx, movement, key);
-    return { id: transaction.id, created };
+    const { transaction, created, beforeOpening } = await createManual(ctx, movement, key);
+    return { id: transaction.id, created, beforeOpening };
   },
   async updateManual(ctx, id, movement) {
-    return { id: (await updateManual(ctx, id, movement)).id };
+    const { transaction, beforeOpening } = await updateManual(ctx, id, movement);
+    return { id: transaction.id, beforeOpening };
   },
   deleteManual: (ctx, id) => deleteManual(ctx, id),
   // The pass a «Sync now» makes, without the session the card's action reads; `retrySend` looks at

@@ -164,3 +164,82 @@ describe("a movement dated before the opening balance (PERS-678)", () => {
     expectNotSilent(moved, await balanceOf(account));
   });
 });
+
+describe("the notice and «Move the opening» (PERS-678, A+)", () => {
+  it("the account's page names the movements before the opening, and moving the opening counts them", async () => {
+    const account = await newAccount();
+    const written = await send(ctx, "POST", "/transactions/manual", {
+      ...manualBody(account, BEFORE),
+      key: crypto.randomUUID(),
+    });
+    expect(written.body.beforeOpening).toEqual({ count: 1, first: BEFORE });
+    // The balance does not move by itself: the person decides.
+    expect(await balanceOf(account)).toBe("100.00");
+
+    const { beforeOpening } = (await send(ctx, "GET", `/accounts/${account}/context`)).body;
+    expect(beforeOpening).toEqual({
+      count: 1,
+      first: BEFORE,
+      moveTo: addDays(BEFORE, -1),
+      opening: { id: expect.any(String), on: OPENING, balance: "100.00", available: null, note: null },
+    });
+
+    const moved = await send(ctx, "PUT", `/accounts/${account}/balances/${beforeOpening.opening.id}`, {
+      on: beforeOpening.moveTo,
+      balance: beforeOpening.opening.balance,
+      available: beforeOpening.opening.available,
+      note: beforeOpening.opening.note,
+    });
+    expect(moved.status).toBe(200);
+    expect(moved.body.beforeOpening).toBeNull();
+    expect(await balanceOf(account)).toBe("87.50");
+    expect((await send(ctx, "GET", `/accounts/${account}/context`)).body.beforeOpening).toBeNull();
+    expect((await send(ctx, "GET", `/accounts/${account}`)).body.openedOn).toBe(addDays(BEFORE, -1));
+  });
+
+  it("a hidden movement restored before the opening is reported", async () => {
+    const account = await newAccount();
+    const written = await send(ctx, "POST", "/transactions/manual", {
+      ...manualBody(account, BEFORE),
+      key: crypto.randomUUID(),
+    });
+    const change = (to: string) =>
+      send(ctx, "POST", "/transactions/visibility", {
+        ids: [written.body.id],
+        change: to,
+        rebuildBalances: true,
+      });
+    expect((await change("hide")).body).toEqual({ count: 1, beforeOpening: null });
+    expect((await change("restore")).body).toEqual({ count: 1, beforeOpening: { count: 1, first: BEFORE } });
+  });
+
+  it("the dialog's preview says the opening holds the day, not a reading that counted it", async () => {
+    const account = await newAccount();
+    const preview = (on: string) =>
+      send(ctx, "POST", "/transactions/manual/preview", {
+        kind: "expense",
+        amount: "12.50",
+        on,
+        accountId: account,
+      });
+    expect((await preview(BEFORE)).body.preview).toEqual({
+      kind: "unchanged",
+      account: "Cash",
+      readingOn: OPENING,
+      opening: true,
+    });
+    expect((await preview(AFTER)).body.preview.kind).toBe("change");
+  });
+
+  it("says nothing on an account with movements and no balance at all", async () => {
+    const created = await send(ctx, "POST", "/accounts", { name: "Wallet", type: "cash" });
+    expect(created.status).toBe(201);
+    const written = await send(ctx, "POST", "/transactions/manual", {
+      ...manualBody(created.body.id, BEFORE),
+      key: crypto.randomUUID(),
+    });
+    expect(written.body.beforeOpening).toBeNull();
+    expect((await send(ctx, "GET", `/accounts/${created.body.id}/context`)).body.beforeOpening).toBeNull();
+    expect(await balanceOf(created.body.id)).toBeNull();
+  });
+});

@@ -43,7 +43,7 @@ export const CROSS_CUTTING = ["a11y", "keyboard", "mobile"];
 export const FLOWS: Flow[] = [
   {
     id: "accounts",
-    specs: ["accounts", "currency", "account-switch", "overview-accounts"],
+    specs: ["accounts", "currency", "account-switch", "overview-accounts", "before-opening"],
     screens: ["a11y", "keyboard"],
   },
   {

@@ -189,6 +189,11 @@ export const USERS = {
     email: "manual-journey@example.test",
     name: "Manual Journey",
   },
+  // PERS-678: a movement imported before the opening, and «Move the opening».
+  beforeOpening: {
+    email: "before-opening@example.test",
+    name: "Before Opening",
+  },
   sendJourney: {
     email: "send-journey@example.test",
     name: "Send Journey",
@@ -354,6 +359,7 @@ export const SESSIONS = {
   reviewJourney: { user: "reviewJourney", file: "review-journey-session.json" },
   reviewNewJourney: { user: "reviewNewJourney", file: "review-new-journey-session.json" },
   manualJourney: { user: "manualJourney", file: "manual-journey-session.json" },
+  beforeOpening: { user: "beforeOpening", file: "before-opening-session.json" },
   sendJourney: { user: "sendJourney", file: "send-journey-session.json" },
   sourceCategories: { user: "sourceCategories", file: "source-categories-session.json" },
   switchJourney: { user: "switchJourney", file: "switch-journey-session.json" },

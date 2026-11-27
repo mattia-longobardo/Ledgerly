@@ -37,7 +37,8 @@ export type ManualSaveResult =
 /** The line under the account: today's balance before and after, already formatted. */
 export type ManualPreviewView =
   | { kind: "change"; account: string; before: string; after: string }
-  | { kind: "unchanged"; account: string; date: string }
+  /** `opening`: the reading is the account's opening, and the day falls before it (PERS-678). */
+  | { kind: "unchanged"; account: string; date: string; opening: boolean }
   | null;
 
 export interface ManualCommands {

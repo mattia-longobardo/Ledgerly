@@ -6,7 +6,15 @@ import { userScoped } from "../../../platform/db/scope";
 import { syncsTransactions } from "../../../platform/integrations/rules";
 import { type Cents } from "../../../shared/money";
 import { movements } from "../ports";
-import { dailySeries, deriveMonthEnds, movementBalances, withMovementPoints } from "../rules";
+import {
+  accountMode,
+  type BeforeOpening,
+  dailySeries,
+  deriveMonthEnds,
+  movementBalances,
+  movementsBeforeOpening,
+  withMovementPoints,
+} from "../rules";
 import {
   type Account,
   accountsToRebuild,
@@ -81,13 +89,14 @@ export async function accountReconstructedBalances(
  * provider that syncs no movements (`syncsTransactions`: an investment provider).
  *
  * Reads first, writes after, and no network anywhere (spec §4.3): the sync calls it once its own
- * reads are over.
+ * reads are over. `beforeOpening` names the accounts «a mano» rebuilt with manual movements before
+ * their first reading (PERS-678), for the answer of the write that called it.
  */
 export async function rebuildDerivedBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountIds?: readonly string[],
   options: { manualChanged?: boolean } = {},
-): Promise<{ written: number }> {
+): Promise<{ written: number; beforeOpening: Map<string, BeforeOpening> }> {
   const wanted = (await accountsToRebuild(ctx)).filter(
     ({ account }) => accountIds === undefined || accountIds.includes(account.id),
   );
@@ -99,13 +108,53 @@ export async function rebuildDerivedBalances(
   // the accounts that have a manual movement, or whose manual movements the caller just changed:
   // a balance written on any other account starts nothing here.
   const manual = options.manualChanged ? wanted : wanted.filter((one) => one.hasManualMovements);
-  if (manual.length > 0) {
-    await rebuildMovementBalances(
-      ctx,
-      manual.map((one) => ({ id: one.account.id, marked: one.hasManualMovements })),
+  const beforeOpening =
+    manual.length > 0
+      ? await rebuildMovementBalances(
+          ctx,
+          manual.map((one) => ({
+            id: one.account.id,
+            marked: one.hasManualMovements,
+            kept: keptByHand(one.account),
+          })),
+        )
+      : new Map<string, BeforeOpening>();
+  return { ...monthEnds, beforeOpening };
+}
+
+/** An account «a mano»: no source reads its balance, so its first reading may mean «it starts here». */
+const keptByHand = (account: Pick<Account, "type" | "origin" | "provider">): boolean =>
+  accountMode(account, account.provider === null ? null : { createsRecords: false }) === "manual";
+
+/**
+ * The manual movements of an account «a mano» before its first reading (PERS-678), with that
+ * reading when a person recorded it — the one «Move the opening» corrects with
+ * `PUT /accounts/{id}/balances/{entryId}`. `null` for any other account, or with none.
+ */
+export async function beforeOpeningOf(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountId: string,
+): Promise<(BeforeOpening & { opening: BalanceEntry | null }) | null> {
+  const account = await requireAccount(ctx, accountId);
+  if (!keptByHand(account)) return null;
+  const [basis, manual] = await Promise.all([
+    movementBasis(ctx, [account.id]),
+    movements().manualMovementsByAccount(ctx, [account.id]),
+  ]);
+  const found = movementsBeforeOpening(basis.get(account.id)?.readings ?? [], manual.get(account.id) ?? []);
+  if (found === null) return null;
+  const [opening] = await getDb()
+    .select()
+    .from(balanceEntries)
+    .where(
+      and(
+        userScoped(ctx).owns(balanceEntries),
+        eq(balanceEntries.accountId, account.id),
+        eq(balanceEntries.on, found.openingOn),
+        eq(balanceEntries.source, "manual"),
+      ),
     );
-  }
-  return monthEnds;
+  return { ...found, opening: opening ?? null };
 }
 
 /**
@@ -118,11 +167,16 @@ export async function rebuildDerivedBalances(
  */
 async function rebuildMovementBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  wanted: readonly { id: string; marked: boolean }[],
-): Promise<void> {
+  wanted: readonly { id: string; marked: boolean; kept: boolean }[],
+): Promise<Map<string, BeforeOpening>> {
   const ids = wanted.map((account) => account.id);
   const manual = await movements().manualMovementsByAccount(ctx, ids);
   const basis = await movementBasis(ctx, [...manual.keys()]);
+  const beforeOpening = new Map<string, BeforeOpening>();
+  for (const account of wanted.filter((one) => one.kept)) {
+    const found = movementsBeforeOpening(basis.get(account.id)?.readings ?? [], manual.get(account.id) ?? []);
+    if (found !== null) beforeOpening.set(account.id, found);
+  }
   const capturedAt = new Date();
   const rows = [...manual].flatMap(([accountId, movements]) => {
     const { readings = [], copies = [] } = basis.get(accountId) ?? {};
@@ -167,6 +221,7 @@ async function rebuildMovementBalances(
       );
     }
   });
+  return beforeOpening;
 }
 
 async function rebuildMonthEnds(

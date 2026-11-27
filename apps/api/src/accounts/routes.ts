@@ -26,13 +26,15 @@ import {
   updateAccountSettings,
   updateBalanceEntry,
   updateConnection,
+  beforeOpeningOf,
+  joinedBeforeOpening,
   type Account,
 } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { incomeLessExpense } from "@ledgerly/domain/transactions";
 import { fundsByAccount } from "@ledgerly/domain/funds";
 import { groupIban } from "@ledgerly/domain/platform/iban";
-import { monthKey, today } from "@ledgerly/domain/shared/dates";
+import { addDays, monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { accountRefusal, refusing } from "./cases";
@@ -90,7 +92,10 @@ export interface AccountCases {
   ): Promise<Outcome<{ matched: number; transfers: number; fresh: number }>>;
   undoSwitch(ctx: Ctx, id: string): Promise<Outcome<object>>;
   /** What the account's page shows around its figures (the registry of providers is the web's). */
-  context(ctx: Ctx, id: string): Promise<Outcome<{ context: Wire<typeof views.getAccountContext.response> }>>;
+  context(
+    ctx: Ctx,
+    id: string,
+  ): Promise<Outcome<{ context: Omit<Wire<typeof views.getAccountContext.response>, "beforeOpening"> }>>;
   /** The step «Account» of the switch: the accounts of the banks, with the IBAN as two flags only. */
   switchCandidates(
     ctx: Ctx,
@@ -247,7 +252,10 @@ function serveBalances(app: Hono<ApiEnv>, guard: Guard): void {
         params.id,
       ),
     );
-    return balanceEntry(entry);
+    return {
+      ...balanceEntry(entry),
+      beforeOpening: joinedBeforeOpening(entry.beforeOpening ? [entry.beforeOpening] : []),
+    };
   });
   serve(app, guard, balances.deleteBalanceEntry, async ({ ctx, params }) => {
     await requireOwn(ctx, params.id);
@@ -316,7 +324,26 @@ function serveFigures(app: Hono<ApiEnv>, guard: Guard, cases: AccountCases): voi
 function serveRemovalAndSwitch(app: Hono<ApiEnv>, guard: Guard, cases: AccountCases): void {
   serve(app, guard, views.getAccountContext, async ({ ctx, params }) => {
     await requireOwn(ctx, params.id);
-    return settled(await cases.context(ctx, params.id)).context;
+    const [{ context }, before] = await Promise.all([
+      cases.context(ctx, params.id).then(settled),
+      beforeOpeningOf(ctx, params.id),
+    ]);
+    const opening = before?.opening ?? null;
+    return {
+      ...context,
+      beforeOpening: before && {
+        count: before.count,
+        first: before.first,
+        moveTo: addDays(before.first, -1),
+        opening: opening && {
+          id: opening.id,
+          on: opening.on,
+          balance: moneyOf(opening.balanceCents),
+          available: money(opening.availableCents),
+          note: opening.note,
+        },
+      },
+    };
   });
   serve(app, guard, switching.listSwitchCandidates, async ({ ctx, params }) => {
     await requireOwn(ctx, params.id);

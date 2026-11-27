@@ -140,16 +140,19 @@ test("an account a bank reads warns about a double, takes the movement and shows
   expect(await balanceOf(page, "Zeta Bank conto")).toContain("1.000,00 €");
 });
 
-test("a day before the last balance written changes nothing, and the dialog says so before the save", async ({
+// PERS-678: the balance of «Contanti» was written five days ago and is its opening, so a day before it
+// is not «already included»: the dialog says the account starts there, and where to move it.
+test("a day before the opening changes nothing, and the dialog says the account starts there", async ({
   page,
 }) => {
   await openAdd(page);
   const sixDaysAgo = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
   await dialog(page).getByLabel("Date").fill(sixDaysAgo);
   await dialog(page).getByLabel("Amount").fill("3");
-  await expect(page.getByTestId("manual-balance-line")).toContainText(
-    "already includes this day: it does not change.",
-  );
+  const line = page.getByTestId("manual-balance-line");
+  await expect(line).toContainText("“Contanti” starts from the opening balance of");
+  await expect(line).toContainText("You can move the opening from the account's page.");
+  await expect(line).not.toContainText("already includes this day");
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(dialog(page)).toHaveCount(0);
 });

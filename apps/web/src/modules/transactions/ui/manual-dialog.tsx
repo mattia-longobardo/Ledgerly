@@ -448,7 +448,10 @@ export function ManualTransactionDialog({
                     before: shownPreview.before,
                     after: shownPreview.after,
                   })
-                : t("manual.balance.unchanged", { account: shownPreview.account, date: shownPreview.date })}
+                : t(shownPreview.opening ? "manual.balance.beforeOpening" : "manual.balance.unchanged", {
+                    account: shownPreview.account,
+                    date: shownPreview.date,
+                  })}
             </p>
           )}
         </div>

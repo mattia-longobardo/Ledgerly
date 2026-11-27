@@ -3,7 +3,12 @@
 // account is «a mano» and rebuilds its balance, transactions reads the file and writes the rows.
 import type { Hono } from "hono";
 import { TRANSACTIONS } from "@ledgerly/api-contract";
-import { accountMode, getAccount, rebuildDerivedBalances } from "@ledgerly/domain/accounts";
+import {
+  accountMode,
+  getAccount,
+  joinedBeforeOpening,
+  rebuildDerivedBalances,
+} from "@ledgerly/domain/accounts";
 import { CsvError, csvMapOf, importCsv, previewCsv, saveCsvMap } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
@@ -45,13 +50,12 @@ export function serveCsv(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCase
     await requireManualAccount(ctx, params.id);
     if (body.saveMap === "true") await refusing(saveCsvMap(ctx, params.id, body.map));
     const outcome = await readingFile(importCsv(ctx, params.id, await bytesOf(body.file), body.map));
-    if (outcome.created > 0) {
-      // The balance as after a movement written by hand. A row with no category gets the automatic
-      // categories' pass: the dialog suggests one before it saves, a file cannot.
-      await rebuildDerivedBalances(ctx, [params.id], { manualChanged: true });
-      await cases.learn(ctx, true);
-    }
-    return outcome;
+    if (outcome.created === 0) return { ...outcome, beforeOpening: null };
+    // The balance as after a movement written by hand. A row with no category gets the automatic
+    // categories' pass: the dialog suggests one before it saves, a file cannot.
+    const { beforeOpening } = await rebuildDerivedBalances(ctx, [params.id], { manualChanged: true });
+    await cases.learn(ctx, true);
+    return { ...outcome, beforeOpening: joinedBeforeOpening(beforeOpening.values()) };
   });
   serve(app, guard, csv.getCsvMap, async ({ ctx, params }) => {
     await requireManualAccount(ctx, params.id);

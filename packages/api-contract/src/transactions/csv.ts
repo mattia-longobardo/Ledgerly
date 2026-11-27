@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { civilDate, money } from "../primitives";
-import { byAccount } from "../accounts/shared";
+import { beforeOpening, byAccount } from "../accounts/shared";
 import { ACCOUNT_ID } from "./shared";
 
 /** The largest file the import reads, and the most rows of movements in it. */
@@ -157,7 +157,8 @@ export const importCsv = defineRoute({
     "Writes the rows of a CSV file (`multipart/form-data`: `file`, `map` as JSON, `saveMap` `true` to " +
     "keep the map for the account) as manual movements of an account «a mano»: each changes the " +
     "balance as a movement written by hand. A row already imported is a duplicate and is not written " +
-    `again, so the same file sent twice writes once. ${REFUSALS}`,
+    "again, so the same file sent twice writes once. `beforeOpening`: the account's manual movements dated " +
+    `before its first balance, which the balance leaves out. ${REFUSALS}`,
   actions: [],
   params: byAccount,
   bodyFormat: "multipart",
@@ -170,12 +171,13 @@ export const importCsv = defineRoute({
     created: z.number().int(),
     duplicates: z.number().int(),
     refused: z.array(z.object({ row: z.number().int(), reason: reasonCode })),
+    beforeOpening,
   }),
   errors: CSV_ERRORS,
   example: {
     params: { id: ACCOUNT_ID },
     body: { file: fileExample(), map: JSON.stringify(MAP_EXAMPLE), saveMap: "true" },
-    response: { created: 1, duplicates: 0, refused: [] },
+    response: { created: 1, duplicates: 0, refused: [], beforeOpening: null },
   },
 });
 

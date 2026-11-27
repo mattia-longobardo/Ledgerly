@@ -57,6 +57,20 @@ export async function seedCurrency(): Promise<void> {
  * same IBAN, an example of the standard), and the bank's plugin turned on. The dry run is never
  * started by a test: it would ask a bank. Its own user: the switch journey changes nothing else.
  */
+/**
+ * PERS-678: an account «a mano» whose opening, 80,00 € five days ago, is its only balance. The
+ * journey imports a movement of an earlier day and moves the opening (tests/e2e/accounts/before-opening.spec.ts).
+ */
+export async function seedBeforeOpening(): Promise<void> {
+  const ctx = await contextOf(USERS.beforeOpening.email);
+  await createAccount(ctx, {
+    name: "Contanti",
+    type: "cash",
+    currency: "EUR",
+    openingBalance: { on: addDays(today(ctx.timeZone), -5), cents: 8_000n },
+  });
+}
+
 export async function seedSwitching(email: string = USERS.switching.email): Promise<void> {
   const ctx = await contextOf(email);
   const iban = "IT60X0542811101000000123456";

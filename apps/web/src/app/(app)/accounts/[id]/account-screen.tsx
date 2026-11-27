@@ -21,7 +21,14 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { SyncStatus } from "@ledgerly/ui/sync-status";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type CardFormat, centsOf, colorFor, CsvImportButton, counterValue } from "@/modules/accounts/client";
+import {
+  BeforeOpeningBanner,
+  type CardFormat,
+  centsOf,
+  colorFor,
+  CsvImportButton,
+  counterValue,
+} from "@/modules/accounts/client";
 import { AccountConnection } from "./connection-status";
 import { EntriesTab } from "./entries-tab";
 import { OverviewTab } from "./overview-tab";
@@ -192,15 +199,19 @@ function Header({ page, view, disconnected }: { page: AccountPage; view: NetWort
       above={
         account.sourceState === "stopped" ? (
           <StoppedBanner page={page} />
+        ) : page.context.connectionId !== null ? (
+          <AccountConnection
+            connectionId={page.context.connectionId}
+            // A service of Investments fed by a provider has its key replaced on its own page.
+            keyHref={row.service !== null ? `/investments/${account.id}/connection` : null}
+            format={page.format}
+          />
         ) : (
-          page.context.connectionId !== null && (
-            <AccountConnection
-              connectionId={page.context.connectionId}
-              // A service of Investments fed by a provider has its key replaced on its own page.
-              keyHref={row.service !== null ? `/investments/${account.id}/connection` : null}
-              format={page.format}
-            />
-          )
+          <BeforeOpeningBanner
+            accountId={account.id}
+            before={page.context.beforeOpening}
+            format={page.format}
+          />
         )
       }
       title={account.name}

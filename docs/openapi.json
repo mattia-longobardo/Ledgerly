@@ -2092,7 +2092,7 @@
       },
       "put": {
         "operationId": "update_balance_entry",
-        "summary": "Corrects a balance a person recorded; any other source is `conflict`.",
+        "summary": "Corrects a balance a person recorded; any other source is `conflict`. Moved earlier, it moves the account's opening day back with it. `beforeOpening`: the manual movements left before the first balance.",
         "tags": [
           "accounts"
         ],
@@ -2217,6 +2217,30 @@
                       "type": "string",
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "beforeOpening": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "first": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "first"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -2226,7 +2250,8 @@
                     "available",
                     "source",
                     "note",
-                    "capturedAt"
+                    "capturedAt",
+                    "beforeOpening"
                   ]
                 }
               }
@@ -2531,6 +2556,83 @@
                         "connect_first",
                         "offer"
                       ]
+                    },
+                    "beforeOpening": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "first": {
+                              "type": "string"
+                            },
+                            "moveTo": {
+                              "type": "string"
+                            },
+                            "opening": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "on": {
+                                      "type": "string"
+                                    },
+                                    "balance": {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "available": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "pattern": "^-?\\d+\\.\\d{2}$"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "note": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "on",
+                                    "balance",
+                                    "available",
+                                    "note"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "first",
+                            "moveTo",
+                            "opening"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -2542,7 +2644,8 @@
                     "subscriptions",
                     "interestRules",
                     "switch",
-                    "switchOffer"
+                    "switchOffer",
+                    "beforeOpening"
                   ]
                 }
               }
@@ -3233,7 +3336,7 @@
     "/accounts/{id}/csv/import": {
       "post": {
         "operationId": "import_csv",
-        "summary": "Writes the rows of a CSV file (`multipart/form-data`: `file`, `map` as JSON, `saveMap` `true` to keep the map for the account) as manual movements of an account «a mano»: each changes the balance as a movement written by hand. A row already imported is a duplicate and is not written again, so the same file sent twice writes once. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
+        "summary": "Writes the rows of a CSV file (`multipart/form-data`: `file`, `map` as JSON, `saveMap` `true` to keep the map for the account) as manual movements of an account «a mano»: each changes the balance as a movement written by hand. A row already imported is a duplicate and is not written again, so the same file sent twice writes once. `beforeOpening`: the account's manual movements dated before its first balance, which the balance leaves out. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
         "tags": [
           "transactions"
         ],
@@ -3319,12 +3422,37 @@
                           "reason"
                         ]
                       }
+                    },
+                    "beforeOpening": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "first": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "first"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "created",
                     "duplicates",
-                    "refused"
+                    "refused",
+                    "beforeOpening"
                   ]
                 }
               }
@@ -69266,13 +69394,38 @@
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "beforeOpening": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "first": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "first"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "id",
                     "created",
                     "on",
-                    "accountId"
+                    "accountId",
+                    "beforeOpening"
                   ]
                 }
               }
@@ -69549,13 +69702,38 @@
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "beforeOpening": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "first": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "first"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "id",
                     "created",
                     "on",
-                    "accountId"
+                    "accountId",
+                    "beforeOpening"
                   ]
                 }
               }
@@ -69872,7 +70050,7 @@
     "/transactions/manual/preview": {
       "post": {
         "operationId": "preview_manual_movement",
-        "summary": "Today's balance of the account before and after the movement being written, or the day of the reading that keeps it unchanged; null when there is nothing to say. Writes nothing.",
+        "summary": "Today's balance of the account before and after the movement being written, or the day of the reading that keeps it unchanged (`opening` when it is the account's first balance); null when there is nothing to say. Writes nothing.",
         "tags": [
           "transactions"
         ],
@@ -69968,12 +70146,16 @@
                                 },
                                 "readingOn": {
                                   "type": "string"
+                                },
+                                "opening": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
                                 "kind",
                                 "account",
-                                "readingOn"
+                                "readingOn",
+                                "opening"
                               ]
                             }
                           ]
@@ -72889,7 +73071,7 @@
     "/transactions/visibility": {
       "post": {
         "operationId": "change_transactions_visibility",
-        "summary": "Hides, restores or deletes for good (hidden rows only) a selection, and rebuilds the balance of each manual movement's account. `rebuildBalances` is accepted and has no effect: the balance is always rebuilt. A synced row deleted is never imported again.",
+        "summary": "Hides, restores or deletes for good (hidden rows only) a selection, and rebuilds the balance of each manual movement's account. `rebuildBalances` is accepted and has no effect: the balance is always rebuilt. A synced row deleted is never imported again. `beforeOpening`: the manual movements of those accounts left before their first balance.",
         "tags": [
           "transactions"
         ],
@@ -72943,10 +73125,35 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "beforeOpening": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "first": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "first"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
-                    "count"
+                    "count",
+                    "beforeOpening"
                   ]
                 }
               }

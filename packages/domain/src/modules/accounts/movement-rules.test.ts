@@ -3,9 +3,11 @@ import {
   type BalanceReading,
   type ManualMovement,
   accountMode,
+  joinedBeforeOpening,
   MANUAL_MOVEMENT_MODES,
   movementBalances,
   movementEffect,
+  movementsBeforeOpening,
   withMovementPoints,
 } from "./rules";
 
@@ -198,5 +200,49 @@ describe("a daily series with the manual movements in it", () => {
         [{ on: "2026-11-16", cents: 3n }],
       ),
     ).toEqual([null, 5n, 3n, 3n]);
+  });
+});
+
+describe("the manual movements before the opening (PERS-678)", () => {
+  const readings = [reading("2026-11-20", 5_000n), reading("2026-11-10", 0n)];
+
+  it("counts the movements before the first reading, with the earliest day and the opening's", () => {
+    const movements = [
+      movement("2026-11-08", -1_250n),
+      movement("2026-11-05", -450n),
+      movement("2026-11-10", -100n),
+      movement("2026-11-15", 300n),
+    ];
+    expect(movementsBeforeOpening(readings, movements)).toEqual({
+      count: 2,
+      first: "2026-11-05",
+      openingOn: "2026-11-10",
+    });
+  });
+
+  it("is null with none before it, and with no reading at all", () => {
+    expect(movementsBeforeOpening(readings, [movement("2026-11-12", -450n)])).toBeNull();
+    expect(movementsBeforeOpening([], [movement("2026-11-12", -450n)])).toBeNull();
+  });
+
+  it("leaves a movement between two readings to decision 12: the later reading holds it", () => {
+    expect(movementsBeforeOpening(readings, [movement("2026-11-15", -450n, "2026-11-25")])).toBeNull();
+  });
+
+  it("is counted once the opening moves to the day before the first movement", () => {
+    const moved = [reading("2026-11-04", 0n)];
+    const before = [movement("2026-11-05", -450n, "2026-11-25")];
+    expect(movementsBeforeOpening(moved, before)).toBeNull();
+    expect(movementBalances(moved, before)).toEqual([{ on: "2026-11-05", cents: -450n }]);
+  });
+
+  it("joins several accounts into one answer: the sum and the earliest day", () => {
+    expect(joinedBeforeOpening([])).toBeNull();
+    expect(
+      joinedBeforeOpening([
+        { count: 2, first: "2026-11-05", openingOn: "2026-11-10" },
+        { count: 1, first: "2026-10-30", openingOn: "2026-11-01" },
+      ]),
+    ).toEqual({ count: 3, first: "2026-10-30" });
   });
 });

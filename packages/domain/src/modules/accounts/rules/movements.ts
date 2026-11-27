@@ -88,6 +88,47 @@ export function movementBalances(
   return points;
 }
 
+/** The manual movements dated before an account's first reading, its opening (PERS-678). */
+export interface BeforeOpening {
+  count: number;
+  /** The day of the earliest of them. */
+  first: CivilDate;
+  /** The day of the first reading. */
+  openingOn: CivilDate;
+}
+
+/**
+ * The manual movements no reading comes before (PERS-678): `movementBalances` leaves them out, as
+ * the opening holds them (decision 12). Right for a balance a bank or a person counted on that day,
+ * wrong when the opening means «the account starts here»: only the person can tell, so the app
+ * says it and never moves the balance by itself. `null` with none, or with no reading at all.
+ */
+export function movementsBeforeOpening(
+  readings: readonly Pick<BalanceReading, "on">[],
+  movements: readonly Pick<ManualMovement, "on">[],
+): BeforeOpening | null {
+  const openingOn = readings.reduce<CivilDate | null>(
+    (first, reading) => (first === null || reading.on < first ? reading.on : first),
+    null,
+  );
+  if (openingOn === null) return null;
+  const before = movements.filter((movement) => movement.on < openingOn).map((movement) => movement.on);
+  if (before.length === 0) return null;
+  return { count: before.length, first: before.sort()[0], openingOn };
+}
+
+/** Several accounts' {@link BeforeOpening} as one answer of a write: the count and the earliest day. */
+export function joinedBeforeOpening(
+  each: Iterable<BeforeOpening>,
+): Pick<BeforeOpening, "count" | "first"> | null {
+  const all = [...each];
+  if (all.length === 0) return null;
+  return {
+    count: all.reduce((sum, one) => sum + one.count, 0),
+    first: all.map((one) => one.first).sort()[0],
+  };
+}
+
 /** What one more manual movement does to today's balance, for the line under the dialog's account. */
 export type MovementEffect =
   | { kind: "change"; before: Cents; after: Cents }

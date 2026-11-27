@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { amountInput, civilDate, id, money } from "../primitives";
+import { beforeOpening } from "../accounts/shared";
 import {
   ACCOUNT_ID,
   byTransaction,
@@ -35,8 +36,15 @@ const MOVEMENT_EXAMPLE = {
   note: "",
 };
 
-const written = z.object({ id: id(), created: z.boolean(), on: civilDate(), accountId: id() });
-const WRITTEN_EXAMPLE = { id: TRANSACTION_ID, created: true, on: "2026-10-14", accountId: ACCOUNT_ID };
+/** `beforeOpening`: the manual movements of the account left before its first balance (PERS-678). */
+const written = z.object({ id: id(), created: z.boolean(), on: civilDate(), accountId: id(), beforeOpening });
+const WRITTEN_EXAMPLE = {
+  id: TRANSACTION_ID,
+  created: true,
+  on: "2026-10-14",
+  accountId: ACCOUNT_ID,
+  beforeOpening: null,
+};
 
 export const getManualForm = defineRoute({
   id: "get_manual_form",
@@ -145,7 +153,8 @@ export const previewManualMovement = defineRoute({
   capability: "transactions",
   summary:
     "Today's balance of the account before and after the movement being written, or the day of the " +
-    "reading that keeps it unchanged; null when there is nothing to say. Writes nothing.",
+    "reading that keeps it unchanged (`opening` when it is the account's first balance); null when there is " +
+    "nothing to say. Writes nothing.",
   actions: [],
   body: movement.pick({ kind: true, amount: true, on: true, accountId: true }).extend({
     editingId: id().optional(),
@@ -154,7 +163,13 @@ export const previewManualMovement = defineRoute({
     preview: z
       .discriminatedUnion("kind", [
         z.object({ kind: z.literal("change"), account: z.string(), before: money(), after: money() }),
-        z.object({ kind: z.literal("unchanged"), account: z.string(), readingOn: civilDate() }),
+        /** `opening`: the reading is the account's first, and the movement falls before it (PERS-678). */
+        z.object({
+          kind: z.literal("unchanged"),
+          account: z.string(),
+          readingOn: civilDate(),
+          opening: z.boolean(),
+        }),
       ])
       .nullable(),
   }),

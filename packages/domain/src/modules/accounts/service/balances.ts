@@ -5,10 +5,10 @@ import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { type Cents } from "../../../shared/money";
 import { managedAccounts } from "../ports";
-import { type BalanceEntryInput, balanceEntrySchema, isFutureDate } from "../rules";
+import { type BalanceEntryInput, balanceEntrySchema, type BeforeOpening, isFutureDate } from "../rules";
 import { type BalanceEntry } from "../queries";
 import { accounts, balanceEntries } from "../schema";
-import { rebuildDerivedBalances } from "./derived-balances";
+import { openedNoLaterThan, rebuildDerivedBalances } from "./derived-balances";
 import { AccountError, refuseManaged, requireAccount, writeBalanceEntry } from "./guards";
 
 /**
@@ -45,6 +45,8 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
  * its place, so the day ends with one manual balance and never two, and no moment exists in which
  * the balance is on neither date. `rebuildDerivedBalances` follows as in {@link saveBalanceEntry}:
  * which month ends get rebuilt depends on the manual corrections, and here two dates moved.
+ * A balance moved earlier moves the account's opening day back with it (`openedNoLaterThan`), and
+ * `beforeOpening` says the manual movements left before the first reading (PERS-678).
  */
 export async function updateBalanceEntry(
   ctx: Ctx,
@@ -52,7 +54,7 @@ export async function updateBalanceEntry(
   input: unknown,
   /** When given, an entry of another account is `not_found`, as the route of the account says. */
   accountId?: string,
-): Promise<BalanceEntry> {
+): Promise<BalanceEntry & { beforeOpening: BeforeOpening | null }> {
   const parsed: BalanceEntryInput = balanceEntrySchema.parse(input);
   const [current] = await getDb()
     .select()
@@ -93,10 +95,11 @@ export async function updateBalanceEntry(
       .set(values)
       .where(and(eq(balanceEntries.id, id), userScoped(ctx).owns(balanceEntries)))
       .returning();
+    if (parsed.on < current.on) await openedNoLaterThan(ctx, current.accountId, parsed.on, trx);
     return updated;
   });
-  await rebuildDerivedBalances(ctx, [current.accountId]);
-  return row;
+  const { beforeOpening } = await rebuildDerivedBalances(ctx, [current.accountId]);
+  return { ...row, beforeOpening: beforeOpening.get(current.accountId) ?? null };
 }
 
 /** A provider's reading of a balance, as a provider's sync hands it over (spec §9.1). */

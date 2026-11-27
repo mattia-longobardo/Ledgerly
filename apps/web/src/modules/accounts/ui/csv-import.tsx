@@ -251,6 +251,11 @@ function DoneStep({ result, onClose }: { result: CsvImported; onClose: () => voi
       <p role="status" className="flex flex-col gap-1 text-sm">
         <span className="font-medium">{text("done", { count: result.created })}</span>
         <span className="text-muted">{text("duplicates", { count: result.duplicates })}</span>
+        {result.beforeOpening && (
+          <span data-testid="csv-before-opening" className="text-warn">
+            {text("beforeOpening", { count: result.beforeOpening.count })}
+          </span>
+        )}
       </p>
       {result.refused.length > 0 && (
         <section className="flex flex-col gap-1.5" aria-labelledby={titleId}>

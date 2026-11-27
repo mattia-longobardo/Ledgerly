@@ -1952,7 +1952,8 @@
       "bankBalance": "The balance changes now. At the next reading the bank's balance applies.",
       "balance": {
         "change": "Balance of “{account}”: from {before} to {after}.",
-        "unchanged": "The balance of “{account}” was recorded on {date} and already includes this day: it does not change."
+        "unchanged": "The balance of “{account}” was recorded on {date} and already includes this day: it does not change.",
+        "beforeOpening": "“{account}” starts from the opening balance of {date}: a transaction of an earlier day does not enter the balance. You can move the opening from the account's page."
       },
       "saving": "Saving…",
       "toasts": {
@@ -2951,12 +2952,20 @@
         "unreadable": "Ledgerly cannot read the file. Check that it is a CSV text file.",
         "invalid": "Check the file and the columns.",
         "failed": "The import did not succeed. Try again."
-      }
+      },
+      "beforeOpening": "{count, plural, one {# transaction is} other {# transactions are}} before the opening balance: the balance does not count {count, plural, one {it} other {them}}. You can move the opening from the account's page."
     },
     "stopped": {
       "title": "This account does not update: {provider} is not active",
       "body": "Balance and transactions stopped on {date}. Choose whether to activate {provider} or to keep the account manual.",
       "fix": "Clean up in {provider}"
+    },
+    "beforeOpening": {
+      "title": "{count, plural, one {# transaction is} other {# transactions are}} before the opening balance",
+      "body": "The balance starts from the opening of {opening} and does not count the {count, plural, one {transaction} other {transactions}} from {first}. If the account started earlier, move the opening: the balance will count {count, plural, one {it} other {them}}.",
+      "move": "Move the opening to {date}",
+      "moved": "Opening moved to {date}",
+      "failed": "The opening could not be moved. Try again."
     }
   },
   "budgets": {
