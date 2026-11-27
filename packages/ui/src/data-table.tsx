@@ -12,6 +12,8 @@ export interface DataColumn<T> {
   muted?: boolean;
   /** Classes of the cell, in the table and on the card; a function for classes that follow the row. */
   className?: string | ((row: T) => string);
+  /** Classes of the header: with `className`, a column that steps aside at a narrow width. */
+  headerClassName?: string;
   /** The width class of the column's `<col>`: a table with one is laid out fixed. */
   width?: string;
   /** The heading orders the list (see `Th`). */
@@ -153,7 +155,7 @@ function TableView<T>({
         )}
         <THead className={stickyHeader ? STICKY_HEAD : undefined}>
           {columns.map((column) => (
-            <Th key={column.key} align={column.align} sort={column.sort}>
+            <Th key={column.key} align={column.align} sort={column.sort} className={column.headerClassName}>
               {column.hiddenHeader ? <span className="sr-only">{column.header}</span> : column.header}
             </Th>
           ))}

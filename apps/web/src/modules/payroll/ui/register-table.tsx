@@ -25,6 +25,27 @@ function Month({ row }: { row: RegisterCells }) {
   );
 }
 
+function Status({ row, text }: { row: RegisterCells; text: Text }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <StatusBadge status={row.state} tones={STATE_TONE}>
+        {text(`states.${row.state}`)}
+      </StatusBadge>
+      {row.warnings > 0 && (
+        <span title={text("register.warningsHint")}>
+          <Badge tone="warn">{text("register.warningsBadge", { count: row.warnings })}</Badge>
+        </span>
+      )}
+    </span>
+  );
+}
+
+// Between the list (below 768 px) and a wide page the table steps two columns aside, so it fits the
+// page column and nothing reaches past the window: the file below 1024 px of column (it opens from the
+// payslip), the status below 896 px (the month shows it).
+const NARROW_DOCUMENT = "@max-5xl:hidden";
+const NARROW_STATUS = "@max-4xl:hidden";
+
 function columnsOf(
   fields: readonly string[],
   details: boolean,
@@ -43,13 +64,27 @@ function columnsOf(
     { key: "rolLeft", header: text("register.rolLeft"), align: "right", cell: (row) => row.rolLeft },
   ];
   return [
-    { key: "month", header: text("register.month"), rowHeader: true, cell: (row) => <Month row={row} /> },
+    {
+      key: "month",
+      header: text("register.month"),
+      rowHeader: true,
+      cell: (row) => (
+        <span className="flex flex-col gap-0.5">
+          <Month row={row} />
+          {/* The status column steps aside on a narrow page: the month says it, as in Time off. */}
+          <span className="@4xl:hidden">
+            <Status row={row} text={text} />
+          </span>
+        </span>
+      ),
+    },
     ...fields.map(amount),
     ...(details ? leave : []),
     {
       key: "document",
       header: text("register.document"),
-      className: "max-w-56 truncate",
+      headerClassName: NARROW_DOCUMENT,
+      className: cn("max-w-56 truncate", NARROW_DOCUMENT),
       cell: (row) =>
         row.hasOriginal ? (
           <button
@@ -68,18 +103,9 @@ function columnsOf(
     {
       key: "status",
       header: text("register.status"),
-      cell: (row) => (
-        <span className="inline-flex items-center gap-1.5">
-          <StatusBadge status={row.state} tones={STATE_TONE}>
-            {text(`states.${row.state}`)}
-          </StatusBadge>
-          {row.warnings > 0 && (
-            <span title={text("register.warningsHint")}>
-              <Badge tone="warn">{text("register.warningsBadge", { count: row.warnings })}</Badge>
-            </span>
-          )}
-        </span>
-      ),
+      headerClassName: NARROW_STATUS,
+      className: NARROW_STATUS,
+      cell: (row) => <Status row={row} text={text} />,
     },
     {
       key: "actions",

@@ -3,7 +3,8 @@
 import { expect, type Page, test } from "@playwright/test";
 import { MARCH } from "../../../test/fixtures/payroll/samples";
 import { twinPdf } from "../../../test/fixtures/payroll/twin";
-import { sessionState } from "../_shared/env";
+import { BASE_URL, sessionState } from "../_shared/env";
+import { LAST_YEAR } from "../_shared/helpers";
 
 test.use({ storageState: sessionState("payroll") });
 test.describe.configure({ mode: "serial" });
@@ -193,4 +194,27 @@ test.describe("at 375 px", () => {
     await expect(page.getByRole("link", { name: /March 2031/ })).toBeVisible();
     expect(await overflow()).toBeLessThanOrEqual(1);
   });
+});
+
+// A tablet, and a laptop with the sidebar open: the table steps columns aside instead of reaching
+// past the window. Reads only the layout user's payslips of last year.
+test.describe("between the list and the desktop", () => {
+  test.use({ storageState: sessionState("layout") });
+
+  for (const [width, sidebar] of [
+    [768, "auto"],
+    [1024, "auto"],
+    [1024, "expanded"],
+  ] as const) {
+    test(`the register fits ${width} px with the sidebar ${sidebar}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 1024 });
+      await page.context().addCookies([{ name: "sidebar", value: sidebar, url: BASE_URL }]);
+      await page.goto(`/payroll?year=${LAST_YEAR}`);
+      const table = page.getByRole("table");
+      await expect(table).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBe(0);
+      const box = await table.boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    });
+  }
 });
