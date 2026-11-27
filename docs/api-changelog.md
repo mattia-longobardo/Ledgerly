@@ -35,6 +35,14 @@ deprecated (`apiLevel` and `minClientLevel` 2).
   the chip's layers; the chart, `period.firstOn` and `period.span` start at the first data of the chip's
   groups; the Return view is on the scale of the chip's KPIs (`total` for `all`, the group's otherwise).
 
+## Unreleased · No fee on a line with 0 shares, one bank movement per execution
+
+- Changed: in `POST …/runs/{runId}/confirm` of a basket, a line with `quantity` 0 and a `fee` above 0 is
+  `invalid` (it buys nothing, so it has no fee); a `fee` of 0 or none is accepted.
+- The debit account (E7) no longer proposes one bank movement to two executions: a movement already
+  proposed on another execution is not proposed again, and of two executions that match one movement the
+  older (by due date) gets it. A skipped or expired execution gives its proposal back.
+
 ## Unreleased · A basket's line with no price, and its bank movement (additive)
 
 - Changed: in `POST …/runs/{runId}/confirm` of a basket, `lines[].unitPrice` is optional on a line with

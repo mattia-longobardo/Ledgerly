@@ -404,7 +404,8 @@ describe("a basket plan", () => {
     expect((await plansToDo(ctx)).priceMissing.map((fact) => fact.runId)).toEqual([proposed.run.id]);
   });
 
-  it("confirms a line with no price at 0 shares, its part carried; refuses shares with no price (§6)", async () => {
+  /** A basket proposed with its first line with no price (§6): its reference, that line and the other typed. */
+  async function proposalWithNoPrice() {
     await closes(todayOn, [{ market: 1, close: "18.75" }]);
     const accountId = await portfolio(1_000_00n);
     const day = Number(todayOn.slice(8, 10));
@@ -416,6 +417,11 @@ describe("a basket plan", () => {
     expect(missing.state).toBe("price_missing");
     const ref = { accountId, planId, runId: proposed.run.id };
     const typed = { assetId: priced.assetId, quantity: shares(4), unitPrice: price("18.75") };
+    return { accountId, planId, ref, missing, typed };
+  }
+
+  it("confirms a line with no price at 0 shares, its part carried; refuses shares with no price (§6)", async () => {
+    const { accountId, planId, ref, missing, typed } = await proposalWithNoPrice();
     await expect(
       confirmBasketRun(ctx, ref, { lines: [{ assetId: missing.assetId, quantity: shares(1) }, typed] }),
     ).rejects.toMatchObject({ name: "ZodError" });
@@ -429,6 +435,19 @@ describe("a basket plan", () => {
       ["buy", 75_00n, eventIds[0]],
     ]);
     expect(recorded.run).toMatchObject({ state: "recorded", carryOutCents: 200_00n - 75_00n });
+  });
+
+  it("refuses a fee on a line with 0 shares, and takes a fee of 0 (PERS-729)", async () => {
+    const { ref, missing, typed } = await proposalWithNoPrice();
+    await expect(
+      confirmBasketRun(ctx, ref, {
+        lines: [{ assetId: missing.assetId, quantity: 0n, feeCents: 1_00n }, typed],
+      }),
+    ).rejects.toMatchObject({ name: "ZodError" });
+    const { eventIds } = await confirmBasketRun(ctx, ref, {
+      lines: [{ assetId: missing.assetId, quantity: 0n, feeCents: 0n }, typed],
+    });
+    expect(eventIds).toHaveLength(1);
   });
 
   it("proposes the bank movement of a recorded execution, purchases and fees, and links it (E7)", async () => {

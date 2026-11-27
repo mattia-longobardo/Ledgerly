@@ -332,6 +332,7 @@ export const confirmBody = z
             quantity: decimalInput(),
             /** Required with shares; a line with no price is confirmed with quantity 0 and none. */
             unitPrice: decimalInput().optional(),
+            /** 0 or none on a line with quantity 0: it buys nothing. */
             fee: amountInput().optional(),
           })
           .strict(),

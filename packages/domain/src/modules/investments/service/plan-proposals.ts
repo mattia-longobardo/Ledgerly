@@ -147,6 +147,10 @@ const confirmSchema = z.object({
         .refine(
           (line) => line.quantity === 0n || line.unitPrice !== undefined,
           "A line with shares needs a price",
+        )
+        .refine(
+          (line) => line.quantity > 0n || !line.feeCents,
+          "A line with 0 shares buys nothing: it has no fee",
         ),
     )
     .min(1),

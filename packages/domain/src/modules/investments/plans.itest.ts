@@ -33,7 +33,7 @@ import {
   skipRun,
   updatePlan,
 } from "./service";
-import { investmentEvents, investmentOperations, investmentPlanRuns } from "./schema";
+import { investmentEvents, investmentOperations, investmentPlanRuns, investmentPlans } from "./schema";
 
 const price = (value: string) => parseDecimal(value, PRICE_SCALE);
 const qty = (value: string) => parseDecimal(value, QUANTITY_SCALE);
@@ -246,6 +246,52 @@ describe("a purchase plan", () => {
     await expect(linkRunDebit(ctx, accountId, planId, proposed.run.id)).rejects.toMatchObject({
       code: "not_editable",
     });
+  });
+
+  /**
+   * A daily plan made a week ago with a debit account, and `count` bank movements today of one
+   * instalment each: the executions whose window (due date to 5 days after) holds today, oldest first,
+   * and the movement each was proposed (PERS-729).
+   */
+  async function debitsOfDailyPlan(count: number) {
+    await closeToday("40");
+    const bank = await createAccount(ctx, {
+      name: "Conto",
+      type: "checking",
+      currency: "EUR",
+      openingBalance: null,
+    });
+    for (let one = 0; one < count; one += 1) await accountMovement(ctx, bank.id, todayOn, -101_00n);
+    const accountId = await portfolio(1_000_00n);
+    const weekAgo = addDays(todayOn, -7);
+    const { id: planId } = await createPlan(
+      ctx,
+      accountId,
+      dueToday({ frequency: "day", startOn: weekAgo, debitAccountId: bank.id }),
+    );
+    await getDb().update(investmentPlans).set({ createdOn: weekAgo }).where(eq(investmentPlans.id, planId));
+    await runDuePlans(ctx);
+    const runs = await getDb().select().from(investmentPlanRuns).where(eq(investmentPlanRuns.planId, planId));
+    return runs
+      .filter((run) => run.dueOn >= addDays(todayOn, -5))
+      .sort((left, right) => left.dueOn.localeCompare(right.dueOn))
+      .map((run) => ({ dueOn: run.dueOn, state: run.state, debit: run.debitTransactionId }));
+  }
+
+  it("proposes one movement to one execution only, the oldest of those it may document (PERS-729)", async () => {
+    const [oldest, ...others] = await debitsOfDailyPlan(1);
+    expect(others.length).toBeGreaterThan(0);
+    expect(oldest).toMatchObject({ state: "proposed", debit: expect.any(String) });
+    expect(others.map((run) => run.debit)).toEqual(others.map(() => null));
+  });
+
+  it("proposes two movements of one amount to two executions, a different one each (PERS-729)", async () => {
+    const runs = await debitsOfDailyPlan(2);
+    const [first, second, ...others] = runs.map((run) => run.debit);
+    expect(first).toEqual(expect.any(String));
+    expect(second).toEqual(expect.any(String));
+    expect(second).not.toBe(first);
+    expect(others).toEqual(others.map(() => null));
   });
 
   it("takes the payee of a linked debit out of the subscription suggestions (§11.3.3)", async () => {
