@@ -99,22 +99,28 @@ export interface BeforeOpening {
 
 /**
  * The manual movements no reading comes before (PERS-678): `movementBalances` leaves them out, as
- * the opening holds them (decision 12). Right for a balance a bank or a person counted on that day,
+ * the opening holds them (decision 12) — those of an earlier day, and those of its own day written
+ * before it was taken (PERS-725). Right for a balance a bank or a person counted on that day,
  * wrong when the opening means «the account starts here»: only the person can tell, so the app
  * says it and never moves the balance by itself. `null` with none, or with no reading at all.
  */
 export function movementsBeforeOpening(
-  readings: readonly Pick<BalanceReading, "on">[],
-  movements: readonly Pick<ManualMovement, "on">[],
+  readings: readonly Pick<BalanceReading, "on" | "capturedAt">[],
+  movements: readonly Pick<ManualMovement, "on" | "writtenAt">[],
 ): BeforeOpening | null {
-  const openingOn = readings.reduce<CivilDate | null>(
-    (first, reading) => (first === null || reading.on < first ? reading.on : first),
+  const opening = readings.reduce<Pick<BalanceReading, "on" | "capturedAt"> | null>(
+    (first, reading) => (first === null || reading.on < first.on ? reading : first),
     null,
   );
-  if (openingOn === null) return null;
-  const before = movements.filter((movement) => movement.on < openingOn).map((movement) => movement.on);
+  if (opening === null) return null;
+  const before = movements
+    .filter(
+      (movement) =>
+        movement.on < opening.on || (movement.on === opening.on && opening.capturedAt >= movement.writtenAt),
+    )
+    .map((movement) => movement.on);
   if (before.length === 0) return null;
-  return { count: before.length, first: before.sort()[0], openingOn };
+  return { count: before.length, first: before.sort()[0], openingOn: opening.on };
 }
 
 /** Several accounts' {@link BeforeOpening} as one answer of a write: the count and the earliest day. */

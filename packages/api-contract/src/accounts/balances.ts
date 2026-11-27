@@ -108,10 +108,12 @@ export const updateBalanceEntry = defineRoute({
   capability: "accounts",
   summary:
     "Corrects a balance a person recorded; any other source is `conflict`. Moved earlier, it moves the " +
-    "account's opening day back with it. `beforeOpening`: the manual movements left before the first balance.",
+    "account's opening day back with it. Moved onto a day with another manual balance, it replaces it; " +
+    "with `replace: false` that is `conflict` (`balance_exists`). `beforeOpening`: the manual movements " +
+    "left before the first balance.",
   actions: [],
   params: byEntry,
-  body: entryInput,
+  body: entryInput.extend({ replace: z.boolean().optional() }),
   response: balanceEntry.extend({ beforeOpening }),
   errors: ACCOUNT_ERRORS,
   example: {

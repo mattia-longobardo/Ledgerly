@@ -46,14 +46,25 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
  * the balance is on neither date. `rebuildDerivedBalances` follows as in {@link saveBalanceEntry}:
  * which month ends get rebuilt depends on the manual corrections, and here two dates moved.
  * A balance moved earlier moves the account's opening day back with it (`openedNoLaterThan`), and
- * `beforeOpening` says the manual movements left before the first reading (PERS-678).
+ * `beforeOpening` says the manual movements left before the first reading (PERS-678). With
+ * `replace: false` a manual balance already on the new date is `balance_exists` and stays: «Move
+ * the opening» never deletes a balance written since its banner was read (PERS-725).
+ *
+ * The same day and amount keep the moment of the reading: a note is no new count of the balance,
+ * so it takes nothing more of the movements of its day (decision 12, PERS-725).
  */
 export async function updateBalanceEntry(
   ctx: Ctx,
   id: string,
   input: unknown,
-  /** When given, an entry of another account is `not_found`, as the route of the account says. */
-  accountId?: string,
+  {
+    accountId,
+    replace = true,
+  }: {
+    /** When given, an entry of another account is `not_found`, as the route of the account says. */
+    accountId?: string;
+    replace?: boolean;
+  } = {},
 ): Promise<BalanceEntry & { beforeOpening: BeforeOpening | null }> {
   const parsed: BalanceEntryInput = balanceEntrySchema.parse(input);
   const [current] = await getDb()
@@ -75,20 +86,22 @@ export async function updateBalanceEntry(
     balanceCents: parsed.cents,
     availableCents: parsed.availableCents,
     note: parsed.note,
-    capturedAt: new Date(),
+    capturedAt:
+      parsed.on === current.on && parsed.cents === current.balanceCents ? current.capturedAt : new Date(),
   };
   const row = await getDb().transaction(async (trx) => {
     if (parsed.on !== current.on) {
-      await trx
-        .delete(balanceEntries)
-        .where(
-          and(
-            userScoped(ctx).owns(balanceEntries),
-            eq(balanceEntries.accountId, current.accountId),
-            eq(balanceEntries.on, parsed.on),
-            eq(balanceEntries.source, "manual"),
-          ),
-        );
+      const onTarget = and(
+        userScoped(ctx).owns(balanceEntries),
+        eq(balanceEntries.accountId, current.accountId),
+        eq(balanceEntries.on, parsed.on),
+        eq(balanceEntries.source, "manual"),
+      );
+      const [taken] = replace
+        ? []
+        : await trx.select({ id: balanceEntries.id }).from(balanceEntries).where(onTarget);
+      if (taken) throw new AccountError("balance_exists");
+      await trx.delete(balanceEntries).where(onTarget);
     }
     const [updated] = await trx
       .update(balanceEntries)

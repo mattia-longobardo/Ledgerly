@@ -2092,7 +2092,7 @@
       },
       "put": {
         "operationId": "update_balance_entry",
-        "summary": "Corrects a balance a person recorded; any other source is `conflict`. Moved earlier, it moves the account's opening day back with it. `beforeOpening`: the manual movements left before the first balance.",
+        "summary": "Corrects a balance a person recorded; any other source is `conflict`. Moved earlier, it moves the account's opening day back with it. Moved onto a day with another manual balance, it replaces it; with `replace: false` that is `conflict` (`balance_exists`). `beforeOpening`: the manual movements left before the first balance.",
         "tags": [
           "accounts"
         ],
@@ -2153,6 +2153,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "replace": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -2570,6 +2573,9 @@
                             "first": {
                               "type": "string"
                             },
+                            "openingOn": {
+                              "type": "string"
+                            },
                             "moveTo": {
                               "type": "string"
                             },
@@ -2625,6 +2631,7 @@
                           "required": [
                             "count",
                             "first",
+                            "openingOn",
                             "moveTo",
                             "opening"
                           ]

@@ -93,7 +93,7 @@ describe("accounts, old Server Action = new call", () => {
       ctx,
       oldEntry.id,
       { on: typed.on, cents: -5n, availableCents: null, note: "" },
-      old,
+      { accountId: old },
     );
     const correction = { on: typed.on, balance: decimal("-0,05"), available: null, note: "" };
     expect(await send("PUT", `/accounts/${now}/balances/${newEntry.id}`, correction)).toBe(200);

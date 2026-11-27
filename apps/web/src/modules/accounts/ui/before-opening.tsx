@@ -27,7 +27,7 @@ export function BeforeOpeningBanner({
 }) {
   const text = useTranslations("accounts.beforeOpening");
   const [pending, startTransition] = useTransition();
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   if (before === null) return null;
   const day = (civil: string) => formatDate(civil, "long", format.locale);
   const { opening } = before;
@@ -36,7 +36,7 @@ export function BeforeOpeningBanner({
     if (opening === null || before === null) return;
     startTransition(async () => {
       const result = await moveOpeningAction(accountId, opening, before.moveTo).catch(() => null);
-      setFailed(result?.ok !== true);
+      setFailed(result?.ok ? null : result?.error === "balance_exists" ? "taken" : "failed");
       if (result?.ok) notify(text("moved", { date: day(before.moveTo) }));
     });
   }
@@ -57,11 +57,11 @@ export function BeforeOpeningBanner({
       {text("body", {
         count: before.count,
         first: day(before.first),
-        opening: day(opening?.on ?? before.moveTo),
+        opening: day(before.openingOn),
       })}
       {failed && (
         <p role="alert" className="mt-1 text-neg">
-          {text("failed")}
+          {failed === "taken" ? text("taken", { date: day(before.moveTo) }) : text("failed")}
         </p>
       )}
     </Banner>

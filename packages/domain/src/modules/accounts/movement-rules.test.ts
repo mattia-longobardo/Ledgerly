@@ -225,6 +225,19 @@ describe("the manual movements before the opening (PERS-678)", () => {
     expect(movementsBeforeOpening([], [movement("2026-11-12", -450n)])).toBeNull();
   });
 
+  it("counts a movement of the opening's day written before the opening was taken (PERS-725)", () => {
+    const opening = [reading("2026-11-10", 0n, "18:00")];
+    expect(movementsBeforeOpening(opening, [movement("2026-11-10", -450n)])).toEqual({
+      count: 1,
+      first: "2026-11-10",
+      openingOn: "2026-11-10",
+    });
+    expect(movementBalances(opening, [movement("2026-11-10", -450n)])).toEqual([]);
+    expect(
+      movementsBeforeOpening(opening, [movement("2026-11-10", -450n, "2026-11-10", "19:00")]),
+    ).toBeNull();
+  });
+
   it("leaves a movement between two readings to decision 12: the later reading holds it", () => {
     expect(movementsBeforeOpening(readings, [movement("2026-11-15", -450n, "2026-11-25")])).toBeNull();
   });

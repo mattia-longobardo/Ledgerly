@@ -2965,7 +2965,8 @@
       "body": "Il saldo parte dall'apertura del {opening} e non conta {count, plural, one {il movimento} other {i movimenti}} dal {first}. Se il conto è iniziato prima, sposta l'apertura: il saldo {count, plural, one {lo conterà} other {li conterà}}.",
       "move": "Sposta l'apertura al {date}",
       "moved": "Apertura spostata al {date}",
-      "failed": "Non è stato possibile spostare l'apertura. Riprova."
+      "failed": "Non è stato possibile spostare l'apertura. Riprova.",
+      "taken": "Il {date} c'è già un saldo che hai registrato: l'apertura non è stata spostata. Ricarica la pagina e controlla i saldi."
     }
   },
   "budgets": {
