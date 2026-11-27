@@ -4,7 +4,6 @@
 // fixed-point decimals here, nowhere else. Hono tries the routes in order: `/investments/home`,
 // `/catalog` and `/connections` come before `/investments/{accountId}`.
 import type { Hono } from "hono";
-import type { z } from "zod";
 import { INVESTMENTS, INVESTMENTS_ROUTES, type RouteContract } from "@ledgerly/api-contract";
 import { accountsView } from "@ledgerly/domain/accounts";
 import {
@@ -29,7 +28,6 @@ import {
   plansOfEvents,
   linkTransfer,
   type PeriodParams,
-  PRICE_SCALE,
   QUANTITY_SCALE,
   reconcileHolding,
   recordOperation,
@@ -55,8 +53,8 @@ import { activityOut, homeOut, movementsOut, overviewOut } from "./pages";
 import { catalogOut, connectionOut, positionsOut } from "./tabs";
 import { fundsListOut, portfolioOut } from "./portfolio";
 import { servePlans } from "./plan-routes";
-import { servePortfolio, writeOperation } from "./portfolio-routes";
-import { cents, decimal, notFound, refusing } from "./refusals";
+import { operationInput, servePortfolio, writeOperation } from "./portfolio-routes";
+import { decimal, notFound, refusing } from "./refusals";
 
 const { investments, register, connection } = INVESTMENTS;
 
@@ -205,50 +203,6 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
       : null;
     return connectionOut(detail, today(ctx.timeZone), connected?.id ?? null, ctx.timeZone);
   });
-}
-
-type OperationBody = z.output<typeof register.recordOperation.body>;
-
-/** An operation as the domain takes it: a price wins over an amount, as the form's (`operationOf`). */
-function operationInput(body: OperationBody) {
-  switch (body.kind) {
-    case "valuation": {
-      const unitPrice = decimal(body.unitPrice, PRICE_SCALE);
-      return {
-        kind: body.kind,
-        holdingId: body.holdingId,
-        on: body.on,
-        unitPrice,
-        amountCents: unitPrice === null ? cents(body.amount) : null,
-        note: body.note,
-      };
-    }
-    case "sell":
-    case "close": {
-      const quantity = decimal(body.quantity, QUANTITY_SCALE);
-      const unitPrice = decimal(body.unitPrice, PRICE_SCALE);
-      return {
-        kind: body.kind,
-        holdingId: body.holdingId,
-        on: body.on,
-        quantity,
-        unitPrice: quantity === null ? null : unitPrice,
-        amountCents: quantity === null || unitPrice === null ? cents(body.amount) : null,
-        feeCents: cents(body.fee) ?? 0n,
-        note: body.note,
-      };
-    }
-    case "income":
-      return {
-        kind: body.kind,
-        holdingId: body.holdingId,
-        on: body.on,
-        amountCents: parseCents(body.amount),
-        note: body.note,
-      };
-    default:
-      throw new ApiRefusal("conflict", "not_editable");
-  }
 }
 
 function serveRegister(app: Hono<ApiEnv>, guard: Guard): void {

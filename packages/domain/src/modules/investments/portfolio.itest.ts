@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount, readingsAt } from "../accounts";
 import type { Ctx } from "../../platform/context";
-import { today } from "../../shared/dates";
+import { addDays, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
@@ -24,6 +24,8 @@ import {
   recordOperation,
   revalueAfterPrices,
   setPriceMode,
+  updateBuy,
+  updateOperation,
 } from "./service";
 import { investmentAccounts, investmentHoldings } from "./schema";
 
@@ -135,6 +137,139 @@ async function holdingOf(accountId: string): Promise<string> {
     .where(eq(investmentAccounts.accountId, accountId));
   return row.id;
 }
+
+describe("an operation edited by hand (PERS-683)", () => {
+  const OTHER = { create: { class: "etf" as const, name: "Another ETF", symbol: "OTH", currency: "EUR" } };
+
+  /** A portfolio with a deposit ten days ago and a purchase five days ago. */
+  async function bought() {
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    await recordOperation(ctx, accountId, {
+      kind: "deposit",
+      on: addDays(todayOn, -10),
+      amountCents: 2_000_00n,
+    });
+    const { eventId } = await addAsset(ctx, accountId, {
+      asset: ETF,
+      on: addDays(todayOn, -5),
+      quantity: qty("10"),
+      unitPrice: price("100"),
+      feeCents: 5_00n,
+    });
+    const [{ assetId }] = await getDb()
+      .select({ assetId: investmentHoldings.assetId })
+      .from(investmentHoldings);
+    return { accountId, eventId, asset: { id: assetId } };
+  }
+
+  it("rewrites a purchase's day, quantity, price and fee as a new purchase would be", async () => {
+    const { accountId, eventId, asset } = await bought();
+    const edited = {
+      asset,
+      on: addDays(todayOn, -7),
+      quantity: qty("8"),
+      unitPrice: price("120"),
+      feeCents: 3_00n,
+    };
+    await updateBuy(ctx, eventId, edited, accountId);
+
+    // The same deposit and the edited purchase, typed new on a second portfolio.
+    const { accountId: twin } = await createPortfolioWithAccount(ctx, {
+      name: "Twin",
+      currency: "EUR",
+      url: null,
+    });
+    await recordOperation(ctx, twin, { kind: "deposit", on: addDays(todayOn, -10), amountCents: 2_000_00n });
+    await addAsset(ctx, twin, edited);
+    // 2,000 − 960 − 3 of cash, 8 units at 120.
+    expect(await valueOf(accountId)).toBe(1_037_00n + 960_00n);
+    expect(await valueOf(accountId)).toBe(await valueOf(twin));
+    const sixDaysAgo = addDays(todayOn, -6);
+    expect((await readingsAt(ctx, [accountId], sixDaysAgo)).get(accountId)).toBe(
+      (await readingsAt(ctx, [twin], sixDaysAgo)).get(twin),
+    );
+  });
+
+  it("moves a purchase to another asset, and the position nothing refers to any more goes", async () => {
+    const { accountId, eventId } = await bought();
+    const before = await holdingOf(accountId);
+    await updateBuy(
+      ctx,
+      eventId,
+      { asset: OTHER, on: addDays(todayOn, -5), quantity: qty("10"), unitPrice: price("100") },
+      accountId,
+    );
+    const holdings = await getDb().select({ id: investmentHoldings.id }).from(investmentHoldings);
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0].id).not.toBe(before);
+    expect(await valueOf(accountId)).toBe(2_000_00n);
+  });
+
+  it("refuses what a new operation is refused, and leaves the operation as it was", async () => {
+    const { accountId, eventId, asset } = await bought();
+    const holdingId = await holdingOf(accountId);
+    await recordOperation(ctx, accountId, {
+      kind: "sell",
+      holdingId,
+      on: addDays(todayOn, -1),
+      quantity: qty("6"),
+      unitPrice: price("100"),
+    });
+    const value = await valueOf(accountId);
+    const order = { asset, on: addDays(todayOn, -5), unitPrice: price("100") };
+    // Fewer units than a later sale sells, more money than the cash, a day in the future.
+    await expect(updateBuy(ctx, eventId, { ...order, quantity: qty("5") }, accountId)).rejects.toMatchObject({
+      code: "quantity_exceeded",
+    });
+    await expect(updateBuy(ctx, eventId, { ...order, quantity: qty("30") }, accountId)).rejects.toMatchObject(
+      {
+        code: "negative_cash",
+      },
+    );
+    await expect(
+      updateBuy(ctx, eventId, { ...order, on: addDays(todayOn, 1), quantity: qty("10") }, accountId),
+    ).rejects.toMatchObject({ code: "future_date" });
+    // Another kind, and the event named under another service.
+    await expect(
+      updateOperation(ctx, eventId, { kind: "fee", on: todayOn, amountCents: 1_00n }, accountId),
+    ).rejects.toMatchObject({ code: "not_editable" });
+    const { accountId: other } = await createPortfolioWithAccount(ctx, {
+      name: "Other",
+      currency: "EUR",
+      url: null,
+    });
+    await expect(updateBuy(ctx, eventId, { ...order, quantity: qty("10") }, other)).rejects.toMatchObject({
+      code: "not_found",
+    });
+    expect(await valueOf(accountId)).toBe(value);
+  });
+
+  it("rewrites a deposit and a fee of the cash", async () => {
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    const deposit = await recordOperation(ctx, accountId, {
+      kind: "deposit",
+      on: todayOn,
+      amountCents: 100_00n,
+    });
+    const fee = await recordOperation(ctx, accountId, { kind: "fee", on: todayOn, amountCents: 2_00n });
+    await updateOperation(
+      ctx,
+      deposit.eventId,
+      { kind: "deposit", on: todayOn, amountCents: 150_00n },
+      accountId,
+    );
+    await updateOperation(ctx, fee.eventId, { kind: "fee", on: todayOn, amountCents: 4_00n }, accountId);
+    expect(await valueOf(accountId)).toBe(146_00n);
+  });
+});
 
 // A public example ISIN (ISO 6166), no person's data; the registers and the source are fakes.
 const ISIN = "US0378331005";

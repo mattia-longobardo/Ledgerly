@@ -29,6 +29,7 @@ import {
   linkAllCashLegs,
   linkCashLegs,
   lockInvestmentAccount,
+  readOperation,
   recordOperation,
   updateOperation,
 } from "./service";
@@ -167,6 +168,84 @@ describe("the leg follows its deposit", () => {
       transferOutside: false,
       transferAccountId: null,
     });
+  });
+
+  it("follows the account the person chose: the old one's movement waits again, the new one's pairs (PERS-683)", async () => {
+    const savings = await anAccount(ctx, "Conto risparmio");
+    await readBank(-400_00n);
+    await upsertFromProvider(
+      ctx,
+      savings,
+      [
+        movement({
+          occurredAt: new Date(`${DAY}T09:00:00Z`),
+          amountCents: -400_00n,
+          type: "expense",
+          payee: "Risparmio",
+          categoryName: null,
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
+    const balances = async () => readingsAt(ctx, [bank, savings, broker], DAY);
+    const { eventId } = await deposit(400_00n, DAY, { counterpart: { kind: "account", accountId: bank } });
+    const before = await balances();
+    const [leg] = await legsOf(broker);
+    expect(leg.transferAccountId).toBe(bank);
+    expect(leg.transferGroupId).toBe((await bankRow()).transferGroupId);
+
+    await updateOperation(
+      ctx,
+      eventId,
+      {
+        kind: "deposit",
+        on: DAY,
+        amountCents: 400_00n,
+        counterpart: { kind: "account", accountId: savings },
+      },
+      broker,
+    );
+    const [moved] = await legsOf(broker);
+    expect(moved).toMatchObject({ id: leg.id, transferAccountId: savings, amountCents: 400_00n });
+    expect(moved.transferGroupId).not.toBeNull();
+    const savingsRow = (await listTransactions(ctx, { includeHidden: true, limit: 100 })).find(
+      (row) => row.accountId === savings,
+    )!;
+    expect(moved.transferGroupId).toBe(savingsRow.transferGroupId);
+    expect((await bankRow()).transferGroupId).toBeNull();
+    // Each account's balance is its own movements': the pairing moves, no money does.
+    expect(await balances()).toEqual(before);
+
+    // A new amount: the broker's leg and its value follow.
+    await updateOperation(ctx, eventId, { kind: "deposit", on: DAY, amountCents: 300_00n }, broker);
+    expect((await legsOf(broker))[0].amountCents).toBe(300_00n);
+    expect((await readingsAt(ctx, [broker], DAY)).get(broker)).toBe(300_00n);
+  });
+
+  it("reads the side the rules paired as the deposit's counterpart, and the side sent back keeps the pair (PERS-695)", async () => {
+    await readBank(-400_00n);
+    const { eventId } = await deposit(400_00n);
+    const pair = (await bankRow()).transferGroupId;
+    expect(pair).not.toBeNull();
+    const [legBefore] = await legsOf(broker);
+    const read = await readOperation(ctx, broker, eventId);
+    expect(read).toMatchObject({
+      kind: "deposit",
+      amountCents: 400_00n,
+      transactionId: null,
+      counterpart: { kind: "account", accountId: bank },
+    });
+    if (read.kind !== "deposit") throw new Error("a deposit");
+    await updateOperation(
+      ctx,
+      eventId,
+      { kind: "deposit", on: read.on, amountCents: read.amountCents, counterpart: read.counterpart },
+      broker,
+    );
+    // The side read sent back is no new choice: the pair stays…
+    expect((await bankRow()).transferGroupId).toBe(pair);
+    // …and the leg stays the rules' own, with no choice of the person on it.
+    expect((await legsOf(broker))[0]).toEqual(legBefore);
   });
 
   it("goes with its deposit; the bank's movement stays and waits", async () => {

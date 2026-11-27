@@ -11,7 +11,14 @@ import { ACTIVITY_PAGE_SIZE, investmentsPnl, serviceActivity, servicePnlView } f
 import type { OperationKind } from "./rules";
 import { investmentAccountPeriods, investmentAccounts, investmentOperations } from "./schema";
 import { assetsService } from "../../../../../test/investments";
-import { insertEvent, rebuildAll, recordOperation } from "./service";
+import { addDays, today } from "../../shared/dates";
+import {
+  createPortfolioWithAccount,
+  insertEvent,
+  readOperation,
+  rebuildAll,
+  recordOperation,
+} from "./service";
 
 const eur = (value: number) => BigInt(Math.round(value * 100));
 
@@ -156,6 +163,78 @@ describe("the Activity tab (§3.5)", () => {
     const accountId = await busy();
     const other = { ...ctx, userId: (await createTestUser()).id };
     expect(await serviceActivity(other, accountId, query())).toBeNull();
+  });
+});
+
+describe("the Activity of a manual portfolio (PERS-695)", () => {
+  async function broker() {
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    const [investment] = await getDb()
+      .select()
+      .from(investmentAccounts)
+      .where(eq(investmentAccounts.accountId, accountId));
+    return { accountId, investmentId: investment.id };
+  }
+  const all = (on: string) => query({ from: null, to: on });
+
+  it("lists by the day of the operation, newest first, and on one day the last written first", async () => {
+    const { accountId } = await broker();
+    const todayOn = today(ctx.timeZone);
+    const deposit = async (days: number) =>
+      (
+        await recordOperation(ctx, accountId, {
+          kind: "deposit",
+          on: addDays(todayOn, -days),
+          amountCents: 10_00n,
+        })
+      ).eventId;
+    // Written in this order, typed with days out of order: two of them on the same day.
+    const twoDaysAgo = await deposit(2);
+    const tenDaysAgo = await deposit(10);
+    const fiveDaysAgo = await deposit(5);
+    const fiveDaysAgoLater = await deposit(5);
+    const activity = await serviceActivity(ctx, accountId, all(todayOn));
+    expect(activity?.rows.map((row) => row.id)).toEqual([
+      twoDaysAgo,
+      fiveDaysAgoLater,
+      fiveDaysAgo,
+      tenDaysAgo,
+    ]);
+    expect(activity?.months.reduce((sum, month) => sum + month.count, 0)).toBe(4);
+  });
+
+  it("says «Edit» only where the edit rewrites: the person's operation on a manual portfolio", async () => {
+    const { accountId, investmentId } = await broker();
+    const todayOn = today(ctx.timeZone);
+    const own = await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 10_00n });
+    await getDb().transaction((tx) =>
+      insertEvent(ctx, tx, investmentId, {
+        on: todayOn,
+        occurredAt: new Date(),
+        origin: "provider",
+        legs: [{ leg: "main", kind: "deposit", amountCents: 5_00n }],
+      }),
+    );
+    const editable = async () =>
+      new Map(
+        (await serviceActivity(ctx, accountId, all(todayOn)))!.rows.map((row) => [row.id, row.editable]),
+      );
+    const before = await editable();
+    expect(before.get(own.eventId)).toBe(true);
+    expect([...before.values()].filter((one) => !one)).toHaveLength(1);
+    await expect(readOperation(ctx, accountId, own.eventId)).resolves.toMatchObject({ kind: "deposit" });
+
+    // The same operation on a service a provider syncs: no «Edit», and the read refuses it.
+    await getDb()
+      .update(investmentAccounts)
+      .set({ provider: "etoro" })
+      .where(eq(investmentAccounts.id, investmentId));
+    expect([...(await editable()).values()]).toEqual([false, false]);
+    await expect(readOperation(ctx, accountId, own.eventId)).rejects.toMatchObject({ code: "not_editable" });
   });
 });
 

@@ -159,6 +159,7 @@ export const ACTIVITY_ROW_EXAMPLE = {
   transfer: null,
   realized: "21.00",
   plan: null,
+  editable: true,
 } as const;
 
 export const PROVIDER_EXAMPLE = {

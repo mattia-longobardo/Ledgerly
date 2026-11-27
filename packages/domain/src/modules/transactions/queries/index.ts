@@ -6,6 +6,7 @@ export type { Transaction, TransactionRow, MonthTotal } from "./filters";
 export {
   transactionsByIds,
   getTransaction,
+  transferSideOf,
   transactionIdsOfAccount,
   transactionsInWindow,
   dailyNetByAccount,

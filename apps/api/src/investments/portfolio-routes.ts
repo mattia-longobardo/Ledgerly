@@ -8,16 +8,21 @@ import {
   addAsset,
   convertToPortfolio,
   isPortfolio,
+  type OperationForEdit,
   PRICE_SCALE,
   QUANTITY_SCALE,
   RATE_SCALE,
+  readOperation,
   recordOperation,
   setPriceMode,
+  updateBuy,
+  updateOperation,
 } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { pricesPlugin } from "@ledgerly/domain/platform/plugins";
-import { parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
+import { formatDecimal, parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
+import { maybe, money } from "./dto";
 import { cents, decimal, refusing } from "./refusals";
 
 const { register, instruments } = INVESTMENTS;
@@ -25,6 +30,7 @@ const { register, instruments } = INVESTMENTS;
 type OperationBody = z.output<typeof register.recordOperation.body>;
 type BuyBody = Extract<OperationBody, { kind: "buy" }>;
 type MoneyBody = Extract<OperationBody, { kind: "deposit" | "withdrawal" }>;
+type ReadBody = z.input<typeof register.getOperation.response>["body"];
 
 /** The money in and out of the account a service reads or a provider writes: not the person's to type. */
 const NOT_TYPED = new Set(["account_valuation", "adjustment"]);
@@ -84,6 +90,130 @@ export async function writeOperation(
   return other(body);
 }
 
+/** An operation as the domain takes it: a price wins over an amount, as the form's (`operationOf`). */
+export function operationInput(body: OperationBody) {
+  switch (body.kind) {
+    case "valuation": {
+      const unitPrice = decimal(body.unitPrice, PRICE_SCALE);
+      return {
+        kind: body.kind,
+        holdingId: body.holdingId,
+        on: body.on,
+        unitPrice,
+        amountCents: unitPrice === null ? cents(body.amount) : null,
+        note: body.note,
+      };
+    }
+    case "sell":
+    case "close": {
+      const quantity = decimal(body.quantity, QUANTITY_SCALE);
+      const unitPrice = decimal(body.unitPrice, PRICE_SCALE);
+      return {
+        kind: body.kind,
+        holdingId: body.holdingId,
+        on: body.on,
+        quantity,
+        unitPrice: quantity === null ? null : unitPrice,
+        amountCents: quantity === null || unitPrice === null ? cents(body.amount) : null,
+        feeCents: cents(body.fee) ?? 0n,
+        note: body.note,
+      };
+    }
+    case "income":
+      return {
+        kind: body.kind,
+        holdingId: body.holdingId,
+        on: body.on,
+        amountCents: parseCents(body.amount),
+        note: body.note,
+      };
+    default:
+      throw new ApiRefusal("conflict", "not_editable");
+  }
+}
+
+/**
+ * «Edit» of an operation (PERS-683): only on a manual portfolio — a provider's service is the
+ * provider's to write — and with the checks of a new one.
+ */
+async function editOperation(
+  ctx: Ctx,
+  where: { accountId: string; eventId: string },
+  body: OperationBody,
+): Promise<void> {
+  const { accountId, eventId } = where;
+  if (NOT_TYPED.has(body.kind) || !(await isPortfolio(ctx, accountId)))
+    throw new ApiRefusal("conflict", "not_editable");
+  if (body.kind === "buy") return updateBuy(ctx, eventId, buyOf(body), accountId);
+  if (body.kind === "deposit" || body.kind === "withdrawal")
+    return updateOperation(ctx, eventId, moneyOf(body), accountId);
+  if (body.kind === "fee") {
+    return updateOperation(
+      ctx,
+      eventId,
+      { kind: "fee", on: body.on, amountCents: parseCents(body.amount), note: body.note },
+      accountId,
+    );
+  }
+  return updateOperation(ctx, eventId, operationInput(body), accountId);
+}
+
+const plain = (value: bigint | null, scale: number) => (value === null ? null : formatDecimal(value, scale));
+
+/** The body of the edit an operation is (PERS-695): what `editOperation` takes back unchanged. */
+function bodyOf(found: OperationForEdit): ReadBody {
+  const { on, note } = found;
+  switch (found.kind) {
+    case "buy":
+      return {
+        kind: "buy",
+        instrumentId: found.instrumentId,
+        mic: found.mic,
+        on,
+        quantity: plain(found.quantity, QUANTITY_SCALE),
+        unitPrice: plain(found.unitPrice, PRICE_SCALE),
+        amount: maybe(found.totalCents),
+        fee: found.feeCents === 0n ? null : money(found.feeCents),
+        fxRate: plain(found.fxRate, RATE_SCALE),
+        note,
+      };
+    case "deposit":
+    case "withdrawal":
+      return {
+        kind: found.kind,
+        on,
+        amount: money(found.amountCents),
+        transactionId: found.transactionId,
+        counterpart: found.counterpart,
+        note,
+      };
+    case "fee":
+      return { kind: "fee", on, amount: money(found.amountCents), note };
+    case "income":
+      return { kind: "income", holdingId: found.holdingId, on, amount: money(found.amountCents), note };
+    case "valuation":
+      return {
+        kind: "valuation",
+        holdingId: found.holdingId,
+        on,
+        unitPrice: plain(found.unitPrice, PRICE_SCALE),
+        amount: maybe(found.amountCents),
+        note,
+      };
+    default:
+      return {
+        kind: found.kind,
+        holdingId: found.holdingId,
+        on,
+        quantity: plain(found.quantity, QUANTITY_SCALE),
+        unitPrice: plain(found.unitPrice, PRICE_SCALE),
+        amount: maybe(found.amountCents),
+        fee: found.feeCents === 0n ? null : money(found.feeCents),
+        note,
+      };
+  }
+}
+
 export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, instruments.searchInstruments, async ({ query }) => {
     // A new market is read by the instance's prices plugin, when it has one.
@@ -96,6 +226,13 @@ export function servePortfolio(app: Hono<ApiEnv>, guard: Guard): void {
       })),
       complete: found.complete,
     };
+  });
+  serve(app, guard, register.getOperation, async ({ ctx, params }) => {
+    const found = await refusing(() => readOperation(ctx, params.accountId, params.eventId));
+    return { kind: found.kind, body: bodyOf(found) };
+  });
+  serve(app, guard, register.updateOperation, async ({ ctx, params, body }) => {
+    await refusing(() => editOperation(ctx, params, body));
   });
   serve(app, guard, register.setPriceMode, async ({ ctx, params, body }) => {
     await refusing(() => setPriceMode(ctx, params.accountId, params.holdingId, body.mode));

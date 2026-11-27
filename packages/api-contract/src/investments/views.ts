@@ -206,6 +206,8 @@ const activityRow = z.object({
   realized: money().nullable(),
   /** The purchase plan's instalment it is (R5d), and whether the job wrote it («automatic»). */
   plan: z.object({ planId: id(), runId: id(), name: z.string(), automatic: z.boolean() }).nullable(),
+  /** «Edit» rewrites it (PERS-695): where PATCH /investments/{accountId}/operations/{eventId} answers 204. */
+  editable: z.boolean(),
 });
 
 /** A bank movement a deposit or a withdrawal can be documented by. */

@@ -54,7 +54,18 @@ function Actions({ page, row }: { page: ServicePage; row: EventRow }) {
         />
       )}
       <OperationMenu
-        operation={{ id: row.id, kind: row.leg.kind, on: row.on, origin: row.origin, amount: row.leg.amount }}
+        operation={{
+          id: row.id,
+          kind: row.leg.kind,
+          on: row.on,
+          origin: row.origin,
+          amount: row.leg.amount,
+          editable: row.editable,
+          instrument: {
+            name: row.leg.assetName ?? "",
+            currency: row.leg.priceCurrency ?? page.context.currency,
+          },
+        }}
         context={page.context}
       />
     </span>

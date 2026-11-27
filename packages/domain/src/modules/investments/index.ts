@@ -88,6 +88,9 @@ export {
   recordOperation,
   transfersToConfirm,
   unlinkTransfer,
+  readOperation,
+  updateBuy,
+  updateOperation,
   updateServiceUrl,
   updateServiceValue,
 } from "./service";
@@ -98,6 +101,7 @@ export type {
   InvestmentPlan,
   InvestmentPlanRun,
   ManualServiceInput,
+  OperationForEdit,
   OperationInput,
   PastRuns,
   PlanFact,
