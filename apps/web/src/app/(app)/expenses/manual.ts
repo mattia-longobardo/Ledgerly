@@ -302,23 +302,18 @@ export async function previewManual(
   const all = manual.get(account.id) ?? [];
   const editing = all.find((movement) => movement.id === input.editingId);
   const readings = basis.get(account.id)?.readings ?? [];
-  const effect = movementEffect(
-    readings,
-    all,
-    {
-      on: input.on,
-      cents: signedAmount(input.kind, input.amountCents),
-      // A movement being changed keeps the moment it was written; a new one is written now.
-      writtenAt: editing?.writtenAt ?? new Date(),
-    },
-    today(ctx.timeZone),
-    editing,
-  );
+  const candidate = {
+    on: input.on,
+    cents: signedAmount(input.kind, input.amountCents),
+    // A movement being changed keeps the moment it was written; a new one is written now.
+    writtenAt: editing?.writtenAt ?? new Date(),
+  };
+  const effect = movementEffect(readings, all, candidate, today(ctx.timeZone), editing);
   // PERS-678: the reading that «holds» the movement is the opening of an account «a mano», which
   // may mean «the account starts here». A source's first reading does hold what came before it.
   const opening =
     effect.kind === "unchanged" &&
     modes.get(account) === "manual" &&
-    movementsBeforeOpening(readings, [{ on: input.on }]) !== null;
+    movementsBeforeOpening(readings, [candidate]) !== null;
   return { account: account.name, effect, opening };
 }

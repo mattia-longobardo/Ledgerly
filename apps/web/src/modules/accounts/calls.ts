@@ -106,7 +106,14 @@ export function moveOpeningAction(
   opening: { id: string; balance: string; available: string | null; note: string | null },
   moveTo: string,
 ) {
-  const body = { on: moveTo, balance: opening.balance, available: opening.available, note: opening.note };
+  // A balance written on that day since the banner was read stays: the server refuses (`balance_exists`).
+  const body = {
+    on: moveTo,
+    balance: opening.balance,
+    available: opening.available,
+    note: opening.note,
+    replace: false,
+  };
   return writing(async () => {
     await call(balances.updateBalanceEntry, { params: { id: accountId, entryId: opening.id }, body });
     await invalidate(

@@ -2965,7 +2965,8 @@
       "body": "The balance starts from the opening of {opening} and does not count the {count, plural, one {transaction} other {transactions}} from {first}. If the account started earlier, move the opening: the balance will count {count, plural, one {it} other {them}}.",
       "move": "Move the opening to {date}",
       "moved": "Opening moved to {date}",
-      "failed": "The opening could not be moved. Try again."
+      "failed": "The opening could not be moved. Try again.",
+      "taken": "On {date} there is already a balance you recorded: the opening was not moved. Reload the page and check the balances."
     }
   },
   "budgets": {

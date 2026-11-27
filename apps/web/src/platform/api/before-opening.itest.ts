@@ -182,6 +182,7 @@ describe("the notice and «Move the opening» (PERS-678, A+)", () => {
     expect(beforeOpening).toEqual({
       count: 1,
       first: BEFORE,
+      openingOn: OPENING,
       moveTo: addDays(BEFORE, -1),
       opening: { id: expect.any(String), on: OPENING, balance: "100.00", available: null, note: null },
     });
@@ -252,7 +253,9 @@ describe("the notes of the review of A+ (PERS-725)", () => {
 
   async function openingOf(account: string) {
     const { balances } = (await send(ctx, "GET", `/accounts/${account}/balances`)).body;
-    return balances.find((one: { on: string; source: string }) => one.on === OPENING && one.source === "manual");
+    return balances.find(
+      (one: { on: string; source: string }) => one.on === OPENING && one.source === "manual",
+    );
   }
 
   async function sameDayMovement(): Promise<string> {
@@ -304,14 +307,20 @@ describe("the notes of the review of A+ (PERS-725)", () => {
     await getDb().transaction((trx) =>
       saveImportBalance(ctx, account, { on: OPENING, cents: 10_000n, note: null }, trx),
     );
-    await send(ctx, "POST", "/transactions/manual", { ...manualBody(account, BEFORE), key: crypto.randomUUID() });
+    await send(ctx, "POST", "/transactions/manual", {
+      ...manualBody(account, BEFORE),
+      key: crypto.randomUUID(),
+    });
     const { beforeOpening } = (await send(ctx, "GET", `/accounts/${account}/context`)).body;
     expect(beforeOpening).toMatchObject({ count: 1, first: BEFORE, openingOn: OPENING, opening: null });
   });
 
   it("«Move the opening» refuses a day that has a balance a person wrote since, and deletes nothing", async () => {
     const account = await newAccount();
-    await send(ctx, "POST", "/transactions/manual", { ...manualBody(account, BEFORE), key: crypto.randomUUID() });
+    await send(ctx, "POST", "/transactions/manual", {
+      ...manualBody(account, BEFORE),
+      key: crypto.randomUUID(),
+    });
     const { beforeOpening } = (await send(ctx, "GET", `/accounts/${account}/context`)).body;
     // Another tab writes a balance on that day before the click.
     const other = await send(ctx, "POST", `/accounts/${account}/balances`, {

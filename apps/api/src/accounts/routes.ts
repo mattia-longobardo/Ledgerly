@@ -249,7 +249,7 @@ function serveBalances(app: Hono<ApiEnv>, guard: Guard): void {
           availableCents: body.available == null ? null : cents(body.available),
           note: body.note ?? "",
         },
-        params.id,
+        { accountId: params.id, replace: body.replace },
       ),
     );
     return {
@@ -334,6 +334,7 @@ function serveRemovalAndSwitch(app: Hono<ApiEnv>, guard: Guard, cases: AccountCa
       beforeOpening: before && {
         count: before.count,
         first: before.first,
+        openingOn: before.openingOn,
         moveTo: addDays(before.first, -1),
         opening: opening && {
           id: opening.id,

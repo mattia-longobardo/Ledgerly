@@ -317,6 +317,8 @@ export const getAccountContext = defineRoute({
       .object({
         count: z.number().int(),
         first: civilDate(),
+        /** The day of the first reading, whatever its source. */
+        openingOn: civilDate(),
         moveTo: civilDate(),
         opening: z
           .object({

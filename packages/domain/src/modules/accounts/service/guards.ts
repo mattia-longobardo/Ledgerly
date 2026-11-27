@@ -23,6 +23,8 @@ export type AccountErrorCode =
   | "iban_archived"
   /** Something of another module still rests on the account: move it first (`removeAccount`). */
   | "in_use"
+  /** A manual balance already stands on the day a balance would move to (`replace: false`). */
+  | "balance_exists"
   | "invalid";
 
 export class AccountError extends Error {
