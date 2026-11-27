@@ -6,7 +6,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 
-// Its own user (scripts/seed-e2e/investments.ts, seedPlans): «Piani», «Senza liquidità», «Vuoto».
+// Its own user (scripts/seed-e2e/investments.ts, seedPlans): «Piani», «Altri piani», «Senza liquidità»,
+// «Vuoto».
 test.use({ storageState: sessionState("plansJourney") });
 test.describe.configure({ mode: "serial" });
 
@@ -179,7 +180,7 @@ test("skipped line: a line confirmed with 0 shares buys nothing and says so", as
   await expect(run.getByTestId("run-budget")).toContainText(money("70.00"));
 });
 
-test("price missing: the line to type blocks «Confirm» until its price is there; another waits", async ({
+test("price missing: the line to type buys nothing until its price is there; with shares and no price «Confirm» waits; another plan waits", async ({
   page,
 }) => {
   await openPlans(page, "Piani");
@@ -187,17 +188,59 @@ test("price missing: the line to type blocks «Confirm» until its price is ther
   const zeta = dialog.getByTestId("review-line").filter({ hasText: "Zeta Small Cap ETF" });
   await expect(zeta).toContainText("Price to type");
   const confirm = dialog.getByRole("button", { name: "Confirm", exact: true });
-  await expect(confirm).toBeDisabled();
-  await expect(dialog.getByTestId("review-blocked")).toBeVisible();
+  // 0 shares and no price: the line buys nothing, and needs no price (PERS-720).
+  await expect(shares(dialog, "Zeta Small Cap ETF")).toHaveValue("0");
+  await expect(confirm).toBeEnabled();
   await dialog.getByLabel("Unit price of Zeta Small Cap ETF").fill("20");
   await expect(shares(dialog, "Zeta Small Cap ETF")).toHaveValue("2");
   await expect(confirm).toBeEnabled();
+  await dialog.getByLabel("Unit price of Zeta Small Cap ETF").fill("");
+  await expect(shares(dialog, "Zeta Small Cap ETF")).toHaveValue("0");
+  await shares(dialog, "Zeta Small Cap ETF").fill("1");
+  await expect(confirm).toBeDisabled();
+  await expect(dialog.getByTestId("review-blocked")).toContainText(
+    "Type the price of every line with shares to confirm, or set its shares to 0.",
+  );
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 
   await choosePlan(page, "In attesa");
   await expect(runs(page).first()).toHaveAttribute("data-state", "waiting_price");
   await expect(runs(page).first()).toContainText("Prices not available yet: new try tomorrow.");
+});
+
+test("no price, 0 shares: «Confirm» buys the line priced, and the other's part goes to the next", async ({
+  page,
+}) => {
+  await openPlans(page, "Altri piani");
+  const dialog = await review(page, "Senza prezzo");
+  await expect(dialog.getByTestId("review-line").filter({ hasText: "Zeta Small Cap ETF" })).toContainText(
+    "Price to type",
+  );
+  // Alfa's 50 € buy 1 share at 41,30 €: 58,70 € to the next.
+  await expect(dialog.getByTestId("review-carry")).toContainText(money("58.70"));
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const run = runs(page).first();
+  await expect(run).toHaveAttribute("data-state", "recorded");
+  await expect(run.getByTestId("run-budget")).toContainText(money("58.70"));
+});
+
+test("debit of a basket: the bank movement of a recorded execution is found, and «Link» links it", async ({
+  page,
+}) => {
+  await openPlans(page, "Altri piani");
+  await choosePlan(page, "Con addebito");
+  const run = runs(page).first();
+  await expect(run).toHaveAttribute("data-state", "recorded");
+  await expect(run).toContainText(/Found: .* · .*176[.,]35.* · BROKER PIANO/);
+  await run.getByRole("button", { name: /^Link the transaction of the instalment of/ }).click();
+  const question = page.getByRole("dialog", { name: "Link the bank transaction?" });
+  await expect(question).toContainText(money("176.35"));
+  await question.getByRole("button", { name: "Link", exact: true }).click();
+  await expect(question).toBeHidden();
+  await expect(run).toContainText(/Linked: .* · .*176[.,]35.* · BROKER PIANO/);
+  await expect(run.getByRole("button", { name: /^Link the transaction of/ })).toHaveCount(0);
 });
 
 test("cash error: with no cash «Confirm» is refused, offers a deposit, and writes nothing", async ({

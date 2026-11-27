@@ -47,7 +47,7 @@ const PAGES: Screen[] = [
   })),
   // The basket plans of a manual portfolio (PERS-681 §7): every state of a plan and of an execution,
   // and a portfolio with none.
-  ...(["Piani", "Senza liquidità", "Vuoto"] as const).map((portfolio) => ({
+  ...(["Piani", "Altri piani", "Senza liquidità", "Vuoto"] as const).map((portfolio) => ({
     name: `/investments/[accountId]/plans, ${portfolio}`,
     session: "plans" as const,
     open: (page: Page) => plansTab(page, portfolio),

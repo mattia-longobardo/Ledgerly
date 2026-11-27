@@ -5,7 +5,8 @@
 // corrects the price, the shares or the fee of a line, and the day. Every correction asks the server
 // for a preview (`…/runs/{runId}/preview`, nothing written): the shares of a line whose price changed,
 // what is spent and the carry to the next execution are the server's. «Confirm» writes one purchase
-// per line with shares, all of them or none; with no cash the dialog offers «Record a deposit».
+// per line with shares, all of them or none; a line with no price goes with 0 shares and no price.
+// With no cash the dialog offers «Record a deposit».
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useId, useState, useTransition } from "react";
 import { priceText, quantityText } from "@ledgerly/domain/investments/client";
@@ -23,6 +24,7 @@ import type { ServicePage } from "../service/service-view";
 import {
   amountText,
   LINE_TONES,
+  noShares,
   type Plan,
   type PlansText,
   type Run,
@@ -283,19 +285,23 @@ function useConfirm(page: ServicePage, plan: Plan, run: Run, onClose: () => void
   const preview = usePreview(ref, run, typed, page.say.format);
   const set = (index: number) => (patch: Partial<Typed>) =>
     setTyped((current) => current.map((line, place) => (place === index ? { ...line, ...patch } : line)));
-  // A line with no price cannot be bought, nor confirmed with none (§6); shares typed are needed.
-  const blocked = typed.some(
-    (line) => line.unitPrice.trim() === "" || (line.touched && !wholeShares(line.quantity, page.say.format)),
-  );
+  const { format } = page.say;
+  const sharesOf = (line: Typed) =>
+    line.touched ? line.quantity : typedDecimal(preview.shown(line.assetId).quantity, format);
+  // Shares are whole, and shares need a price; a line with no price is confirmed with 0 (PERS-720).
+  const blocked = typed.some((line) => {
+    const quantity = sharesOf(line);
+    return !wholeShares(quantity, format) || (line.unitPrice.trim() === "" && !noShares(quantity, format));
+  });
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (blocked) return;
     startTransition(async () => {
-      const lines = typed.map(({ touched, ...line }) => ({
-        ...line,
-        quantity: touched
-          ? line.quantity
-          : typedDecimal(preview.shown(line.assetId).quantity, page.say.format),
+      const lines = typed.map((line) => ({
+        assetId: line.assetId,
+        unitPrice: line.unitPrice,
+        fee: line.fee,
+        quantity: sharesOf(line),
       }));
       const result = await confirmRun(ref, day, lines);
       if (!result.ok) {
