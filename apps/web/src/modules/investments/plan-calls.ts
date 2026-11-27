@@ -187,7 +187,10 @@ export async function previewRun(
   }
 }
 
-/** Confirms an execution (§4.3): every line, its shares and its real price; all purchases or none. */
+/**
+ * Confirms an execution (§4.3): every line, its shares and its real price, or 0 shares and no price;
+ * all purchases or none.
+ */
 export function confirmRun(
   ref: RunRef,
   day: string,
@@ -199,10 +202,12 @@ export function confirmRun(
       ...(day === "" ? {} : { on: day }),
       lines: lines.map((line) => {
         const fee = amountOf(line.fee, format);
+        // A line with no price goes with none; the server refuses it with shares (`invalid`).
+        const unitPrice = decimalOf(line.unitPrice, format);
         return {
           assetId: line.assetId,
           quantity: required(decimalOf(line.quantity, format)),
-          unitPrice: required(decimalOf(line.unitPrice, format)),
+          ...(unitPrice === null ? {} : { unitPrice }),
           ...(fee === null ? {} : { fee }),
         };
       }),

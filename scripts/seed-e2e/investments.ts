@@ -3,15 +3,17 @@ import { createAccount, saveBalanceEntry, saveProviderBalance } from "@domain/mo
 import { refreshPrices, searchInstruments } from "@domain/modules/instruments";
 import {
   addAsset,
+  confirmBasketRun,
   createBasketPlan,
   createManualService,
   createPortfolioWithAccount,
   PRICE_SCALE,
+  listRuns,
   QUANTITY_SCALE,
   recordOperation,
   runDuePlans,
 } from "@domain/modules/investments";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { investmentPlanRuns, investmentPlans } from "@domain/modules/investments/schema";
 import { getDb } from "@domain/platform/db/client";
 import { pricesPlugin } from "@domain/platform/plugins";
@@ -24,6 +26,7 @@ import { listConnections, saveSchedule } from "@domain/platform/integrations/ser
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
 import { WALLET_PROVIDER } from "../../test/fixtures/providers";
+import { accountMovement } from "../../test/investments";
 
 /**
  * Investments (PERS-342): no service yet — the journey adds two from Accounts — a manual investment
@@ -613,7 +616,9 @@ async function basketInstruments(on: string): Promise<Record<BasketKey, string>>
  * «Piani», with 1.000 € of cash: «Tre ETF» (example 1, run 1), «Due ETF» (example 2: Epsilon skipped),
  * «Da confermare» (Alfa and Beta at 50 %), «Prezzo mancante» (Zeta has no close, proposed after 5
  * working days), «In attesa» (Zeta only, waiting for its price) and «Convertito» (a plan of R5d after
- * the conversion: no amount). «Senza liquidità», with no cash and one proposal; «Vuoto», with no plan.
+ * the conversion: no amount). «Altri piani», with 1.000 € of cash: «Senza prezzo» (as «Prezzo
+ * mancante», to confirm with Zeta at 0 shares) and «Con addebito» (Alfa and Beta at 50 %, recorded, its
+ * bank movement proposed, E7). «Senza liquidità», with no cash and one proposal; «Vuoto», with no plan.
  */
 async function planUser(email: string, ids: Record<BasketKey, string>): Promise<void> {
   const ctx = await contextOf(email);
@@ -630,6 +635,12 @@ async function planUser(email: string, ids: Record<BasketKey, string>): Promise<
   });
   const piani = await createPortfolioWithAccount(ctx, { name: "Piani", currency: "EUR", url: null });
   await recordOperation(ctx, piani.accountId, { kind: "deposit", on, amountCents: 1_000_00n });
+  const bank = await createAccount(ctx, {
+    name: "Conto corrente",
+    type: "checking",
+    currency: "EUR",
+    openingBalance: null,
+  });
   const plans = [
     basket("Tre ETF", 200_00n, { alfa: 50, beta: 30, gamma: 20 }),
     basket("Due ETF", 100_00n, { delta: 70, epsilon: 30 }),
@@ -640,6 +651,14 @@ async function planUser(email: string, ids: Record<BasketKey, string>): Promise<
   ];
   const made = new Map<string, string>();
   for (const plan of plans) made.set(plan.name, (await createBasketPlan(ctx, piani.accountId, plan)).id);
+  // Their purchases have an Activity of their own: «Piani» shows those of «Da confermare» only.
+  const others = await createPortfolioWithAccount(ctx, { name: "Altri piani", currency: "EUR", url: null });
+  await recordOperation(ctx, others.accountId, { kind: "deposit", on, amountCents: 1_000_00n });
+  for (const plan of [
+    basket("Senza prezzo", 100_00n, { alfa: 50, zeta: 50 }),
+    { ...basket("Con addebito", 200_00n, { alfa: 50, beta: 50 }), debitAccountId: bank.id },
+  ])
+    made.set(plan.name, (await createBasketPlan(ctx, others.accountId, plan)).id);
   // A plan of R5d after the migration: its instrument at 100 %, its amount to type again (M4).
   await getDb()
     .update(investmentPlans)
@@ -657,8 +676,31 @@ async function planUser(email: string, ids: Record<BasketKey, string>): Promise<
   await getDb()
     .update(investmentPlanRuns)
     .set({ waitingSince: addDays(on, -10) })
-    .where(eq(investmentPlanRuns.planId, made.get("Prezzo mancante") ?? ""));
+    .where(
+      inArray(investmentPlanRuns.planId, [made.get("Prezzo mancante") ?? "", made.get("Senza prezzo") ?? ""]),
+    );
+  await recordWithDebit(ctx, others.accountId, made.get("Con addebito") ?? "", bank.id);
   await runDuePlans(ctx);
+}
+
+/**
+ * «Con addebito» confirmed as proposed, 2 × 41,30 + 5 × 18,75 = 176,35 €, and that sum out of its debit
+ * account on the day: the next job proposes the movement (E7).
+ */
+async function recordWithDebit(
+  ctx: Ctx,
+  accountId: string,
+  planId: string,
+  debitAccountId: string,
+): Promise<void> {
+  const [proposed] = await listRuns(ctx, accountId, planId);
+  const lines = proposed.lines.map((line) => ({
+    assetId: line.assetId,
+    quantity: parseDecimal(line.quantity, QUANTITY_SCALE),
+    unitPrice: parseDecimal(line.price ?? "0", PRICE_SCALE),
+  }));
+  await confirmBasketRun(ctx, { accountId, planId, runId: proposed.run.id }, { lines });
+  await accountMovement(ctx, debitAccountId, proposed.run.dueOn, -176_35n, { payee: "BROKER PIANO" });
 }
 
 /** The basket plans (PERS-681): `plans` for the screen check, `plansJourney` for the journey. */
