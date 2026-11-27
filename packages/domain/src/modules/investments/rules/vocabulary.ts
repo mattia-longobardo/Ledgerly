@@ -158,8 +158,11 @@ export const PLAN_RECORDERS = ["person", "job"] as const;
 /** `single`: a plan of R5d, one asset; `basket`: several, by weight, whole shares only (PERS-681). */
 export const PLAN_MODELS = ["single", "basket"] as const;
 export type PlanModel = (typeof PLAN_MODELS)[number];
-/** What a line of a basket's execution buys: shares, none (one costs more than its part), or none yet (no price). */
-export const PLAN_LINE_STATES = ["buy", "too_expensive", "price_missing"] as const;
+/**
+ * What a line of a basket's execution buys: shares, none (one costs more than its part), none yet (no
+ * price), or none because the person confirmed 0 of the shares the job proposed (`skipped`).
+ */
+export const PLAN_LINE_STATES = ["buy", "too_expensive", "price_missing", "skipped"] as const;
 export type PlanLineState = (typeof PLAN_LINE_STATES)[number];
 /** A basket plan's weights are basis points: 10000 is the whole amount. */
 export const WEIGHT_WHOLE = 10_000;

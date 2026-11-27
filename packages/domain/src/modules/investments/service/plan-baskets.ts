@@ -27,10 +27,6 @@ import { InvestmentError, type WriteCtx } from "./types";
 
 export type PlanRunLine = typeof investmentPlanRunLines.$inferSelect;
 
-const OPEN = ["pending", "waiting_price", "proposed"] as const;
-const isOpen = (run: InvestmentPlanRun) =>
-  run.state === "pending" || run.state === "waiting_price" || run.state === "proposed";
-
 /** The currency of a basket: its portfolio's account's, the one of its amount and its budget. */
 export async function currencyOfPlan(ctx: Pick<Ctx, "userId">, plan: InvestmentPlan, transaction?: Tx) {
   const [owner] = await (transaction ?? getDb())
@@ -79,11 +75,7 @@ async function priceLines(
   );
 }
 
-/**
- * The execution of a due date, made when missing with its budget: the open ones before it expire and
- * carry their budget (§4.3, D2), its carry in is the carry out of the last closed one, and its budget
- * is the amount plus that carry, never below 0 (§2.1). The unique key keeps one a due date.
- */
+/** The execution of a due date, made when missing; the unique key keeps one a due date. */
 async function executionOn(
   ctx: Pick<Ctx, "userId">,
   transaction: Tx,
@@ -99,15 +91,28 @@ async function executionOn(
     .from(investmentPlanRuns)
     .where(and(eq(investmentPlanRuns.planId, plan.id), eq(investmentPlanRuns.dueOn, dueOn)))
     .for("update");
-  if (run.budgetCents !== null || !isOpen(run)) return run;
+  return run;
+}
+
+/**
+ * The budget of an execution, fixed when it becomes a proposal or closes (§4.3): a proposal still open
+ * before it expires and carries its whole budget (D2) — at most one proposal a plan —, the carry in is
+ * the carry out of the last closed one, and the budget is the amount plus that carry, never below 0
+ * (§2.1). An execution still waiting for a price has none: the one before may still be confirmed.
+ */
+async function settleBudget(
+  transaction: Tx,
+  plan: InvestmentPlan,
+  run: InvestmentPlanRun,
+): Promise<{ budgetCents: bigint; carryInCents: bigint }> {
   const before = await transaction
     .select()
     .from(investmentPlanRuns)
     .where(
       and(
         eq(investmentPlanRuns.planId, plan.id),
-        lt(investmentPlanRuns.dueOn, dueOn),
-        inArray(investmentPlanRuns.state, [...OPEN]),
+        lt(investmentPlanRuns.dueOn, run.dueOn),
+        eq(investmentPlanRuns.state, "proposed"),
       ),
     )
     .for("update");
@@ -123,7 +128,7 @@ async function executionOn(
     .where(
       and(
         eq(investmentPlanRuns.planId, plan.id),
-        lt(investmentPlanRuns.dueOn, dueOn),
+        lt(investmentPlanRuns.dueOn, run.dueOn),
         isNotNull(investmentPlanRuns.carryOutCents),
       ),
     )
@@ -131,13 +136,12 @@ async function executionOn(
     .limit(1);
   const carryInCents = last?.carry ?? 0n;
   const budget = (plan.executionAmountCents ?? 0n) + carryInCents;
-  const budgetCents = budget > 0n ? budget : 0n;
-  const [made] = await transaction
+  const settled = { budgetCents: budget > 0n ? budget : 0n, carryInCents };
+  await transaction
     .update(investmentPlanRuns)
-    .set({ budgetCents, carryInCents, updatedAt: new Date() })
-    .where(eq(investmentPlanRuns.id, run.id))
-    .returning();
-  return made;
+    .set({ ...settled, updatedAt: new Date() })
+    .where(eq(investmentPlanRuns.id, run.id));
+  return settled;
 }
 
 /**
@@ -192,6 +196,8 @@ export async function advanceBasket(
         .where(eq(investmentPlanRuns.id, run.id));
       return;
     }
+    // The later execution has a close too: its proposal comes in this same run of the job.
+    const { budgetCents, carryInCents } = await settleBudget(transaction, plan, run);
     const closed = !missing && marketClosed(plan, dueOn, priced);
     if (closed) {
       await transaction
@@ -199,14 +205,14 @@ export async function advanceBasket(
         .set({
           state: "skipped",
           reason: "market_closed",
-          carryOutCents: run.carryInCents ?? 0n,
+          carryOutCents: carryInCents,
           updatedAt: new Date(),
         })
         .where(eq(investmentPlanRuns.id, run.id));
       return;
     }
     const allocation = allocateWholeShares(
-      run.budgetCents ?? 0n,
+      budgetCents,
       priced.map((line) => ({
         assetId: line.assetId,
         weightBp: line.weightBp,
@@ -245,9 +251,15 @@ export async function linesOf(ctx: Pick<Ctx, "userId">, runIds: readonly string[
     .orderBy(desc(investmentPlanRunLines.weightBp), investmentAssets.name);
 }
 
-/** A skipped basket execution carries its whole budget to the next one (M1, D2). */
-export const skippedCarry = (run: InvestmentPlanRun) =>
-  run.budgetCents === null ? {} : { carryOutCents: run.budgetCents };
+/**
+ * A skipped basket execution carries its whole budget to the next one (M1, D2); one still waiting
+ * for a price fixes it first. An instalment of R5d carries nothing.
+ */
+export async function skippedCarry(transaction: Tx, plan: InvestmentPlan, run: InvestmentPlanRun) {
+  if (plan.model !== "basket") return {};
+  const budgetCents = run.budgetCents ?? (await settleBudget(transaction, plan, run)).budgetCents;
+  return { carryOutCents: budgetCents };
+}
 
 /** The carry of a plan now: the carry out of its last closed execution, 0 with none. */
 export async function carryOfPlans(ctx: Pick<Ctx, "userId">, planIds: readonly string[]) {

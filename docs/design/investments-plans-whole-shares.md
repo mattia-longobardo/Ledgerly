@@ -247,11 +247,11 @@ Contratto in `packages/api-contract/src/investments/plans.ts` e `plan-schemas.ts
 | Metodo e percorso | Cambio | Body / risposta |
 |---|---|---|
 | `GET /investments/{accountId}/plans` | Esteso | Ogni piano: `model`, `currency`, `amount` (null = da inserire), `instruments[] {assetId, name, weight}`, `frequency`, `interval`, `day`, `carry` (resto attuale), `nextDueOn`, `state` |
-| `POST /investments/{accountId}/plans` | Cambiato | `{ name, amount, instruments: [{ assetId \| instrument+mic, weight }], frequency: day\|week\|month, interval, day, startOn (≥ oggi), endOn \| runsLimit, fee, debitAccountId }`. Il corpo R5d (`assetId` + `amount`/`quantity`) → 400 `plan_model_retired` |
-| `PATCH /investments/{accountId}/plans/{planId}` | Esteso | Stessi campi; vale dalla prossima esecuzione, una proposta aperta non cambia |
+| `POST /investments/{accountId}/plans` | Cambiato | `{ name, amount, instruments: [{ assetId \| instrument+mic, weight }], frequency: day\|week\|month, interval, day, startOn (≥ oggi), endOn \| runsLimit, fee, debitAccountId }`. Il corpo R5d (`instrumentId` + `quantity`/`fractions`/`mode`) → 400 `invalid` |
+| `PATCH /investments/{accountId}/plans/{planId}` | Esteso | Stessi campi; vale dalla prossima esecuzione, una proposta aperta non cambia. Una cadenza nuova riparte da oggi: anche `runsLimit` conta da lì (N esecuzioni con la cadenza nuova) |
 | `GET …/plans/{planId}/runs` | Esteso | `budget`, `carryIn`, `carryOut`, `lines[] {assetId, weight, price, priceCurrency, priceOn, fxRate, target, quantity, spent, state, eventId}` |
-| `POST …/runs/{runId}/preview` | **Nuovo** | `{ lines: [{ assetId, unitPrice?, quantity? }] }` → stessa forma di una run, nessuna scrittura. Unico punto di calcolo: la UI non calcola |
-| `POST …/runs/{runId}/confirm` | Cambiato per `basket` | `{ on?, lines: [{ assetId, quantity, unitPrice, fee? }] }` → `{ eventIds[] }`. Errori: 409 `not_editable`, 422 `negative_cash`, 400 riga mancante o strumento estraneo |
+| `POST …/runs/{runId}/preview` | **Nuovo** | `{ lines: [{ assetId, unitPrice?, quantity? }] }` → stessa forma di una run, nessuna scrittura. Unico punto di calcolo: la UI non calcola. Quote non intere → 400 `invalid` |
+| `POST …/runs/{runId}/confirm` | Cambiato per `basket` | `{ on?, lines: [{ assetId, quantity, unitPrice, fee? }] }` → `{ eventIds[] }`. Errori: 409 `not_editable`, 409 `negative_cash` (come la registrazione a mano), 400 `invalid` riga mancante, strumento estraneo o quote non intere. La commissione fissa del piano è nella valuta del conto e si converte al cambio BCE del giorno per uno strumento in altra valuta; `fee` di una riga è nella valuta dello strumento. Una riga confermata con 0 quote che il job proponeva di comprare diventa `skipped` (quote 0, spesa 0) |
 | `POST …/runs/{runId}/skip` | Invariato | Scarto (§4.3) |
 | `POST …/runs/{runId}/debit` | Invariato | |
 | `GET/POST …/plans/{planId}/backfill` | Solo `single` | Un piano `basket` → 400 `plan_model_retired`: un acquisto passato si registra a mano |

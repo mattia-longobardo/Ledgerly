@@ -8757,7 +8757,7 @@
       "checkConstraints": {
         "investment_plan_run_lines_state_ck": {
           "name": "investment_plan_run_lines_state_ck",
-          "value": "\"investment_plan_run_lines\".\"state\" in ('buy', 'too_expensive', 'price_missing')"
+          "value": "\"investment_plan_run_lines\".\"state\" in ('buy', 'too_expensive', 'price_missing', 'skipped')"
         }
       },
       "isRLSEnabled": false

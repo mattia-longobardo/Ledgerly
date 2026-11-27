@@ -28,7 +28,7 @@ CREATE TABLE "investment_plan_run_lines" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "investment_plan_run_lines_uq" UNIQUE("run_id","asset_id"),
 	CONSTRAINT "investment_plan_run_lines_event_uq" UNIQUE("event_id"),
-	CONSTRAINT "investment_plan_run_lines_state_ck" CHECK ("investment_plan_run_lines"."state" in ('buy', 'too_expensive', 'price_missing'))
+	CONSTRAINT "investment_plan_run_lines_state_ck" CHECK ("investment_plan_run_lines"."state" in ('buy', 'too_expensive', 'price_missing', 'skipped'))
 );
 --> statement-breakpoint
 ALTER TABLE "notification_preferences" DROP CONSTRAINT "notification_preferences_event_ck";--> statement-breakpoint

@@ -139,7 +139,12 @@ export async function skipRun(
     const run = await requireRun(ctx, plan, ref.runId, transaction);
     await transaction
       .update(investmentPlanRuns)
-      .set({ state: "skipped", reason: null, ...skippedCarry(run), updatedAt: new Date() })
+      .set({
+        state: "skipped",
+        reason: null,
+        ...(await skippedCarry(transaction, plan, run)),
+        updatedAt: new Date(),
+      })
       .where(eq(investmentPlanRuns.id, run.id));
   });
 }

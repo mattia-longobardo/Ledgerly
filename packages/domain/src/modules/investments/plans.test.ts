@@ -160,6 +160,31 @@ describe("the whole shares of a basket's execution", () => {
     expect([run.spentCents, run.carryOutCents]).toEqual([99_90n, 10n]);
   });
 
+  it("buys 10 instruments, each with its part of the budget (§8.1)", () => {
+    const weights = [3000, 2000, 1000, 1000, 1000, 500, 500, 500, 250, 250];
+    const run = allocateWholeShares(
+      cents("1000"),
+      weights.map((weight, index) => line(`I${index}`, weight, "7")),
+    );
+    expect(run.lines.map((one) => one.targetCents)).toEqual(
+      [300, 200, 100, 100, 100, 50, 50, 50, 25, 25].map((euro) => BigInt(euro) * 100n),
+    );
+    expect(shares(run).map((one) => one[0])).toEqual([42n, 28n, 14n, 14n, 14n, 7n, 7n, 7n, 3n, 3n]);
+    expect([run.spentCents, run.carryOutCents]).toEqual([973_00n, 27_00n]);
+  });
+
+  it("gives a weight of 1 bp its part: a cheap share, or none when the part is below a cent (§8.1)", () => {
+    const large = allocateWholeShares(cents("10000"), [line("A", 9999, "100"), line("B", 1, "0.99")]);
+    expect(shares(large)).toEqual([
+      [99n, 9900_00n, "buy"],
+      [1n, 99n, "buy"],
+    ]);
+    expect(large.lines[1].targetCents).toBe(1_00n);
+    expect(large.carryOutCents).toBe(99_01n);
+    const small = allocateWholeShares(cents("50"), [line("A", 9999, "5"), line("B", 1, "0.01")]);
+    expect(small.lines[1]).toMatchObject({ targetCents: 0n, quantity: 0n, state: "too_expensive" });
+  });
+
   it("carries the whole budget when every line is skipped or has no price", () => {
     const run = allocateWholeShares(cents("50"), [line("A", 9999, "80"), line("B", 1, null)]);
     expect(shares(run)).toEqual([

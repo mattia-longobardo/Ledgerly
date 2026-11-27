@@ -21,6 +21,17 @@ WHERE state = 'expired'
 
 UPDATE investment_plans SET model = 'single', updated_at = now() WHERE model = 'basket';
 
+-- The previous image answers only the frequencies and the reasons it knows: its answers are checked, and
+-- one unknown value fails «GET …/plans» and «GET …/runs» of the whole portfolio. A daily plan, paused
+-- above, becomes weekly on Monday: Mattia finds it paused, «weekly, Monday», and sets its cadence again
+-- before he starts it. Send him this list too.
+UPDATE investment_plans SET frequency = 'week', day = 1, updated_at = now()
+WHERE frequency = 'day'
+RETURNING id, name;
+
+UPDATE investment_plan_runs SET reason = NULL, updated_at = now()
+WHERE reason IN ('amount_missing', 'market_closed');
+
 -- The facts of the new event: the previous image does not know it (the new image raises them again).
 -- The checks stay as 0084 left them, wider: the previous image writes none of the new values, and a
 -- deploy of the new image again finds them (0084 is not applied twice).

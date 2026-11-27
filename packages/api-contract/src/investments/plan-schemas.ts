@@ -12,7 +12,8 @@ export const PLAN_MODELS = ["single", "basket"] as const;
 /** A basket's cadence: every N working days (Monday-Friday), weeks or months. */
 export const BASKET_FREQUENCIES = ["day", "week", "month"] as const;
 /** A line of a basket's execution: shares to buy, none (one costs more than its part), or no price yet. */
-export const PLAN_LINE_STATES = ["buy", "too_expensive", "price_missing"] as const;
+/** `skipped`: a line the job proposed to buy and the person confirmed with 0 shares. */
+export const PLAN_LINE_STATES = ["buy", "too_expensive", "price_missing", "skipped"] as const;
 /** A basket buys at most this many instruments. */
 export const MAX_PLAN_INSTRUMENTS = 10;
 /** `expired`: a proposal still open when the next due date came (PERS-681 §4.3). */

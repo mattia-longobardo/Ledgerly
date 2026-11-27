@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "../../platform/context";
 import { addDays, dayOfWeek, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
@@ -80,6 +80,7 @@ beforeEach(async () => {
 });
 
 afterAll(closeDatabase);
+afterEach(() => vi.useRealTimers());
 
 /** The closes of some markets on a day, in their currency. */
 async function closes(on: string, prices: { market: number; close: string; currency?: string }[]) {
@@ -123,6 +124,14 @@ const weekly = (over: Record<string, unknown> = {}) => ({
   feeCents: 1_50n,
   ...over,
 });
+
+/** The confirmation of a proposal as the job made it. */
+const confirmation = (lines: { assetId: string; quantity: string; price: string | null }[]) =>
+  lines.map((line) => ({
+    assetId: line.assetId,
+    quantity: parseDecimal(line.quantity, QUANTITY_SCALE),
+    unitPrice: parseDecimal(line.price ?? "0", PRICE_SCALE),
+  }));
 
 const runsOf = (planId: string) =>
   getDb().select().from(investmentPlanRuns).where(eq(investmentPlanRuns.planId, planId));
@@ -216,6 +225,11 @@ describe("a basket plan", () => {
     await runDuePlans(ctx);
     const [first] = await listRuns(ctx, accountId, skipped);
     await skipRun(ctx, { accountId, planId: skipped, runId: first.run.id });
+    // The proposal left open expires when the next one is made, with the closes of its day (§4.3).
+    await closes(addDays(todayOn, 7), [
+      { market: 0, close: "41.30" },
+      { market: 1, close: "18.75" },
+    ]);
     await runDuePlans(ctx, daysFrom(7));
     const [next, skippedRun] = await listRuns(ctx, accountId, skipped);
     expect(skippedRun.run).toMatchObject({ state: "skipped", carryOutCents: 200_00n });
@@ -223,6 +237,90 @@ describe("a basket plan", () => {
     const [later, expired] = await listRuns(ctx, accountId, open);
     expect(expired.run).toMatchObject({ state: "expired", carryOutCents: 200_00n });
     expect(later.run).toMatchObject({ carryInCents: 200_00n, budgetCents: 400_00n });
+  });
+
+  it("proposes each working day of a daily plan whose close comes the day after (§4.3)", async () => {
+    const accountId = await portfolio(100_000_00n);
+    const { id: planId } = await createBasketPlan(ctx, accountId, weekly({ frequency: "day" }));
+    const workingDays: string[] = [];
+    let confirmed = 0;
+    for (let day = 0; day <= 7; day += 1) {
+      const yesterday = addDays(todayOn, day - 1);
+      if (day > 0 && dayOfWeek(yesterday) !== 0 && dayOfWeek(yesterday) !== 6) {
+        workingDays.push(yesterday);
+        await closes(yesterday, [
+          { market: 0, close: "41.30" },
+          { market: 1, close: "18.75" },
+        ]);
+      }
+      // The confirmation of each day is no purchase in the future: the clock is on that day.
+      vi.useFakeTimers({ toFake: ["Date"], now: daysFrom(day) });
+      await runDuePlans(ctx);
+      const proposed = (await listRuns(ctx, accountId, planId)).filter((one) => one.run.state === "proposed");
+      expect(proposed.length).toBeLessThanOrEqual(1);
+      if (proposed.length === 0) continue;
+      const [run] = proposed;
+      // The budget is the amount and the small carry of the purchase before: it does not grow.
+      expect(run.run.budgetCents).toBeLessThan(2n * 200_00n);
+      await confirmBasketRun(
+        ctx,
+        { accountId, planId, runId: run.run.id },
+        { lines: confirmation(run.lines) },
+      );
+      confirmed += 1;
+    }
+    expect(confirmed).toBe(workingDays.length);
+    const runs = await runsOf(planId);
+    expect(runs.filter((run) => run.state === "expired")).toEqual([]);
+  });
+
+  it("confirms a line set to 0 as skipped, and refuses a fraction of a share", async () => {
+    await closes(todayOn, [
+      { market: 0, close: "41.30" },
+      { market: 1, close: "18.75" },
+    ]);
+    const accountId = await portfolio(1_000_00n);
+    const { id: planId } = await createBasketPlan(ctx, accountId, weekly());
+    await runDuePlans(ctx);
+    const [run] = await listRuns(ctx, accountId, planId);
+    const ref = { accountId, planId, runId: run.run.id };
+    const half = shares(1) + shares(1) / 2n;
+    await expect(
+      previewRun(ctx, ref, { lines: [{ assetId: run.lines[0].assetId, quantity: half }] }),
+    ).rejects.toMatchObject({ name: "ZodError" });
+    const lines = confirmation(run.lines);
+    await expect(
+      confirmBasketRun(ctx, ref, { lines: [{ ...lines[0], quantity: half }, lines[1]] }),
+    ).rejects.toMatchObject({ name: "ZodError" });
+    const preview = await previewRun(ctx, ref, { lines: [{ assetId: run.lines[0].assetId, quantity: 0n }] });
+    expect(preview.lines[0]).toMatchObject({ quantity: 0n, spentCents: 0n, state: "skipped" });
+    const { eventIds } = await confirmBasketRun(ctx, ref, {
+      lines: [{ ...lines[0], quantity: 0n }, lines[1]],
+    });
+    expect(eventIds).toHaveLength(1);
+    const [recorded] = await listRuns(ctx, accountId, planId);
+    expect(recorded.lines.map((line) => [line.quantity, line.spentCents, line.state, line.eventId])).toEqual([
+      ["0.000000000000000000", 0n, "skipped", null],
+      ["4.000000000000000000", 75_00n, "buy", eventIds[0]],
+    ]);
+    expect(recorded.run).toMatchObject({ state: "recorded", carryOutCents: 200_00n - 75_00n });
+  });
+
+  it("takes the plan's fixed fee in the plan's currency on an instrument in dollars", async () => {
+    await saveRates([{ on: todayOn, currency: "USD", eurPerUnit: "0.9" }]);
+    await closes(todayOn, [{ market: 2, close: "30", currency: "USD" }]);
+    const accountId = await portfolio(1_000_00n);
+    const { id: planId } = await createBasketPlan(
+      ctx,
+      accountId,
+      weekly({ amountCents: 100_00n, instruments: [instrument(2, 10000)] }),
+    );
+    await runDuePlans(ctx);
+    const [run] = await listRuns(ctx, accountId, planId);
+    await confirmBasketRun(ctx, { accountId, planId, runId: run.run.id }, { lines: confirmation(run.lines) });
+    const fees = await getDb().select().from(investmentOperations).where(eq(investmentOperations.leg, "fee"));
+    // 1,50 € is 1,67 $ at the rate of the day, and 1,50 € again in the portfolio.
+    expect(fees.map((leg) => leg.amountCents)).toEqual([-1_50n]);
   });
 
   it("waits for a missing price, then after 5 working days proposes the line to type", async () => {
@@ -298,6 +396,8 @@ describe("a basket plan", () => {
     expect(await runsOf(planId)).toHaveLength(1);
     await updatePlan(ctx, accountId, planId, { amountCents: 150_00n });
     expect((await plansToDo(ctx)).amountMissing).toEqual([]);
+    // The budget is fixed when the proposal is made, with the close of its day (§4.3).
+    await closes(addDays(todayOn, 7), [{ market: 0, close: "40" }]);
     await runDuePlans(ctx, daysFrom(7));
     const runs = await listRuns(ctx, accountId, planId);
     // From the day the amount was typed: the due date of next week, with no carry.

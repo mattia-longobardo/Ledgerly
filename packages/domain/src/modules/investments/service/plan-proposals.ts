@@ -18,13 +18,19 @@ import { fromNumeric, InvestmentError, type WriteCtx } from "./types";
 
 type Lines = Awaited<ReturnType<typeof linesOf>>;
 
+/** Whole shares only (§2): a quantity typed with a fraction is refused, as `invalid`. */
+const wholeShares = z
+  .bigint()
+  .nonnegative()
+  .refine((quantity) => quantity % 10n ** BigInt(QUANTITY_SCALE) === 0n, "Whole shares only");
+
 const correctionSchema = z.object({
   lines: z
     .array(
       z.object({
         assetId: z.uuid(),
         unitPrice: positive.optional(),
-        quantity: z.bigint().nonnegative().optional(),
+        quantity: wholeShares.optional(),
       }),
     )
     .default([]),
@@ -74,10 +80,14 @@ async function corrected(
     const quantity = typed.get(line.assetId)?.quantity;
     if (quantity === undefined) return line;
     const spentCents = line.unitPrice === null ? 0n : spentAt(quantity, line.unitPrice, line.rate);
-    return { ...line, quantity, spentCents, state: quantity > 0n ? "buy" : line.state };
+    return { ...line, quantity, spentCents, state: lineStateOf(quantity, line.state) };
   });
   return { lines: result, spentCents: result.reduce((sum, line) => sum + line.spentCents, 0n) };
 }
+
+/** A line typed with shares buys them; one set to 0 that the job proposed to buy is `skipped`. */
+const lineStateOf = (quantity: bigint, proposed: PlanRunLine["state"]): PlanRunLine["state"] =>
+  quantity > 0n ? "buy" : proposed === "buy" ? "skipped" : proposed;
 
 /** A proposal of a basket, locked, or `not_editable`: one recorded, skipped or expired cannot change. */
 async function requireProposal(
@@ -128,7 +138,7 @@ const confirmSchema = z.object({
     .array(
       z.object({
         assetId: z.uuid(),
-        quantity: z.bigint().nonnegative(),
+        quantity: wholeShares,
         unitPrice: positive,
         feeCents: z.bigint().nonnegative().optional(),
       }),
@@ -158,10 +168,20 @@ export async function confirmBasketRun(
     const day = parsed.on ?? latestPriceDay(lines) ?? run.dueOn;
     const eventIds: string[] = [];
     let spentCents = 0n;
-    for (const { line } of lines) {
+    for (const { line, currency } of lines) {
       const typed = given.get(line.assetId)!;
-      if (typed.quantity === 0n) continue;
-      const bought = await buyLine(ctx, transaction, { plan, account, line, typed, day });
+      if (typed.quantity === 0n) {
+        await transaction
+          .update(investmentPlanRunLines)
+          .set({
+            quantity: formatDecimal(0n, QUANTITY_SCALE),
+            spentCents: 0n,
+            state: lineStateOf(0n, line.state),
+          })
+          .where(eq(investmentPlanRunLines.id, line.id));
+        continue;
+      }
+      const bought = await buyLine(ctx, transaction, { plan, account, line, currency, typed, day });
       spentCents += bought.spentCents;
       eventIds.push(bought.eventId);
     }
@@ -202,12 +222,19 @@ async function buyLine(
     plan: InvestmentPlan;
     account: { id: string; currency: string };
     line: PlanRunLine;
+    /** The asset's currency, the one of its price and of a fee typed on the line. */
+    currency: string;
     typed: TypedLine;
     day: CivilDate;
   },
 ): Promise<{ eventId: string; spentCents: bigint }> {
   const { plan, account, line, typed } = input;
-  const fee = { cents: plan.feeCents, rate: fromNumeric(plan.feeRate, RATE_SCALE) };
+  // The plan's fixed fee is in the plan's currency (the account's); a purchase takes it in the asset's.
+  const feeCents =
+    plan.feeCents === null
+      ? null
+      : (await rateOf(account.currency, input.currency, input.day, null)).inAccount(plan.feeCents);
+  const fee = { cents: feeCents, rate: fromNumeric(plan.feeRate, RATE_SCALE) };
   const { eventId } = await buyWithin(ctx, transaction, {
     account,
     input: {

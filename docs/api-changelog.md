@@ -22,12 +22,15 @@ instrument at 100 %, the amount to type again.
   (`null`: to type) and `currency` the portfolio's.
 - Added to each run of `GET …/runs`: `budget`, `carryIn`, `carryOut`, `lines[]` (`assetId`, `name`,
   `weight`, `price`, `priceCurrency`, `priceOn`, `fxRate`, `target`, `quantity`, `spent`, `state`:
-  `buy` | `too_expensive` | `price_missing`, `eventId`); the state `expired`; the reasons `market_closed`
+  `buy` | `too_expensive` | `price_missing` | `skipped`, `eventId`); the state `expired`; the reasons `market_closed`
   and `amount_missing`; the frequency `day`.
 - Added: `POST …/runs/{runId}/preview` `{ lines: [{ assetId, unitPrice?, quantity? }] }`: the proposal with
   the corrections, nothing written.
 - Changed: `POST …/runs/{runId}/confirm` takes `lines: [{ assetId, quantity, unitPrice, fee? }]` for a basket
-  (every line, each once; all purchases or none) and answers `{ id, ids }`.
+  (every line, each once; all purchases or none) and answers `{ id, ids }`. A quantity of preview and
+  confirm with a fraction of a share is `invalid`. The plan's fixed fee is in the portfolio's currency,
+  converted at the ECB rate of the day for an instrument in another currency; the `fee` of a line is in
+  the instrument's. A line the job proposed to buy, confirmed with 0 shares, is `skipped`.
 - `POST …/plans/{planId}/backfill` on a basket: `invalid` (`plan_model_retired`).
 - Added: the event `plan_amount_missing` of «Da fare» (a converted plan with no amount yet).
 

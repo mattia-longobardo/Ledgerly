@@ -36865,7 +36865,8 @@
                                   "enum": [
                                     "buy",
                                     "too_expensive",
-                                    "price_missing"
+                                    "price_missing",
+                                    "skipped"
                                   ]
                                 },
                                 "eventId": {
