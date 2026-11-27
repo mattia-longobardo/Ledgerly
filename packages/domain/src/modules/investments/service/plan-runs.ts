@@ -1,7 +1,7 @@
 // The instalments of the purchase plans (rewrite plan R5d, step 2; 11-standardization.md §11.3.2): the
 // daily job that makes the due dates and prices them, and what the person does with one — confirm,
 // skip, record the past ones. A purchase and its instalment's state are written in one transaction.
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sum } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "../../accounts";
 import { matchMovements } from "../../transactions/queries";
@@ -21,7 +21,14 @@ import {
   type PlanRunReason,
   PRICE_SCALE,
 } from "../rules";
-import { investmentAccounts, investmentEvents, investmentPlanRuns, investmentPlans } from "../schema";
+import {
+  investmentAccounts,
+  investmentEvents,
+  investmentOperations,
+  investmentPlanRunLines,
+  investmentPlanRuns,
+  investmentPlans,
+} from "../schema";
 import { buyWithin, positive } from "./events";
 import { marketPrices } from "../ports";
 import {
@@ -274,14 +281,14 @@ async function advance(
  * match is proposed on the instalment; the person links it.
  */
 async function proposeDebit(ctx: WriteCtx, plan: InvestmentPlan, run: InvestmentPlanRun): Promise<void> {
-  const unitPrice = fromNumeric(run.price, PRICE_SCALE);
-  if (plan.debitAccountId === null || unitPrice === null || run.debitTransactionId !== null) return;
-  const sized = instalment(sizeOf(plan), unitPrice);
+  if (plan.debitAccountId === null || run.debitTransactionId !== null) return;
+  const amountCents = plan.model === "basket" ? await basketCost(ctx, run) : instalmentCost(plan, run);
+  if (amountCents === null) return;
   const found = await matchMovements(ctx, {
     accountId: plan.debitAccountId,
     sign: "out",
     window: { from: run.dueOn, to: addDays(run.dueOn, DEBIT_WINDOW_DAYS) },
-    amountCents: sized.spentCents + sized.feeCents,
+    amountCents,
   });
   if (found.length === 0) return;
   const taken = await getDb()
@@ -302,6 +309,28 @@ async function proposeDebit(ctx: WriteCtx, plan: InvestmentPlan, run: Investment
     .update(investmentPlanRuns)
     .set({ debitTransactionId: free.id, updatedAt: new Date() })
     .where(eq(investmentPlanRuns.id, run.id));
+}
+
+/** What an instalment of one instrument spends with its fee, at its price; null with no price yet. */
+function instalmentCost(plan: InvestmentPlan, run: InvestmentPlanRun): bigint | null {
+  const unitPrice = fromNumeric(run.price, PRICE_SCALE);
+  if (unitPrice === null) return null;
+  const sized = instalment(sizeOf(plan), unitPrice);
+  return sized.spentCents + sized.feeCents;
+}
+
+/**
+ * What a basket's execution cost in the portfolio's currency, its purchases with their fees; null
+ * before it is recorded, when lines and fees can still change (§4.3).
+ */
+async function basketCost(ctx: Pick<Ctx, "userId">, run: InvestmentPlanRun): Promise<bigint | null> {
+  if (run.state !== "recorded") return null;
+  const [row] = await getDb()
+    .select({ cents: sum(investmentOperations.amountCents).mapWith(BigInt) })
+    .from(investmentOperations)
+    .innerJoin(investmentPlanRunLines, eq(investmentPlanRunLines.eventId, investmentOperations.eventId))
+    .where(and(userScoped(ctx).owns(investmentPlanRunLines), eq(investmentPlanRunLines.runId, run.id)));
+  return row?.cents ? -row.cents : null;
 }
 
 /** The person's active plans of their manual portfolios. */
@@ -346,11 +375,8 @@ export async function runDuePlans(ctx: WriteCtx, now: Date = new Date()): Promis
       .select()
       .from(investmentPlanRuns)
       .where(eq(investmentPlanRuns.planId, plan.id));
-    // shortcut: a basket's execution is several purchases, and a bank movement documents one event:
-    // no debit match for baskets yet (PERS-681), upgrade when a movement can document several.
     for (const run of after)
-      if (plan.model !== "basket" && (run.state === "proposed" || run.state === "recorded"))
-        await proposeDebit(ctx, plan, run);
+      if (run.state === "proposed" || run.state === "recorded") await proposeDebit(ctx, plan, run);
     if (endedBy(scheduleOf(plan), todayOn) && after.every((run) => run.dueOn <= todayOn)) {
       await getDb()
         .update(investmentPlans)

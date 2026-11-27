@@ -1,6 +1,6 @@
 // The purchase plans of a manual portfolio (rewrite plan R5d, step 2; 11-standardization.md §11.3): a
 // plan, its instalments, and the purchases plans wrote. A plan writes purchases only (P1 B).
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -399,6 +399,27 @@ export async function lockRun(
 }
 
 /**
+ * The purchase the bank movement of an instalment documents. A movement documents one event, and a
+ * basket's execution is several purchases: the one of its heaviest line stands for the execution.
+ */
+async function debitedEventOf(ctx: Pick<Ctx, "userId">, plan: InvestmentPlan, runId: string) {
+  if (plan.model !== "basket") return (await eventsOfRuns(ctx, [runId])).get(runId);
+  const [line] = await getDb()
+    .select({ eventId: investmentPlanRunLines.eventId })
+    .from(investmentPlanRunLines)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentPlanRunLines),
+        eq(investmentPlanRunLines.runId, runId),
+        isNotNull(investmentPlanRunLines.eventId),
+      ),
+    )
+    .orderBy(desc(investmentPlanRunLines.weightBp), asc(investmentPlanRunLines.assetId))
+    .limit(1);
+  return line?.eventId ?? undefined;
+}
+
+/**
  * Links a recorded instalment to the bank movement the matcher proposed (E7): the movement documents
  * the purchase. Only on the person's word; `not_editable` with nothing proposed, or linked already.
  */
@@ -411,7 +432,7 @@ export async function linkRunDebit(
   const plan = await requirePlan(ctx, accountId, planId);
   await getDb().transaction(async (transaction) => {
     const run = await lockRun(ctx, plan, runId, transaction);
-    const eventId = (await eventsOfRuns(ctx, [run.id])).get(run.id);
+    const eventId = await debitedEventOf(ctx, plan, run.id);
     if (run.state !== "recorded" || run.debitTransactionId === null || run.debitLinked || !eventId) {
       throw new InvestmentError("not_editable");
     }

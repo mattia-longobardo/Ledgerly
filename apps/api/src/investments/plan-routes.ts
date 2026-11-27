@@ -262,7 +262,7 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard): void {
           lines: (body.lines ?? []).map((line) => ({
             assetId: line.assetId,
             quantity: parseDecimal(line.quantity, QUANTITY_SCALE),
-            unitPrice: parseDecimal(line.unitPrice, PRICE_SCALE),
+            unitPrice: decimal(line.unitPrice ?? null, PRICE_SCALE) ?? undefined,
             feeCents: cents(line.fee ?? null) ?? undefined,
           })),
         }),

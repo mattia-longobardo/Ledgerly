@@ -11,7 +11,9 @@ import type { Ctx } from "../../platform/context";
 import { addDays, dayOfWeek, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { saveRates } from "../../platform/fx/service";
+import { createAccount } from "../accounts";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
+import { accountMovement } from "../../../../../test/investments";
 import { createTestUser } from "../../../../../test/users";
 import { refreshPrices, searchInstruments } from "../instruments";
 import { PRICE_SCALE, QUANTITY_SCALE } from "./rules";
@@ -21,6 +23,7 @@ import {
   createBasketPlan,
   createPlan,
   createPortfolioWithAccount,
+  linkRunDebit,
   listPlans,
   listRuns,
   plansToDo,
@@ -31,6 +34,7 @@ import {
   updatePlan,
 } from "./service";
 import {
+  investmentEvents,
   investmentOperations,
   investmentPlanInstruments,
   investmentPlanRuns,
@@ -398,6 +402,73 @@ describe("a basket plan", () => {
       ["buy", "4.000000000000000000"],
     ]);
     expect((await plansToDo(ctx)).priceMissing.map((fact) => fact.runId)).toEqual([proposed.run.id]);
+  });
+
+  it("confirms a line with no price at 0 shares, its part carried; refuses shares with no price (§6)", async () => {
+    await closes(todayOn, [{ market: 1, close: "18.75" }]);
+    const accountId = await portfolio(1_000_00n);
+    const day = Number(todayOn.slice(8, 10));
+    const { id: planId } = await createBasketPlan(ctx, accountId, weekly({ frequency: "month", day }));
+    await runDuePlans(ctx);
+    await runDuePlans(ctx, daysFrom(10));
+    const [proposed] = await listRuns(ctx, accountId, planId);
+    const [missing, priced] = proposed.lines;
+    expect(missing.state).toBe("price_missing");
+    const ref = { accountId, planId, runId: proposed.run.id };
+    const typed = { assetId: priced.assetId, quantity: shares(4), unitPrice: price("18.75") };
+    await expect(
+      confirmBasketRun(ctx, ref, { lines: [{ assetId: missing.assetId, quantity: shares(1) }, typed] }),
+    ).rejects.toMatchObject({ name: "ZodError" });
+    const { eventIds } = await confirmBasketRun(ctx, ref, {
+      lines: [{ assetId: missing.assetId, quantity: 0n }, typed],
+    });
+    expect(eventIds).toHaveLength(1);
+    const [recorded] = await listRuns(ctx, accountId, planId);
+    expect(recorded.lines.map((line) => [line.state, line.spentCents, line.eventId])).toEqual([
+      ["price_missing", 0n, null],
+      ["buy", 75_00n, eventIds[0]],
+    ]);
+    expect(recorded.run).toMatchObject({ state: "recorded", carryOutCents: 200_00n - 75_00n });
+  });
+
+  it("proposes the bank movement of a recorded execution, purchases and fees, and links it (E7)", async () => {
+    await closes(todayOn, [
+      { market: 0, close: "41.30" },
+      { market: 1, close: "18.75" },
+    ]);
+    const bank = await createAccount(ctx, {
+      name: "Bank",
+      type: "checking",
+      currency: "EUR",
+      openingBalance: null,
+    });
+    // 157,60 € of shares and 2 × 1,50 € of fees, in one bank movement.
+    await accountMovement(ctx, bank.id, todayOn, -160_60n, { payee: "BROKER BASKET" });
+    const accountId = await portfolio(1_000_00n);
+    const { id: planId } = await createBasketPlan(ctx, accountId, weekly({ debitAccountId: bank.id }));
+    await runDuePlans(ctx);
+    const [proposed] = await listRuns(ctx, accountId, planId);
+    // A proposal's lines and fees can still change: no match before the confirmation.
+    expect(proposed.debit).toBeNull();
+    const ref = { accountId, planId, runId: proposed.run.id };
+    await expect(linkRunDebit(ctx, accountId, planId, ref.runId)).rejects.toMatchObject({
+      code: "not_editable",
+    });
+    await confirmBasketRun(ctx, ref, { lines: confirmation(proposed.lines) });
+    await runDuePlans(ctx);
+    const [recorded] = await listRuns(ctx, accountId, planId);
+    expect(recorded.debit).toMatchObject({ cents: 160_60n, payee: "BROKER BASKET", linked: false });
+    await linkRunDebit(ctx, accountId, planId, ref.runId);
+    const linked = await getDb()
+      .select()
+      .from(investmentEvents)
+      .where(eq(investmentEvents.transactionId, recorded.debit!.transactionId));
+    // One movement documents one event: the purchase of the heaviest line.
+    expect(linked.map((event) => event.id)).toEqual([recorded.lines[0].eventId]);
+    expect((await listRuns(ctx, accountId, planId))[0].debit?.linked).toBe(true);
+    await expect(linkRunDebit(ctx, accountId, planId, ref.runId)).rejects.toMatchObject({
+      code: "not_editable",
+    });
   });
 
   it("buys an instrument in another currency at the ECB rate of the close", async () => {
