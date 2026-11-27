@@ -5500,7 +5500,8 @@
       "skip": {
         "title": "Discard the execution of {date}?",
         "description": "Nothing is bought. Its whole budget passes to the next execution.",
-        "submit": "Discard"
+        "submit": "Discard",
+        "blocked": "Confirm or discard the proposal before this one first."
       },
       "link": {
         "title": "Link the bank transaction?",

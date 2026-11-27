@@ -5500,7 +5500,8 @@
       "skip": {
         "title": "Scartare l'esecuzione del {date}?",
         "description": "Non si compra niente. Tutto il suo budget passa all'esecuzione dopo.",
-        "submit": "Scarta"
+        "submit": "Scarta",
+        "blocked": "Prima conferma o scarta la proposta precedente."
       },
       "link": {
         "title": "Collegare il movimento bancario?",

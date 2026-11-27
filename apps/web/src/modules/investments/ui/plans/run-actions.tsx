@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { lazy, Suspense, useState } from "react";
 import { formatDate } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import type { ActionResult } from "../../calls";
 import { linkRunDebit, skipRun } from "../../plan-calls";
 import { ConfirmAction, useOutcome } from "../dialog-kit";
@@ -44,7 +45,13 @@ function RunQuestion({ page, plan, run, close, kind }: DialogProps & { kind: "sk
         title={text("skip.title", { date: formatDate(run.dueOn, "long", page.say.locale) })}
         description={text("skip.description")}
         confirm={text("skip.submit")}
-        onConfirm={() => write(skipRun(ref), text("skipped"))}
+        onConfirm={async () => {
+          const result = await skipRun(ref);
+          // A later execution waits while the proposal before it is open: that one goes first.
+          if (!result.ok && result.error === "not_editable") notify(text("skip.blocked"), "error");
+          else outcome(result, text("skipped"));
+          return result.ok;
+        }}
       />
     );
   return (
