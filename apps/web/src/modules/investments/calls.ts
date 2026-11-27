@@ -5,9 +5,15 @@
 // only, and never comes back.
 import { connection, investments, register } from "@ledgerly/api-contract/investments";
 import { profile } from "@ledgerly/api-contract/settings";
-import { call } from "@ledgerly/api-client";
+import { call, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
-import { type NumberFormat, numberStyle, parseAmount, plainDecimalOf } from "@ledgerly/format/format";
+import {
+  type NumberFormat,
+  numberSeparators,
+  numberStyle,
+  parseAmount,
+  plainDecimalOf,
+} from "@ledgerly/format/format";
 import { invalidate, read } from "@ledgerly/ui/data";
 import { refusal, type WriteResult } from "@/platform/writes";
 
@@ -20,9 +26,9 @@ function failed(error: unknown): Failure {
   return refusal(error);
 }
 
-/** What a write of a service changes: every read of the section, and the pages that show its value. */
+/** What a write of a service changes: every read of the section, the pages that show its value, an edit's form. */
 function changed(): void {
-  invalidate(...Object.values(investments));
+  invalidate(...Object.values(investments), register.getOperation);
 }
 
 /** Runs a write: its answer (`{ accountId }`…) beside `ok`, or the refusal; a success drops what is stale. */
@@ -171,10 +177,28 @@ async function operationBody(input: OperationForm) {
   return saleBody({ ...input, kind: input.kind }, format);
 }
 
-export function recordOperation(accountId: string, input: OperationForm): Promise<ActionResult> {
-  return attempt(async () =>
-    done(call(register.recordOperation, { params: { accountId }, body: await operationBody(input) })),
-  );
+/** A new operation, or with `eventId` the rewrite of that one (its «Edit»): the same body. */
+function writeOperation(
+  accountId: string,
+  eventId: string | undefined,
+  bodyOf: () => Promise<RouteInput<typeof register.recordOperation>["body"]>,
+): Promise<ActionResult> {
+  return attempt(async () => {
+    const body = await bodyOf();
+    return done(
+      eventId === undefined
+        ? call(register.recordOperation, { params: { accountId }, body })
+        : call(register.updateOperation, { params: { accountId, eventId }, body }),
+    );
+  });
+}
+
+export function recordOperation(
+  accountId: string,
+  input: OperationForm,
+  eventId?: string,
+): Promise<ActionResult> {
+  return writeOperation(accountId, eventId, () => operationBody(input));
 }
 
 /** What «Record operation» of a manual portfolio writes besides a sale and an income (R5d). */
@@ -246,10 +270,28 @@ async function portfolioBody(input: PortfolioOperationForm) {
 export function recordPortfolioOperation(
   accountId: string,
   input: PortfolioOperationForm,
+  eventId?: string,
 ): Promise<ActionResult> {
-  return attempt(async () =>
-    done(call(register.recordOperation, { params: { accountId }, body: await portfolioBody(input) })),
-  );
+  return writeOperation(accountId, eventId, () => portfolioBody(input));
+}
+
+/** An operation as `GET …/operations/{eventId}` reads it back for its «Edit». */
+export type StoredOperation = RouteOutput<typeof register.getOperation>["body"];
+
+/** A wire decimal as a person types it back: their decimal separator, no grouping; null is empty. */
+export function typedOf(value: string | null | undefined, format: NumberFormat): string {
+  return value == null ? "" : value.replace(".", numberSeparators(format).decimal);
+}
+
+/** The select's value for the side a deposit or a withdrawal has now: the inverse of `counterpartOf`. */
+export function choiceOf(body: {
+  transactionId?: string | null;
+  counterpart?: { kind: "account"; accountId: string } | { kind: "outside" | "none" } | null;
+}): string {
+  if (body.transactionId) return `tx:${body.transactionId}`;
+  const side = body.counterpart;
+  if (!side) return AUTOMATIC;
+  return side.kind === "account" ? `acc:${side.accountId}` : side.kind;
 }
 
 /** Where a holding's price comes from: the market's daily close, or the person (R5d). */

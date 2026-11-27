@@ -83,6 +83,7 @@ export const FLOWS: Flow[] = [
       "portfolio",
       "plans",
       "legs",
+      "edit-operation",
     ],
     screens: ["a11y", "keyboard"],
   },

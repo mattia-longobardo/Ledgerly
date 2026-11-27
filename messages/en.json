@@ -5405,7 +5405,10 @@
         "noneOut": "None: a spending",
         "movementOption": "{date} · {payee} · {amount} · {account}",
         "noPayee": "No payee"
-      }
+      },
+      "editTitle": "Edit operation · {name}",
+      "currentInstrument": "Now: {name} ({mic}). Search to change it.",
+      "readFailed": "Couldn't read the operation."
     },
     "convertForm": {
       "title": "Switch to positions · {name}",

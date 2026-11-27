@@ -92,6 +92,7 @@ async function send(ctx: Ctx, method: string, path: string, body?: unknown) {
     investments: {
       queueSync: async (_ctx, connectionId) => void queued.push(`sync:${connectionId}`),
       queueFirstFlows: async (_ctx, connectionId) => void queued.push(`flows:${connectionId}`),
+      queuePrices: async () => void queued.push("prices"),
     },
   });
   const response = await routes.request(path, {
@@ -361,7 +362,15 @@ describe("the writes of investments", () => {
         on: addDays(todayOn, 1),
       }),
     ).toEqual({ status: 400, body: { error: "invalid", reason: "future_date" } });
-    expect((await send(alice, "POST", `/investments/${accountId}/operations`, income)).status).toBe(201);
+    const recorded = await send(alice, "POST", `/investments/${accountId}/operations`, income);
+    expect(recorded.status).toBe(201);
+    // A service a provider syncs is the provider's to write: no edit, even of an operation typed by hand.
+    expect(
+      await send(alice, "PATCH", `/investments/${accountId}/operations/${recorded.body.id}`, {
+        ...income,
+        amount: "6.00",
+      }),
+    ).toEqual({ status: 409, body: { error: "conflict", reason: "not_editable" } });
   });
 
   it("make a manual service, change its address and its value", async () => {

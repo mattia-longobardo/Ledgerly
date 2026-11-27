@@ -156,9 +156,12 @@ export function FxRateField({
 
 export function InstrumentField({
   id,
+  initial = null,
   onChange,
 }: {
   id: string;
+  /** The instrument of the operation an «Edit» opens: kept until another one is picked. */
+  initial?: PickedInstrument | null;
   onChange: (picked: PickedInstrument | null) => void;
 }) {
   const text = useTranslations("investments.portfolioOps");
@@ -196,6 +199,11 @@ export function InstrumentField({
         />
       )}
       {hit && <MarketField id={id} hit={hit} mic={mic} onChange={(market) => choose(hit, market)} />}
+      {!hit && initial && (
+        <p className="text-sm" data-testid="instrument-current">
+          {text("currentInstrument", { name: initial.name, mic: initial.mic ?? "—" })}
+        </p>
+      )}
     </div>
   );
 }

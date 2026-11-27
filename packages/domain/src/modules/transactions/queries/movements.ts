@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, gte, sql, sum } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, gte, ne, sql, sum } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { addDays, type CivilDate, civilDateIn } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
@@ -30,6 +30,36 @@ export async function transactionsByIds(
 export async function getTransaction(ctx: Pick<Ctx, "userId">, id: string): Promise<Transaction | null> {
   const found = await transactionsByIds(ctx, [id]);
   return found.get(id) ?? null;
+}
+
+/**
+ * The other side of a giroconto as the person would choose it (PERS-695): its partner's account, the
+ * account chosen, one outside, or `none` when it is no giroconto. `null` while the rules decide it.
+ */
+export async function transferSideOf(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+): Promise<{ kind: "account"; accountId: string } | { kind: "outside" } | { kind: "none" } | null> {
+  const row = await getTransaction(ctx, id);
+  if (!row) return null;
+  if (row.type !== "transfer") return { kind: "none" };
+  if (row.transferGroupId !== null) {
+    const [partner] = await getDb()
+      .select({ accountId: transactions.accountId })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transferGroupId, row.transferGroupId),
+          ne(transactions.id, row.id),
+          userScoped(ctx).owns(transactions),
+        ),
+      )
+      .orderBy(asc(transactions.id))
+      .limit(1);
+    if (partner) return { kind: "account", accountId: partner.accountId };
+  }
+  if (row.transferAccountId !== null) return { kind: "account", accountId: row.transferAccountId };
+  return row.transferOutside ? { kind: "outside" } : null;
 }
 
 /**

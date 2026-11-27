@@ -35,14 +35,22 @@ export {
 export type { ManualServiceInput, ServiceValueInput } from "./services";
 export { convertToPortfolio, createPortfolio, createPortfolioWithAccount, isPortfolio } from "./portfolio";
 export type { ConversionInput, PortfolioInput } from "./portfolio";
-export { assetPrices, pricedMarkets, revalueAfterPrices, setPriceMode } from "./prices";
+export { assetPrices, hasUnpricedMarket, pricedMarkets, revalueAfterPrices, setPriceMode } from "./prices";
 export type { AssetPrice } from "./prices";
 export { assetInputSchema, createAsset, ensureAssetSeed } from "./assets";
 export type { AssetInput } from "./assets";
 export { addAsset, buyInputSchema, insertEvent, periodOn } from "./events";
 export type { BuyInput, LegInput } from "./events";
-export { deleteOperation, operationInputSchema, recordOperation, updateOperation } from "./operations";
+export {
+  deleteOperation,
+  operationInputSchema,
+  recordOperation,
+  updateBuy,
+  updateOperation,
+} from "./operations";
 export { linkAllCashLegs, linkCashLegs } from "./cash-legs";
+export { isEditable, readOperation } from "./operation-read";
+export type { OperationForEdit } from "./operation-read";
 export type { OperationInput } from "./operations";
 export { confirmZeroReading, reconcileHolding, reconciliationInputSchema, saveReading } from "./readings";
 export type { ReadingInput, ReconciliationInput } from "./readings";

@@ -16,7 +16,7 @@ import {
 import { parseDecimal } from "../../../shared/money";
 import { investmentAccounts, investmentEvents, investmentHoldings, investmentOperations } from "../schema";
 import { abs } from "../../../shared/money";
-import { requireEvent } from "./operations";
+import { requireEvent } from "./revisions";
 import { InvestmentError, type WriteCtx } from "./types";
 
 // ——— Transfers between the person's accounts (§2.4, A10) ————————————————————————————————————
