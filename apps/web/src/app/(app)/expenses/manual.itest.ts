@@ -345,7 +345,7 @@ describe("the balance line of the dialog", () => {
     expect(await balance(ctx, account.id)).toBe(7_550n);
   });
 
-  it("says the balance does not change for a day the written balance already holds", async () => {
+  it("says the balance does not change for a day before the opening, which holds it", async () => {
     const ctx = await newContext();
     const account = await cash(ctx, 8_000n, day(2));
     const preview = await previewManual(ctx, {
@@ -355,6 +355,23 @@ describe("the balance line of the dialog", () => {
       on: day(4),
     });
     expect(preview?.effect).toEqual({ kind: "unchanged", readingOn: day(2) });
+  });
+
+  it("says a later reading, not the opening, holds a day between two readings", async () => {
+    const ctx = await newContext();
+    const account = await cash(ctx, 8_000n, day(8));
+    await saveBalanceEntry(ctx, account.id, { on: day(2), cents: 9_000n, note: "" });
+    const preview = await previewManual(ctx, {
+      accountId: account.id,
+      kind: "expense",
+      amountCents: 450n,
+      on: day(5),
+    });
+    expect(preview).toEqual({
+      account: "Cash",
+      effect: { kind: "unchanged", readingOn: day(2) },
+      opening: false,
+    });
   });
 
   it("compares a movement being changed with the balance that holds it", async () => {

@@ -5,6 +5,8 @@
 // (`movementBalances`, packages/domain/src/modules/accounts/rules/movements.ts).
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
+import { saveImportBalance } from "@domain/modules/accounts/service";
+import { getDb } from "@domain/platform/db/client";
 import { addDays, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { contextFor } from "../../../../../test/fixtures";
@@ -241,5 +243,99 @@ describe("the notice and «Move the opening» (PERS-678, A+)", () => {
     expect(written.body.beforeOpening).toBeNull();
     expect((await send(ctx, "GET", `/accounts/${created.body.id}/context`)).body.beforeOpening).toBeNull();
     expect(await balanceOf(created.body.id)).toBeNull();
+  });
+});
+
+describe("the notes of the review of A+ (PERS-725)", () => {
+  /** The clock one step on: a write after another is a later moment, as for a person. */
+  const later = (ms: number) => vi.setSystemTime(Date.now() + ms);
+
+  async function openingOf(account: string) {
+    const { balances } = (await send(ctx, "GET", `/accounts/${account}/balances`)).body;
+    return balances.find((one: { on: string; source: string }) => one.on === OPENING && one.source === "manual");
+  }
+
+  async function sameDayMovement(): Promise<string> {
+    const account = await newAccount();
+    later(60_000);
+    const written = await send(ctx, "POST", "/transactions/manual", {
+      ...manualBody(account, OPENING),
+      key: crypto.randomUUID(),
+    });
+    expect(written.status).toBe(201);
+    expect(await balanceOf(account)).toBe("87.50");
+    later(3_600_000);
+    return account;
+  }
+
+  it("a note written on the opening keeps the movement of its day in the balance", async () => {
+    const account = await sameDayMovement();
+    const opening = await openingOf(account);
+    const edited = await send(ctx, "PUT", `/accounts/${account}/balances/${opening.id}`, {
+      on: OPENING,
+      balance: "100",
+      available: null,
+      note: "Counted at the counter",
+    });
+    expect(edited.status).toBe(200);
+    expect(await balanceOf(account)).toBe("87.50");
+  });
+
+  it("a new amount of the opening, taken after a movement of its day, says the movement is left out", async () => {
+    const account = await sameDayMovement();
+    const opening = await openingOf(account);
+    const edited = await send(ctx, "PUT", `/accounts/${account}/balances/${opening.id}`, {
+      on: OPENING,
+      balance: "90",
+      available: null,
+      note: null,
+    });
+    expect(edited.status).toBe(200);
+    expectNotSilent(edited, await balanceOf(account));
+    expect(edited.body.beforeOpening).toEqual({ count: 1, first: OPENING });
+    const { beforeOpening } = (await send(ctx, "GET", `/accounts/${account}/context`)).body;
+    expect(beforeOpening).toMatchObject({ count: 1, first: OPENING, moveTo: addDays(OPENING, -1) });
+  });
+
+  it("the banner names the day of the first reading when no person recorded it", async () => {
+    const created = await send(ctx, "POST", "/accounts", { name: "Pension", type: "cash" });
+    expect(created.status).toBe(201);
+    const account = created.body.id as string;
+    await getDb().transaction((trx) =>
+      saveImportBalance(ctx, account, { on: OPENING, cents: 10_000n, note: null }, trx),
+    );
+    await send(ctx, "POST", "/transactions/manual", { ...manualBody(account, BEFORE), key: crypto.randomUUID() });
+    const { beforeOpening } = (await send(ctx, "GET", `/accounts/${account}/context`)).body;
+    expect(beforeOpening).toMatchObject({ count: 1, first: BEFORE, openingOn: OPENING, opening: null });
+  });
+
+  it("«Move the opening» refuses a day that has a balance a person wrote since, and deletes nothing", async () => {
+    const account = await newAccount();
+    await send(ctx, "POST", "/transactions/manual", { ...manualBody(account, BEFORE), key: crypto.randomUUID() });
+    const { beforeOpening } = (await send(ctx, "GET", `/accounts/${account}/context`)).body;
+    // Another tab writes a balance on that day before the click.
+    const other = await send(ctx, "POST", `/accounts/${account}/balances`, {
+      on: beforeOpening.moveTo,
+      balance: "50",
+      available: null,
+      note: null,
+    });
+    expect(other.status).toBe(201);
+
+    const moved = await send(ctx, "PUT", `/accounts/${account}/balances/${beforeOpening.opening.id}`, {
+      on: beforeOpening.moveTo,
+      balance: beforeOpening.opening.balance,
+      available: beforeOpening.opening.available,
+      note: beforeOpening.opening.note,
+      replace: false,
+    });
+    expect(moved).toMatchObject({ status: 409, body: { reason: "balance_exists" } });
+    const { balances } = (await send(ctx, "GET", `/accounts/${account}/balances`)).body;
+    expect(balances.map((one: { on: string; balance: string }) => [one.on, one.balance])).toEqual(
+      expect.arrayContaining([
+        [beforeOpening.moveTo, "50.00"],
+        [OPENING, "100.00"],
+      ]),
+    );
   });
 });
