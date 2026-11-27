@@ -278,7 +278,8 @@ async function proposeDebit(ctx: WriteCtx, plan: InvestmentPlan, run: Investment
   });
   if (found.length === 0) return;
   const ids = found.map((one) => one.id);
-  // A movement already linked to an event, or already proposed on another execution, is not free.
+  // A movement already linked to an event, or proposed on another execution still open or recorded, is
+  // not free: one skipped or expired gives its proposal back.
   const linked = await getDb()
     .select({ id: investmentEvents.transactionId })
     .from(investmentEvents)
@@ -287,7 +288,11 @@ async function proposeDebit(ctx: WriteCtx, plan: InvestmentPlan, run: Investment
     .select({ id: investmentPlanRuns.debitTransactionId })
     .from(investmentPlanRuns)
     .where(
-      and(userScoped(ctx).owns(investmentPlanRuns), inArray(investmentPlanRuns.debitTransactionId, ids)),
+      and(
+        userScoped(ctx).owns(investmentPlanRuns),
+        inArray(investmentPlanRuns.debitTransactionId, ids),
+        inArray(investmentPlanRuns.state, ["proposed", "recorded"]),
+      ),
     );
   const taken = new Set([...linked, ...proposed].map((row) => row.id));
   const free = found.find((one) => !taken.has(one.id));

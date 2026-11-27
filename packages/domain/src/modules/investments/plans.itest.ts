@@ -272,26 +272,39 @@ describe("a purchase plan", () => {
     await getDb().update(investmentPlans).set({ createdOn: weekAgo }).where(eq(investmentPlans.id, planId));
     await runDuePlans(ctx);
     const runs = await getDb().select().from(investmentPlanRuns).where(eq(investmentPlanRuns.planId, planId));
-    return runs
+    const eligible = runs
       .filter((run) => run.dueOn >= addDays(todayOn, -5))
-      .sort((left, right) => left.dueOn.localeCompare(right.dueOn))
-      .map((run) => ({ dueOn: run.dueOn, state: run.state, debit: run.debitTransactionId }));
+      .sort((left, right) => left.dueOn.localeCompare(right.dueOn));
+    return { accountId, planId, eligible };
   }
 
+  const debitsOf = (runs: { dueOn: string; state: string; debitTransactionId: string | null }[]) =>
+    runs.map((run) => ({ dueOn: run.dueOn, state: run.state, debit: run.debitTransactionId }));
+
   it("proposes one movement to one execution only, the oldest of those it may document (PERS-729)", async () => {
-    const [oldest, ...others] = await debitsOfDailyPlan(1);
+    const [oldest, ...others] = debitsOf((await debitsOfDailyPlan(1)).eligible);
     expect(others.length).toBeGreaterThan(0);
     expect(oldest).toMatchObject({ state: "proposed", debit: expect.any(String) });
     expect(others.map((run) => run.debit)).toEqual(others.map(() => null));
   });
 
   it("proposes two movements of one amount to two executions, a different one each (PERS-729)", async () => {
-    const runs = await debitsOfDailyPlan(2);
+    const runs = debitsOf((await debitsOfDailyPlan(2)).eligible);
     const [first, second, ...others] = runs.map((run) => run.debit);
     expect(first).toEqual(expect.any(String));
     expect(second).toEqual(expect.any(String));
     expect(second).not.toBe(first);
     expect(others).toEqual(others.map(() => null));
+  });
+
+  it("gives the movement of a skipped execution to the next one (PERS-729)", async () => {
+    const { accountId, planId, eligible } = await debitsOfDailyPlan(1);
+    const [oldest, next] = eligible;
+    expect(oldest.debitTransactionId).toEqual(expect.any(String));
+    await skipRun(ctx, { accountId, planId, runId: oldest.id });
+    await runDuePlans(ctx);
+    const [after] = await getDb().select().from(investmentPlanRuns).where(eq(investmentPlanRuns.id, next.id));
+    expect(after.debitTransactionId).toBe(oldest.debitTransactionId);
   });
 
   it("takes the payee of a linked debit out of the subscription suggestions (§11.3.3)", async () => {
