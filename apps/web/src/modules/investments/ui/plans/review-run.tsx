@@ -193,6 +193,8 @@ function ReviewLine({
   const { format } = page.say;
   const weight = formatDecimalText(line.weight, format, { min: 0, max: 2 });
   const state = typed.unitPrice === "" ? "price_missing" : shown.state;
+  // A line with 0 shares buys nothing: no fee (the server refuses one, `invalid`).
+  const none = noShares(typed.touched ? typed.quantity : typedDecimal(shown.quantity, format), format);
   return (
     <fieldset
       data-testid="review-line"
@@ -212,8 +214,9 @@ function ReviewLine({
         <MoneyField
           id={`${id}-fee`}
           label={text("review.feeOf", { name: line.name })}
-          hint={text("review.feeHint")}
-          value={typed.fee}
+          hint={text(none ? "review.feeNone" : "review.feeHint")}
+          value={none ? "" : typed.fee}
+          disabled={none}
           onChange={(fee) => set({ fee })}
           currency={line.priceCurrency ?? currency}
         />
@@ -297,12 +300,15 @@ function useConfirm(page: ServicePage, plan: Plan, run: Run, onClose: () => void
     event.preventDefault();
     if (blocked) return;
     startTransition(async () => {
-      const lines = typed.map((line) => ({
-        assetId: line.assetId,
-        unitPrice: line.unitPrice,
-        fee: line.fee,
-        quantity: sharesOf(line),
-      }));
+      const lines = typed.map((line) => {
+        const quantity = sharesOf(line);
+        return {
+          assetId: line.assetId,
+          unitPrice: line.unitPrice,
+          fee: noShares(quantity, format) ? "" : line.fee,
+          quantity,
+        };
+      });
       const result = await confirmRun(ref, day, lines);
       if (!result.ok) {
         setRefused(result.error);

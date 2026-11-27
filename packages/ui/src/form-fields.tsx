@@ -37,7 +37,8 @@ export function MoneyField({
   currency,
   hint,
   autoFocus,
-}: TextFieldProps & { currency: string; hint?: string; autoFocus?: boolean }) {
+  disabled,
+}: TextFieldProps & { currency: string; hint?: string; autoFocus?: boolean; disabled?: boolean }) {
   return (
     <Field label={label} htmlFor={id} hint={hint}>
       <InputGroup suffix={currency}>
@@ -46,6 +47,7 @@ export function MoneyField({
           inputMode="decimal"
           numeric
           autoFocus={autoFocus}
+          disabled={disabled}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />

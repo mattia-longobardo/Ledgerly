@@ -5602,6 +5602,7 @@
         "quantityOf": "Shares of {name}",
         "feeOf": "Fee of {name}",
         "feeHint": "Empty: the plan's fee.",
+        "feeNone": "No fee: 0 shares.",
         "spent": "{quantity} shares · {spent}",
         "budget": "Budget",
         "spentTotal": "Spent",

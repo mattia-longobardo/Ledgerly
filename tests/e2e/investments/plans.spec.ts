@@ -170,7 +170,13 @@ test("skipped line: a line confirmed with 0 shares buys nothing and says so", as
   // Epsilon at 30 €: 1 share of its 30 €; Delta confirmed with none. 70 € to the next.
   await dialog.getByLabel("Unit price of Epsilon EM ETF").fill("30");
   await expect(shares(dialog, "Epsilon EM ETF")).toHaveValue("1");
+  // A fee typed on Delta, then 0 shares: the line buys nothing, so its fee is off and not sent.
+  const fee = dialog.getByLabel("Fee of Delta Europe ETF");
+  await fee.fill("2");
   await shares(dialog, "Delta Europe ETF").fill("0");
+  await expect(fee).toBeDisabled();
+  await expect(fee).toHaveValue("");
+  await expect(dialog.getByText("No fee: 0 shares.")).toBeVisible();
   await expect(dialog.getByTestId("review-carry")).toContainText(money("70.00"));
   await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
   await expect(dialog).toBeHidden();

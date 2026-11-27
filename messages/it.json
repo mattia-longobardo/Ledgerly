@@ -5602,6 +5602,7 @@
         "quantityOf": "Quote di {name}",
         "feeOf": "Commissione di {name}",
         "feeHint": "Vuoto: la commissione del piano.",
+        "feeNone": "Nessuna commissione: 0 quote.",
         "spent": "{quantity} quote · {spent}",
         "budget": "Budget",
         "spentTotal": "Spesa",
