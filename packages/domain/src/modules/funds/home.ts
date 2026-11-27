@@ -362,18 +362,12 @@ export function gainGrain(
   return chartGrain(daysBetween(span.from, span.to) + 1, "stretch");
 }
 
-/**
- * The bars of the Gain view. A stretch lands in the bar of the day its last reading describes: a value
- * of the 1st belongs to the month before, and a stretch longer than a month stays one bar.
- */
-export function gainBars(
-  lines: readonly FundLine[],
+/** Funds' own bars of a grain: one per stretch's end, per month or per year of the span. */
+function slotsOf(
+  stretches: readonly Stretch[],
   span: { from: CivilDate; to: CivilDate },
   grain: GainGrain,
-): GainBar[] {
-  const stretches = lines
-    .flatMap(stretchesOf)
-    .sort((a, b) => (a.to < b.to ? -1 : a.to > b.to ? 1 : a.fundId < b.fundId ? -1 : 1));
+): { from: CivilDate; to: CivilDate }[] {
   const slots: { from: CivilDate; to: CivilDate }[] = [];
   if (grain === "stretch") {
     for (const to of new Set(stretches.map((stretch) => stretch.to))) {
@@ -389,6 +383,23 @@ export function gainBars(
       slots.push({ from: `${year}-01-01`, to: `${year}-12-31` });
     }
   }
+  return slots;
+}
+
+/**
+ * The bars of the Gain view. A stretch lands in the bar of the day its last reading describes: a value
+ * of the 1st belongs to the month before, and a stretch longer than a month stays one bar. `grain` is
+ * Funds' own, or the bars another chart already drew (Investments' `barIntervals`), which then cover `span`.
+ */
+export function gainBars(
+  lines: readonly FundLine[],
+  span: { from: CivilDate; to: CivilDate },
+  grain: GainGrain | readonly { from: CivilDate; to: CivilDate }[],
+): GainBar[] {
+  const stretches = lines
+    .flatMap(stretchesOf)
+    .sort((a, b) => (a.to < b.to ? -1 : a.to > b.to ? 1 : a.fundId < b.fundId ? -1 : 1));
+  const slots = typeof grain === "string" ? slotsOf(stretches, span, grain) : grain;
   const slotOf = (stretch: Stretch) => {
     if (grain === "stretch") return slots.findIndex((slot) => slot.to === stretch.to);
     const day = describedDay(stretch.to);
@@ -400,6 +411,7 @@ export function gainBars(
     stretches: [],
     totalCents: null,
   }));
+  if (bars.length === 0) return bars;
   for (const stretch of stretches) {
     // Never lost: on the edge of the span, a stretch stays in the nearest bar, so the sum still holds.
     const slot = slotOf(stretch);
@@ -445,4 +457,12 @@ export function valueSeries(lines: readonly FundLine[]): ValuePointRow[] {
     }
     return { on, valueCents, paidCents };
   });
+}
+
+/**
+ * A fund's value on each of `days`, held from one reading to the next and never drawn between them
+ * (the rule of `heldAt`): `null` before its first reading.
+ */
+export function heldValues(fund: Pick<HomeFund, "points">, days: readonly CivilDate[]): (Cents | null)[] {
+  return days.map((day) => lastUpTo(fund.points, day)?.cents ?? null);
 }

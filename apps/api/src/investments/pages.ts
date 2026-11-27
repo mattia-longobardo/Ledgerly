@@ -179,8 +179,16 @@ function composition(home: HomeData, rows: ReturnType<typeof homeRows>) {
   };
 }
 
-/** The home of a period (§3.1): `home` is today's, `pnl` the period's, both the page's queries. */
-export function homeOut(home: HomeData, pnl: View, parts: Pick<Home, "total" | "groups">): Home {
+/**
+ * The home of a period (§3.1): `home` is today's, `pnl` the period's, both the page's queries. `group` is
+ * the chip the chart draws: its layers and the gain and rate of its KPIs, the Return view's scale.
+ */
+export function homeOut(
+  home: HomeData,
+  pnl: View,
+  parts: Pick<Home, "total" | "groups">,
+  group?: Parameters<typeof chartOut>[3] & { gainCents: Cents | null; rate: number | null },
+): Home {
   const { portfolio, period, todayOn } = pnl;
   const rows = homeRows(home, pnl);
   return {
@@ -192,7 +200,9 @@ export function homeOut(home: HomeData, pnl: View, parts: Pick<Home, "total" | "
       period.to < todayOn ? maybe(sumCents(pnl.chart.map((one) => one.values.at(-1) ?? null)).total) : null,
     services: homeServices(rows, portfolio),
     pnl: homePnl(portfolio),
-    chart: chartOut(pnl, portfolio.parts?.pnlCents ?? null, portfolio.rate),
+    chart: group
+      ? chartOut(pnl, group.gainCents, group.rate, group)
+      : chartOut(pnl, portfolio.parts?.pnlCents ?? null, portfolio.rate),
     ...composition(home, rows),
     ...parts,
   };

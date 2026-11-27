@@ -4,6 +4,18 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · The home's chart by chip, with the pension funds (additive)
+
+- Added to `GET /investments/home`: the query `group` (`all`, `stocks_crypto`, `pension_funds`), the chip
+  the chart draws. Without it, the answer of before.
+- With `group`: `chart.funds`, one layer per pension fund with the shape of `chart.services` plus `fundId`
+  (`accountId` is the fund's valuation account). A fund's gain between two readings is in the bar of the
+  day the later reading describes (a reading of the 1st describes the day before); a bar with no reading
+  is `null`, never zero. Its value holds each reading until the next one.
+- With `group`: `chart.services` is empty for `pension_funds`; `chart.bars`, `cumulative` and `values` sum
+  the chip's layers; the chart, `period.firstOn` and `period.span` start at the first data of the chip's
+  groups; the Return view is on the scale of the chip's KPIs (`total` for `all`, the group's otherwise).
+
 ## Unreleased · A basket's line with no price, and its bank movement (additive)
 
 - Changed: in `POST …/runs/{runId}/confirm` of a basket, `lines[].unitPrice` is optional on a line with

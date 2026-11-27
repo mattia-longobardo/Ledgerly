@@ -260,7 +260,24 @@ export const investmentsHome = z.object({
     stale: z.array(id()),
     excluded: z.array(z.object({ accountId: id(), reasons: z.array(z.enum(PNL_REASONS)) })),
   }),
-  chart,
+  chart: chart.extend({
+    /**
+     * With `group` only: each pension fund's layer, as `services` (`accountId` its valuation account). A
+     * fund's gain between two readings lands in the bar of the day the later one describes; a bar with no
+     * reading is null. Its value holds each reading until the next one.
+     */
+    funds: z
+      .array(
+        z.object({
+          accountId: id(),
+          fundId: id(),
+          bars: z.array(money().nullable()),
+          values: z.array(money().nullable()),
+          returns: z.array(ratio()),
+        }),
+      )
+      .optional(),
+  }),
   /** Today's value by asset class (`unclassified`: a manual account kept as a total), by service, by currency. */
   byClass: z.array(slice(z.enum([...ASSET_CLASSES, "unclassified"]))),
   byService: z.array(slice(id())),

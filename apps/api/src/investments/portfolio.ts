@@ -9,6 +9,8 @@ import {
   fundsByAccount,
   fundsList,
   fundsHomeView,
+  gainBars,
+  heldValues,
   viewPeriod,
 } from "@ledgerly/domain/funds";
 import { type InvestmentsPnl, type Portfolio, portfolioMeasure } from "@ledgerly/domain/investments";
@@ -25,7 +27,7 @@ import {
   portfolioView,
 } from "@ledgerly/domain/portfolio";
 import { type Cents } from "@ledgerly/domain/shared/money";
-import { maybe, ratio } from "./dto";
+import { type FundLayer, maybe, ratio, type View } from "./dto";
 
 type ViewRows = Awaited<ReturnType<typeof accountsView>>["rows"];
 
@@ -64,11 +66,22 @@ export function overviewGroups(rows: ViewRows) {
   };
 }
 
+type FundsHome = Awaited<ReturnType<typeof fundsHomeView>>;
+
 /** The query of Funds for the period Investments measured: the same days for both groups. */
 function fundsQuery(period: InvestmentsPnl["period"]) {
   if (period.kind === "all") return { period: "all" };
   if (period.kind === "custom") return { period: "custom", from: period.from!, to: period.to };
   return { period: String(period.year) };
+}
+
+/** The Funds home of the period Investments measures. */
+export function fundsHomeOf(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  period: InvestmentsPnl["period"],
+  todayOn: CivilDate,
+): Promise<FundsHome> {
+  return fundsHomeView(ctx, viewPeriod(fundsQuery(period), todayOn));
 }
 
 /**
@@ -78,12 +91,13 @@ function fundsQuery(period: InvestmentsPnl["period"]) {
  */
 async function fundsMeasure(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  period: InvestmentsPnl["period"],
+  pnl: Pick<InvestmentsPnl, "period" | "todayOn">,
   currencies: ReadonlySet<string>,
-  todayOn: CivilDate,
+  read?: FundsHome,
 ): Promise<GroupMeasure | null> {
   if (currencies.size !== 1) return null;
-  const home = await fundsHomeView(ctx, viewPeriod(fundsQuery(period), todayOn));
+  const { todayOn } = pnl;
+  const home = read ?? (await fundsHomeOf(ctx, pnl.period, todayOn));
   const { summary } = home;
   if (summary.lines.length === 0) return null;
   const [currency] = currencies;
@@ -119,10 +133,10 @@ const kpisOut = (kpis: Kpis) => ({
   rateReason: kpis.rateReason,
 });
 
-/** `total` and `groups` of the home and of `GET /investments?include=funds`. */
-export async function portfolioOut(
+/** The KPIs and the rows of every group: `funds` is the Funds home of the period, when already read. */
+export async function portfolioOf(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  input: { rows: ViewRows; portfolio: Pick<Portfolio, "services">; pnl: InvestmentsPnl },
+  input: { rows: ViewRows; portfolio: Pick<Portfolio, "services">; pnl: InvestmentsPnl; funds?: FundsHome },
 ) {
   const { rows, portfolio, pnl } = input;
   const funds = await fundsByAccount(ctx);
@@ -138,7 +152,7 @@ export async function portfolioOut(
   );
   const measured = pnl.portfolio;
   const { netFlowsCents, capital } = portfolioMeasure(measured.services);
-  const view = portfolioView(listed, {
+  return portfolioView(listed, {
     stocks_crypto:
       measured.parts === null
         ? null
@@ -150,8 +164,12 @@ export async function portfolioOut(
             to: pnl.period.to,
           },
     pension_funds:
-      fundCurrencies.size === 0 ? null : await fundsMeasure(ctx, pnl.period, fundCurrencies, pnl.todayOn),
+      fundCurrencies.size === 0 ? null : await fundsMeasure(ctx, pnl, fundCurrencies, input.funds),
   });
+}
+
+/** `total` and `groups` of the home and of `GET /investments?include=funds`. */
+export function portfolioJson(view: Awaited<ReturnType<typeof portfolioOf>>) {
   return {
     total: kpisOut(view.total),
     groups: view.groups.map((group) => ({
@@ -170,6 +188,58 @@ export async function portfolioOut(
       })),
     })),
   };
+}
+
+export async function portfolioOut(...args: Parameters<typeof portfolioOf>) {
+  return portfolioJson(await portfolioOf(...args));
+}
+
+/**
+ * The funds' layers on the bars and the days of the services' chart (`View`): each fund's stretches in
+ * the bar of the day their reading describes, a bar with none `null`; each value held until the next
+ * reading. Converted at today's rate like {@link fundsMeasure} (same shortcut), the bars through their
+ * running total, so they still add up to the converted gain.
+ */
+export async function fundLayers(
+  ctx: Pick<Ctx, "displayCurrency">,
+  funds: FundsHome,
+  view: Pick<View, "span" | "intervals" | "valueDays" | "todayOn">,
+  currencyOf: ReadonlyMap<string, string>,
+): Promise<FundLayer[]> {
+  const { todayOn } = view;
+  const accountOf = new Map(funds.funds.map(({ row }) => [row.fund.id, row.fund.valuationAccountId]));
+  const lines = funds.summary.lines;
+  const currencies = new Set(lines.map((line) => currencyOf.get(accountOf.get(line.fund.id)!)!));
+  currencies.delete(ctx.displayCurrency);
+  const rates =
+    currencies.size === 0
+      ? null
+      : await ratesOn([ctx.displayCurrency, ...currencies], addDays(todayOn, -7), todayOn);
+  const bars = gainBars(lines, view.span, view.intervals);
+  return lines.map((line) => {
+    const accountId = accountOf.get(line.fund.id)!;
+    const currency = currencyOf.get(accountId)!;
+    const display = (cents: Cents | null) =>
+      cents === null || rates === null || currency === ctx.displayCurrency
+        ? cents
+        : convertCents(cents, currency, ctx.displayCurrency, todayOn, rates);
+    let raw = 0n;
+    let shown: Cents | null = 0n;
+    return {
+      accountId,
+      fundId: line.fund.id,
+      bars: bars.map((bar) => {
+        const cents = bar.byFund.get(line.fund.id);
+        if (cents === undefined) return null;
+        raw += cents;
+        const total = display(raw);
+        const own = total === null || shown === null ? null : total - shown;
+        shown = total;
+        return own;
+      }),
+      values: heldValues(line.fund, view.valueDays).map(display),
+    };
+  });
 }
 
 /**

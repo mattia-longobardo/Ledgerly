@@ -1,5 +1,6 @@
 // What the parts of the Investments home share (rewrite plan R3): the answer of `GET /investments/home`,
 // the person's way of writing figures, and the links that keep the period and the chart's choices.
+import { PALETTE } from "@ledgerly/design-tokens";
 import type { RouteOutput } from "@ledgerly/api-client";
 import type { investments } from "@ledgerly/api-contract/investments";
 import type { SectionQuery } from "@ledgerly/ui/period";
@@ -14,6 +15,45 @@ export type GroupBy = "service" | "class" | "ccy";
 /** The chips of the one list (R5b): every group, or one of the two. */
 export const CHIPS = ["all", "stocks_crypto", "pension_funds"] as const;
 type Chip = (typeof CHIPS)[number];
+type Series = Home["chart"]["services"][number];
+
+/** The KPIs of a chip: the total for «All», the group's for the others; null for a group with no row. */
+export const chipKpis = (home: Home, chip: Chip): Home["total"] | null =>
+  chip === "all" ? home.total : (home.groups.find((group) => group.id === chip)?.kpis ?? null);
+
+/** One layer of the chart: a service or a pension fund, as the rows of the list name them. */
+export interface ChartLayer {
+  key: string;
+  label: string;
+  color: string;
+  series: Series;
+}
+
+/**
+ * The chart's layers, in the order of the list: the services, then the pension funds the server drew
+ * for the chip. A fund has no colour of its own here: the palette's, skipping the services' colours.
+ */
+export function chartLayers(home: Home): ChartLayer[] {
+  const series = new Map(
+    [...home.chart.services, ...(home.chart.funds ?? [])].map((one) => [one.accountId, one]),
+  );
+  const services = home.services.flatMap((service) => {
+    const one = series.get(service.accountId);
+    return one ? [{ key: service.accountId, label: service.name, color: colorOf(service), series: one }] : [];
+  });
+  const used = new Set(home.services.map((service) => colorOf(service).toLowerCase()));
+  const unused = PALETTE.filter((color) => !used.has(color));
+  const free = unused.length > 0 ? unused : PALETTE;
+  const funds = home.groups
+    .filter((group) => group.id === "pension_funds")
+    .flatMap((group) => group.rows)
+    .flatMap((row) => {
+      const one = series.get(row.accountId);
+      return one ? [{ key: row.accountId, label: row.name, series: one }] : [];
+    })
+    .map((fund, index) => ({ ...fund, color: free[index % free.length]! }));
+  return [...services, ...funds];
+}
 
 export interface HomeContext {
   home: Home;

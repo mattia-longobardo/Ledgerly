@@ -15,29 +15,31 @@ import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
 import { barLabels, intervalName, valueLabels } from "../period-chart";
 import { centsOf } from "../present";
-import type { HomeContext, HomeService } from "./home-view";
+import { type ChartLayer, chartLayers, chipKpis, type HomeContext } from "./home-view";
 
 type Chart = HomeContext["home"]["chart"];
 
 const cents = (amounts: readonly (string | null)[]) => amounts.map(centsOf);
 
-/** The bars of one service, as money or, in the Return view, as shares of the period's capital. */
+/** The layers' bars, as money or, in the Return view, as shares of the period's capital. */
 function useBars(context: HomeContext) {
   const { home, view } = context;
   const { chart } = home;
-  const byService = new Map(chart.services.map((one) => [one.accountId, one]));
-  const layerOf = (service: HomeService) => {
-    const one = byService.get(service.accountId);
-    return view === "return" ? (one?.returns ?? []) : asNumbers(cents(one?.bars ?? []));
-  };
+  const layers = chartLayers(home);
+  const valuesOf = (layer: ChartLayer) =>
+    view === "return" ? layer.series.returns : asNumbers(cents(layer.series.bars));
   const line = view === "return" ? chart.cumulativeReturns : asNumbers(cents(chart.cumulative));
-  return { byService, layerOf, line };
+  return { layers, valuesOf, line };
 }
 
 /** The chart in words: the period's total, its best and worst bar, what each service added. */
 function useSummary(context: HomeContext, shownBar: (index: number) => string): string {
   const text = useTranslations("investments");
-  const { home, view, say, money, percent, name } = context;
+  const { home, view, say, money, percent, name, chip } = context;
+  const kpis = chipKpis(home, chip);
+  // «Stocks and crypto» says the services' P&L, as before; a chip with funds says its KPIs.
+  const services = chip === "stocks_crypto";
+  const drawn = new Set(home.chart.services.map((one) => one.accountId));
   const best = bestAndWorst(cents(home.chart.bars));
   const spot = (index: number) => `${intervalName(home.chart, index, say.locale)} (${shownBar(index)})`;
   const words = {
@@ -46,12 +48,19 @@ function useSummary(context: HomeContext, shownBar: (index: number) => string): 
     worst: best ? spot(best.worst) : NULL_DISPLAY,
   };
   if (view === "return")
-    return text("home.chart.returnSummary", { ...words, total: percent(home.pnl.modifiedDietz) });
+    return text("home.chart.returnSummary", {
+      ...words,
+      total: percent(services ? home.pnl.modifiedDietz : kpis?.rate),
+    });
   return text("home.chart.summary", {
     ...words,
-    total: home.pnl.parts === null ? NULL_DISPLAY : money(home.pnl.parts.pnl, { signed: true }),
+    total: services
+      ? home.pnl.parts === null
+        ? NULL_DISPLAY
+        : money(home.pnl.parts.pnl, { signed: true })
+      : money(kpis?.gain ?? null, { signed: true }),
     services: home.services
-      .filter((service) => service.pnl?.display)
+      .filter((service) => service.pnl?.display && drawn.has(service.accountId))
       .map((service) => `${service.name} ${money(service.pnl?.display?.pnl, { signed: true })}`)
       .join(", "),
   });
@@ -59,19 +68,19 @@ function useSummary(context: HomeContext, shownBar: (index: number) => string): 
 
 function BarsChart({ context }: { context: HomeContext }) {
   const text = useTranslations("investments");
-  const { home, view, say, money, percent, colorOf } = context;
+  const { home, view, say, money, percent } = context;
   const { chart } = home;
-  const { byService, layerOf, line } = useBars(context);
+  const { layers: drawn, valuesOf, line } = useBars(context);
   const returns = view === "return";
   const shownBar = (index: number) =>
     returns ? percent(chart.returns[index]) : money(chart.bars[index], { signed: true });
   const shownLine = (index: number) =>
     returns ? percent(chart.cumulativeReturns[index]) : money(chart.cumulative[index], { signed: true });
-  const layers = [...home.services].reverse().map((service) => ({
-    key: service.accountId,
-    label: service.name,
-    color: colorOf(service),
-    values: layerOf(service),
+  const layers = [...drawn].reverse().map((layer) => ({
+    key: layer.key,
+    label: layer.label,
+    color: layer.color,
+    values: valuesOf(layer),
   }));
   const stack = stackLayers(
     layers.map((layer) => layer.values),
@@ -97,14 +106,15 @@ function BarsChart({ context }: { context: HomeContext }) {
         label: intervalName(chart, index, say.locale),
         value: shownBar(index),
         note: text("home.chart.cumulative", { amount: shownLine(index) }),
-        rows: home.services
-          .filter((service) => (byService.get(service.accountId)?.bars[index] ?? null) !== null)
-          .map((service) => ({
-            label: service.name,
+        // A fund's month with no reading is no row: never a zero.
+        rows: drawn
+          .filter((layer) => (layer.series.bars[index] ?? null) !== null)
+          .map((layer) => ({
+            label: layer.label,
             value: returns
-              ? percent(layerOf(service)[index])
-              : money(byService.get(service.accountId)?.bars[index], { signed: true }),
-            color: colorOf(service),
+              ? percent(valuesOf(layer)[index])
+              : money(layer.series.bars[index], { signed: true }),
+            color: layer.color,
           })),
       }))}
       summary={summary}
@@ -114,16 +124,16 @@ function BarsChart({ context }: { context: HomeContext }) {
 
 function ValueChart({ context }: { context: HomeContext }) {
   const text = useTranslations("investments");
-  const { home, say, money, colorOf } = context;
+  const { home, say, money } = context;
   const { chart } = home;
-  const byService = new Map(chart.services.map((one) => [one.accountId, one]));
+  const layers = chartLayers(home);
   return (
     <StackedArea
-      layers={[...home.services].reverse().map((service) => ({
-        key: service.accountId,
-        label: service.name,
-        color: colorOf(service),
-        values: asNumbers(cents(byService.get(service.accountId)?.values ?? [])),
+      layers={[...layers].reverse().map((layer) => ({
+        key: layer.key,
+        label: layer.label,
+        color: layer.color,
+        values: asNumbers(cents(layer.series.values)),
       }))}
       total={asNumbers(cents(chart.values))}
       yLabels={axisLabels(cents(chart.values), say.format, 4, home.currency)}
@@ -131,12 +141,12 @@ function ValueChart({ context }: { context: HomeContext }) {
       hover={chart.valueDays.map((day, index) => ({
         label: formatDate(day, "long", say.locale),
         value: money(chart.values[index]),
-        rows: home.services
-          .filter((service) => (byService.get(service.accountId)?.values[index] ?? null) !== null)
-          .map((service) => ({
-            label: service.name,
-            value: money(byService.get(service.accountId)?.values[index]),
-            color: colorOf(service),
+        rows: layers
+          .filter((layer) => (layer.series.values[index] ?? null) !== null)
+          .map((layer) => ({
+            label: layer.label,
+            value: money(layer.series.values[index]),
+            color: layer.color,
           })),
       }))}
       summary={text("home.chart.valueSummary", { value: money(chart.values.at(-1) ?? null) })}

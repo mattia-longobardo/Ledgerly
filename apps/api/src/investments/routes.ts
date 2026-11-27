@@ -4,6 +4,7 @@
 // fixed-point decimals here, nowhere else. Hono tries the routes in order: `/investments/home`,
 // `/catalog` and `/connections` come before `/investments/{accountId}`.
 import type { Hono } from "hono";
+import type { z } from "zod";
 import { INVESTMENTS, INVESTMENTS_ROUTES, type RouteContract } from "@ledgerly/api-contract";
 import { accountsView } from "@ledgerly/domain/accounts";
 import {
@@ -28,6 +29,7 @@ import {
   plansOfEvents,
   linkTransfer,
   type PeriodParams,
+  pnlPeriodOf,
   QUANTITY_SCALE,
   reconcileHolding,
   recordOperation,
@@ -45,13 +47,13 @@ import {
 } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
-import { today } from "@ledgerly/domain/shared/dates";
+import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import { parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { holdingsOut, listOut } from "./dto";
 import { activityOut, homeOut, movementsOut, overviewOut } from "./pages";
 import { catalogOut, connectionOut, positionsOut } from "./tabs";
-import { fundsListOut, portfolioOut } from "./portfolio";
+import { fundLayers, fundsHomeOf, fundsListOut, portfolioJson, portfolioOf, portfolioOut } from "./portfolio";
 import { servePlans } from "./plan-routes";
 import { operationInput, readNewMarkets, servePortfolio, writeOperation } from "./portfolio-routes";
 import { decimal, notFound, refusing } from "./refusals";
@@ -106,6 +108,45 @@ function periodOf(ctx: Ctx, query: { period?: string; from?: string; to?: string
   return { period: period ?? null };
 }
 
+type HomeQuery = z.infer<(typeof investments.getInvestmentsHome)["query"]>;
+type Chip = NonNullable<HomeQuery["group"]>;
+
+/** The chart's first day for a chip: the earliest of its groups' first data. */
+const firstOfChip =
+  (chip: Chip, fundsFirstOn: CivilDate | null) =>
+  (services: CivilDate | null): CivilDate | null =>
+    [chip === "all" ? services : null, fundsFirstOn].filter((day) => day !== null).sort()[0] ?? null;
+
+/**
+ * The home of a period. Without `group` the chart of before, the services only; with it, the chip's
+ * layers from the chip's first data, on the scale of its KPIs.
+ */
+async function homeAnswer(ctx: Ctx, query: HomeQuery) {
+  const { group } = query;
+  const snapshot = await investmentsSnapshot(ctx);
+  const period = pnlPeriodOf(periodOf(ctx, query), snapshot.todayOn);
+  const funds =
+    group === undefined || group === "stocks_crypto"
+      ? undefined
+      : await fundsHomeOf(ctx, period, snapshot.todayOn);
+  const [home, pnl, { rows }] = await Promise.all([
+    investmentsHome(ctx, snapshot),
+    investmentsPnlView(ctx, period, snapshot, funds && firstOfChip(group!, funds.firstOn)),
+    accountsView(ctx, { months: 1 }),
+  ]);
+  const portfolio = await portfolioOf(ctx, { rows, portfolio: home, pnl, funds });
+  const parts = portfolioJson(portfolio);
+  if (group === undefined) return homeOut(home, pnl, parts);
+  const kpis = group === "all" ? portfolio.total : portfolio.groups.find((one) => one.group === group)?.kpis;
+  const currencyOf = new Map(rows.map((row) => [row.account.id, row.account.currency]));
+  return homeOut(home, pnl, parts, {
+    services: group !== "pension_funds",
+    funds: funds ? await fundLayers(ctx, funds, pnl, currencyOf) : [],
+    gainCents: kpis?.gainCents ?? null,
+    rate: kpis?.rate ?? null,
+  });
+}
+
 /** A service's detail and one view of its period, from one read of its book (INV-4). */
 async function withDetail<T>(
   ctx: Ctx,
@@ -135,16 +176,7 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   });
   serve(app, guard, INVESTMENTS.funds.listFunds, async ({ ctx }) => fundsListOut(ctx));
   // The literal paths first: `/investments/{accountId}` would take them.
-  serve(app, guard, investments.getInvestmentsHome, async ({ ctx, query }) => {
-    const period = periodOf(ctx, query);
-    const snapshot = await investmentsSnapshot(ctx);
-    const [home, pnl, { rows }] = await Promise.all([
-      investmentsHome(ctx, snapshot),
-      investmentsPnlView(ctx, period, snapshot),
-      accountsView(ctx, { months: 1 }),
-    ]);
-    return homeOut(home, pnl, await portfolioOut(ctx, { rows, portfolio: home, pnl }));
-  });
+  serve(app, guard, investments.getInvestmentsHome, async ({ ctx, query }) => homeAnswer(ctx, query));
   serve(app, guard, investments.getInvestmentsCatalog, async ({ ctx }) => catalogOut(await catalogView(ctx)));
   serve(app, guard, investments.getInvestmentHoldings, async ({ ctx, params }) =>
     holdingsOut(found(await serviceHoldings(ctx, params.accountId))),

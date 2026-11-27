@@ -273,3 +273,96 @@ describe("the one list of Investments", () => {
     expect(home.body.total).toMatchObject({ value: null, gain: null, rateReason: "none" });
   });
 });
+
+describe("the home's chart by chip", () => {
+  const known = (amounts: (string | null)[]) => amounts.filter((one): one is string => one !== null);
+  const home = (ctx: Ctx, query: string) => send(ctx, "GET", `/investments/home?${query}`);
+  const kpisOf = (body: Json, group: string) =>
+    group === "all" ? body.total : body.groups.find((one: Json) => one.id === group).kpis;
+
+  beforeEach(async () => {
+    // A second reading: the fund has a stretch of its own, in the month its reading of the 1st describes.
+    await funds.recordValuation(alice, fundId, { on: "2026-05-01", cents: 541_000n });
+  });
+
+  it("answers as before without group, and as the services' chip with it", async () => {
+    for (const period of ["period=all", "period=2026"]) {
+      const [plain, scoped] = await Promise.all([
+        home(alice, period),
+        home(alice, `${period}&group=stocks_crypto`),
+      ]);
+      expect(plain.status).toBe(200);
+      expect(plain.body.chart).not.toHaveProperty("funds");
+      expect(scoped.body.chart.funds).toEqual([]);
+      expect({ ...scoped.body, chart: { ...scoped.body.chart, funds: undefined } }).toEqual(plain.body);
+    }
+  });
+
+  it("draws the pension funds' chip with the funds only, from their first data", async () => {
+    const [plain, pension] = await Promise.all([
+      home(alice, "period=all"),
+      home(alice, "period=all&group=pension_funds"),
+    ]);
+    expect(pension.status).toBe(200);
+    const { chart, period } = pension.body;
+    const [exported] = await funds.fundsExport(alice);
+    expect(chart.services).toEqual([]);
+    expect(chart.funds.map((one: Json) => [one.fundId, one.accountId])).toEqual([
+      [fundId, exported.fund.valuationAccountId],
+    ]);
+    // The chart starts at the funds' first data, before the service's.
+    expect(period.firstOn < plain.body.period.firstOn).toBe(true);
+    expect(chart.intervals[0].from).toBe(period.span.from);
+    // Option A: the gain in the bar of the month the reading describes, a month with none empty.
+    const [layer] = chart.funds;
+    const april = chart.intervals.findIndex((one: Json) => one.from === "2026-04-01");
+    expect(layer.bars[april]).toBe("110.00");
+    expect(layer.bars.filter((one: string | null) => one === null).length).toBeGreaterThan(0);
+    expect(sum(known(layer.bars))).toBe(kpisOf(pension.body, "pension_funds").gain);
+    expect(sum(known(chart.bars))).toBe(kpisOf(pension.body, "pension_funds").gain);
+    // The running total ends on the chip's return; a month with no reading has no point.
+    expect(chart.cumulativeReturns.filter((one: number | null) => one !== null).at(-1)).toBeCloseTo(
+      kpisOf(pension.body, "pension_funds").rate,
+      5,
+    );
+    // The value holds each reading until the next one.
+    const value = (day: string) => layer.values[chart.valueDays.indexOf(day)];
+    expect([value("2026-03-31"), value("2026-04-30"), value("2026-05-31")]).toEqual([
+      "5300.00",
+      "5300.00",
+      "5410.00",
+    ]);
+    expect(chart.values).toEqual(layer.values);
+  });
+
+  it("draws All with a layer per service and per fund, adding up to the total gain", async () => {
+    const [pension, all] = await Promise.all([
+      home(alice, "period=all&group=pension_funds"),
+      home(alice, "period=all&group=all"),
+    ]);
+    const { chart } = all.body;
+    expect(chart.services.map((one: Json) => one.accountId)).toEqual([directa]);
+    expect(chart.funds.map((one: Json) => one.fundId)).toEqual([fundId]);
+    expect(all.body.period.firstOn).toBe(pension.body.period.firstOn);
+    expect(sum(known(chart.bars))).toBe(all.body.total.gain);
+    for (const group of ["stocks_crypto", "pension_funds"]) {
+      const layers = group === "stocks_crypto" ? chart.services : chart.funds;
+      const bars = layers.flatMap((one: Json) => known(one.bars));
+      expect(sum(bars)).toBe(kpisOf(all.body, group).gain);
+    }
+    const last = chart.valueDays.length - 1;
+    expect(chart.values[last]).toBe(sum([chart.services[0].values[last], chart.funds[0].values[last]]));
+  });
+
+  it("gives an empty chart to a chip with no data, and refuses a chip it does not know", async () => {
+    const bob = contextFor((await createTestUser()).id);
+    for (const group of ["pension_funds", "all"]) {
+      const empty = await home(bob, `period=all&group=${group}`);
+      expect(empty.status).toBe(200);
+      expect(empty.body.chart.funds).toEqual([]);
+      expect(empty.body.chart.services).toEqual([]);
+      expect(known(empty.body.chart.bars)).toEqual([]);
+    }
+    expect((await home(alice, "period=all&group=pac")).status).toBe(400);
+  });
+});
