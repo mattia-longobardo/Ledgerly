@@ -15,6 +15,7 @@ const INVALID = new Set([
   "invalid_credentials",
   "unsupported_currency",
   "invalid",
+  "plan_model_retired",
 ]);
 
 /** A missing service, with the words the MCP tool `get_investment_holdings` has always said. */

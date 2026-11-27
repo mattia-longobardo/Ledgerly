@@ -38,7 +38,9 @@ export type InvestmentErrorCode =
   | "before_positions"
   | "not_a_transfer"
   // A sale of more than the quantity held that day (R5d).
-  | "quantity_exceeded";
+  | "quantity_exceeded"
+  // A write of the R5d model on a basket plan (PERS-681): «Record the past instalments».
+  | "plan_model_retired";
 
 export class InvestmentError extends Error {
   constructor(readonly code: InvestmentErrorCode) {

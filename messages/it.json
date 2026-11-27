@@ -5447,7 +5447,8 @@
       "every": {
         "week": "{interval, plural, one {ogni settimana di {day}} other {ogni # settimane di {day}}}",
         "month": "{interval, plural, one {ogni mese il giorno {day}} other {ogni # mesi il giorno {day}}}",
-        "quarter": "{interval, plural, one {ogni trimestre il giorno {day}} other {ogni # trimestri il giorno {day}}}"
+        "quarter": "{interval, plural, one {ogni trimestre il giorno {day}} other {ogni # trimestri il giorno {day}}}",
+        "day": "{interval, plural, one {ogni giorno lavorativo} other {ogni # giorni lavorativi}}"
       },
       "weekdays": {
         "1": "lunedì",
@@ -5461,7 +5462,8 @@
       "frequencies": {
         "week": "Settimanale",
         "month": "Mensile",
-        "quarter": "Trimestrale"
+        "quarter": "Trimestrale",
+        "day": "Giornaliero"
       },
       "actions": "Comandi di {name}",
       "edit": "Modifica",
@@ -5486,14 +5488,17 @@
         "negative_cash": "Liquidità insufficiente. Registra un versamento, poi confermala.",
         "quantity_exceeded": "La quantità supera quella che puoi comprare: controllala, poi conferma.",
         "wrong_mode": "La posizione è tenuta per valore: confermala a mano.",
-        "before_period": "Il giorno è prima del periodo che puoi modificare: correggi il giorno, poi conferma."
+        "before_period": "Il giorno è prima del periodo che puoi modificare: correggi il giorno, poi conferma.",
+        "market_closed": "Quel giorno la borsa era chiusa: saltata, il suo importo non si aggiunge.",
+        "amount_missing": "Il piano non ha ancora un importo: inseriscilo."
       },
       "runStates": {
         "pending": "In scadenza",
         "waiting_price": "Senza prezzo",
         "proposed": "Da confermare",
         "recorded": "Registrata",
-        "skipped": "Saltata"
+        "skipped": "Saltata",
+        "expired": "Scaduta"
       },
       "proposal": "{quantity} × {price} = {amount} · commissione {fee}",
       "priceOnly": "Prezzo {price}",
@@ -6553,7 +6558,8 @@
       "fund_to_verify": "Fondo da verificare",
       "plan_run_to_confirm": "Rata di un piano da confermare",
       "plan_run_no_cash": "Rata di un piano senza liquidità",
-      "plan_run_price_missing": "Rata di un piano senza prezzo"
+      "plan_run_price_missing": "Rata di un piano senza prezzo",
+      "plan_amount_missing": "Piano senza importo"
     },
     "todo": {
       "connection_failed": "Un collegamento non legge più. Riparalo.",
@@ -6566,6 +6572,7 @@
       "plan_run_to_confirm": "La rata di un piano del {date} è da confermare",
       "plan_run_no_cash": "La rata di un piano del {date} non ha liquidità. Registra un versamento, poi confermala.",
       "plan_run_price_missing": "La rata di un piano del {date} non ha ancora un prezzo. Scrivilo tu.",
+      "plan_amount_missing": "Un piano di acquisto non ha ancora un importo. Inseriscilo.",
       "account_low_balance": "Un conto è sotto la sua soglia",
       "budget_threshold": "Un budget ha raggiunto il {percent}%",
       "monthly_summary": "Il riepilogo mensile è pronto"

@@ -6,14 +6,17 @@ import type { z } from "zod";
 import { INVESTMENTS } from "@ledgerly/api-contract";
 import {
   backfillPlan,
+  confirmBasketRun,
   confirmRun,
-  createPlan,
+  createBasketPlan,
   linkRunDebit,
   listPastRuns,
   listPlans,
   listRuns,
   type PastRuns,
   type PlanView,
+  type PreviewLine,
+  previewRun,
   PRICE_SCALE,
   QUANTITY_SCALE,
   RATE_SCALE,
@@ -34,6 +37,20 @@ import { cents, decimal, refusing } from "./refusals";
 const { plans } = INVESTMENTS;
 
 type FeeBody = z.output<typeof plans.createPlan.body>["fee"];
+type InstrumentsBody = z.output<typeof plans.createPlan.body>["instruments"];
+
+/** A weight in percent ("33.33") is basis points in the domain (3333). */
+const weightBp = (weight: string) => Number(parseDecimal(weight, 2));
+const weightOut = (basisPoints: number) => formatDecimal(BigInt(basisPoints), 2);
+const instrumentsOf = (rows: InstrumentsBody) =>
+  rows.map((row) => ({
+    asset:
+      "assetId" in row
+        ? { id: row.assetId }
+        : { instrument: { instrumentId: row.instrumentId, mic: row.mic } },
+    weightBp: weightBp(row.weight),
+  }));
+const cents2 = (value: bigint | null) => (value === null ? null : centsToDecimal(value));
 
 /** A numeric column, as the contract writes it: "2.5", never "2.500000000000". */
 const plain = (value: string | null, scale: number) =>
@@ -59,14 +76,16 @@ const proposalOut = (proposal: Proposal | null) =>
         fee: centsToDecimal(proposal.feeCents),
       };
 
-function planOut({ plan, asset, nextDueOn, toConfirm, waitingPrice }: PlanView) {
+function planOut(view: PlanView) {
+  const { plan, asset, nextDueOn, toConfirm, waitingPrice } = view;
   const noFee = plan.feeCents === null && plan.feeRate === null;
+  const basket = plan.model === "basket";
   return {
     id: plan.id,
     name: plan.name,
     asset: { id: asset.id, name: asset.name, instrumentId: asset.instrumentId, mic: asset.mic },
-    currency: asset.currency,
-    amount: maybe(plan.amountCents),
+    currency: view.currency,
+    amount: maybe(basket ? plan.executionAmountCents : plan.amountCents),
     quantity: plain(plan.quantity, QUANTITY_SCALE),
     fractions: plan.fractions,
     frequency: plan.frequency,
@@ -82,10 +101,49 @@ function planOut({ plan, asset, nextDueOn, toConfirm, waitingPrice }: PlanView) 
     nextDueOn,
     toConfirm,
     waitingPrice,
+    model: plan.model,
+    instruments: [...view.instruments]
+      .sort((left, right) => right.weightBp - left.weightBp)
+      .map((one) => ({
+        assetId: one.id,
+        name: one.name,
+        instrumentId: one.instrumentId,
+        mic: one.mic,
+        weight: weightOut(one.weightBp),
+      })),
+    carry: centsToDecimal(view.carryCents),
   };
 }
 
-function runOut({ run, currency, proposal, eventId, debit }: RunView) {
+type Line = RunView["lines"][number];
+const lineOut = (line: Line) => ({
+  assetId: line.assetId,
+  name: line.name,
+  weight: weightOut(line.weightBp),
+  price: plain(line.price, PRICE_SCALE),
+  priceCurrency: line.priceCurrency,
+  priceOn: line.priceOn,
+  fxRate: plain(line.fxRate, RATE_SCALE),
+  target: centsToDecimal(line.targetCents),
+  quantity: plain(line.quantity, QUANTITY_SCALE) ?? "0",
+  spent: centsToDecimal(line.spentCents),
+  state: line.state,
+  eventId: line.eventId,
+});
+
+const previewLineOut = (line: PreviewLine, name: string) => ({
+  assetId: line.assetId,
+  name,
+  weight: weightOut(line.weightBp),
+  price: line.unitPrice === null ? null : formatDecimal(line.unitPrice, PRICE_SCALE),
+  fxRate: line.rate === null ? null : formatDecimal(line.rate, RATE_SCALE),
+  target: centsToDecimal(line.targetCents),
+  quantity: formatDecimal(line.quantity, QUANTITY_SCALE),
+  spent: centsToDecimal(line.spentCents),
+  state: line.state,
+});
+
+function runOut({ run, currency, proposal, eventId, debit, lines }: RunView) {
   return {
     id: run.id,
     dueOn: run.dueOn,
@@ -109,6 +167,10 @@ function runOut({ run, currency, proposal, eventId, debit }: RunView) {
           },
     eventId,
     automatic: run.recordedBy === "job",
+    budget: cents2(run.budgetCents),
+    carryIn: cents2(run.carryInCents),
+    carryOut: cents2(run.carryOutCents),
+    lines: lines.map(lineOut),
   };
 }
 
@@ -128,21 +190,25 @@ function pastRunsOut(planId: string, past: PastRuns) {
 
 function serveWrites(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, plans.createPlan, async ({ ctx, params, body }) => {
-    const { instrumentId, mic, amount, quantity, fee, ...schedule } = body;
+    const { amount, instruments, fee, ...schedule } = body;
     return refusing(() =>
-      createPlan(ctx, params.accountId, {
+      createBasketPlan(ctx, params.accountId, {
         ...schedule,
-        instrument: { instrumentId, mic },
-        amountCents: cents(amount),
-        quantity: decimal(quantity, QUANTITY_SCALE),
+        amountCents: cents(amount) ?? 0n,
+        instruments: instrumentsOf(instruments),
         ...feeOf(fee),
       }),
     );
   });
   serve(app, guard, plans.updatePlan, async ({ ctx, params, body }) => {
-    const { fee, ...rest } = body;
+    const { fee, amount, instruments, ...rest } = body;
     await refusing(() =>
-      updatePlan(ctx, params.accountId, params.planId, { ...rest, ...(fee === undefined ? {} : feeOf(fee)) }),
+      updatePlan(ctx, params.accountId, params.planId, {
+        ...rest,
+        ...(fee === undefined ? {} : feeOf(fee)),
+        ...(amount === undefined ? {} : { amountCents: cents(amount) ?? 0n }),
+        ...(instruments === undefined ? {} : { instruments: instrumentsOf(instruments) }),
+      }),
     );
   });
   serve(app, guard, plans.listPastRuns, async ({ ctx, params }) =>
@@ -169,7 +235,40 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard): void {
     planId: params.planId,
     runs: (await refusing(() => listRuns(ctx, params.accountId, params.planId))).map(runOut),
   }));
+  serve(app, guard, plans.previewPlanRun, async ({ ctx, params, body }) => {
+    const preview = await refusing(() =>
+      previewRun(ctx, params, {
+        lines: body.lines.map((line) => ({
+          assetId: line.assetId,
+          unitPrice: decimal(line.unitPrice ?? null, PRICE_SCALE) ?? undefined,
+          quantity: decimal(line.quantity ?? null, QUANTITY_SCALE) ?? undefined,
+        })),
+      }),
+    );
+    return {
+      runId: preview.run.id,
+      currency: preview.currency,
+      budget: centsToDecimal(preview.run.budgetCents ?? 0n),
+      spent: centsToDecimal(preview.spentCents),
+      carryOut: centsToDecimal(preview.carryOutCents),
+      lines: preview.lines.map((line) => previewLineOut(line, preview.names.get(line.assetId) ?? "")),
+    };
+  });
   serve(app, guard, plans.confirmPlanRun, async ({ ctx, params, body }) => {
+    if (body.lines !== undefined) {
+      const { eventIds } = await refusing(() =>
+        confirmBasketRun(ctx, params, {
+          on: body.on,
+          lines: (body.lines ?? []).map((line) => ({
+            assetId: line.assetId,
+            quantity: parseDecimal(line.quantity, QUANTITY_SCALE),
+            unitPrice: parseDecimal(line.unitPrice, PRICE_SCALE),
+            feeCents: cents(line.fee ?? null) ?? undefined,
+          })),
+        }),
+      );
+      return { id: eventIds[0], ids: eventIds };
+    }
     const { eventId } = await refusing(() =>
       confirmRun(ctx, params, {
         on: body.on,
@@ -178,7 +277,7 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard): void {
         feeCents: cents(body.fee ?? null) ?? undefined,
       }),
     );
-    return { id: eventId };
+    return { id: eventId, ids: [eventId] };
   });
   serve(app, guard, plans.linkPlanRunDebit, async ({ ctx, params }) => {
     await refusing(() => linkRunDebit(ctx, params.accountId, params.planId, params.runId));

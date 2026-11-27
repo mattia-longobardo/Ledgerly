@@ -112,7 +112,7 @@
    {
     "name": "list_investment_plans",
     "title": "Investment plans",
-    "description": "The purchase plans (PAC) of one manual portfolio, as GET /api/v1/investments/{accountId}/plans: the instrument, the amount or quantity of each instalment, how often, the next due date, the mode (proposed for confirmation, or automatic) and how many instalments wait to be confirmed or priced. Read only. Take the account id from list_investments.",
+    "description": "The purchase plans (PAC) of one manual portfolio, as GET /api/v1/investments/{accountId}/plans: for a basket plan its instruments with their weight in percent, the amount of each execution (null: to type), the carry to the next execution; how often, the next due date and how many executions wait to be confirmed or priced. Read only. Take the account id from list_investments.",
     "inputSchema": {
      "$schema": "http://json-schema.org/draft-07/schema#",
      "type": "object",

@@ -19,6 +19,8 @@ import {
   planBody,
   planUpdateBody,
   plansList,
+  previewBody,
+  previewOut,
   RUN_ID,
   runsList,
 } from "./plan-schemas";
@@ -43,9 +45,9 @@ export const listPlans = defineRoute({
     title: "Investment plans",
     description:
       "The purchase plans (PAC) of one manual portfolio, as GET /api/v1/investments/{accountId}/plans: " +
-      "the instrument, the amount or quantity of each instalment, how often, the next due date, the mode " +
-      "(proposed for confirmation, or automatic) and how many instalments wait to be confirmed or priced. " +
-      "Read only. Take the account id from list_investments.",
+      "for a basket plan its instruments with their weight in percent, the amount of each execution " +
+      "(null: to type), the carry to the next execution; how often, the next due date and how many " +
+      "executions wait to be confirmed or priced. Read only. Take the account id from list_investments.",
     arguments: { account_id: z.uuid().describe("The portfolio's accountId, from list_investments.") },
     pathArguments: { accountId: "account_id" },
   },
@@ -59,9 +61,11 @@ export const createPlan = defineRoute({
   scope: "write",
   capability: "investments",
   summary:
-    "A purchase plan of a manual portfolio: one instrument, an amount or a quantity, a frequency and a day. " +
-    "`not_eligible` on a service that is not a manual portfolio. A start in the past leaves its due dates " +
-    "to «Record the past instalments».",
+    "A basket purchase plan of a manual portfolio (PERS-681): 1-10 instruments whose weights make 100, " +
+    "the amount of each execution in the portfolio's currency (fees on top), every N working days, weeks " +
+    "or months, from today or later. Each due date proposes whole shares to confirm; what is not spent " +
+    "goes to the next execution. `not_eligible` on a service that is not a manual portfolio; `invalid` " +
+    "for weights that do not make 100, an instrument twice, a start in the past or the body of R5d.",
   actions: [],
   params: byService,
   body: planBody,
@@ -71,12 +75,12 @@ export const createPlan = defineRoute({
   example: {
     params: { accountId: ACCOUNT_ID },
     body: {
-      name: "Monthly world ETF",
-      instrumentId: INSTRUMENT_ID,
-      mic: "XMIL",
-      amount: "100.00",
-      quantity: null,
-      fractions: true,
+      name: "Monthly ETFs",
+      amount: "200.00",
+      instruments: [
+        { instrumentId: INSTRUMENT_ID, mic: "XMIL", weight: "60" },
+        { assetId: "091a2b3c-4d5e-4f60-9172-1a2b3c4d5e6f", weight: "40" },
+      ],
       frequency: "month",
       interval: 1,
       day: 5,
@@ -85,7 +89,6 @@ export const createPlan = defineRoute({
       runsLimit: null,
       debitAccountId: null,
       fee: { amount: "2.95", rate: null },
-      mode: "propose",
     },
     response: { id: PLAN_ID },
   },
@@ -98,8 +101,10 @@ export const updatePlan = defineRoute({
   scope: "write",
   capability: "investments",
   summary:
-    "Changes a plan: its name, its mode, its end, its debit account or its fee; pauses it, starts it again " +
-    "or ends it. The instalments already written stay as they are.",
+    "Changes a plan: its name, its end, its debit account or its fee; for a basket also its amount, its " +
+    "instruments and its cadence, from the next execution (a proposal open stays as it is; a new cadence, " +
+    "or the first amount of a converted plan, starts from today). Pauses it, starts it again or ends it. " +
+    "The executions already written stay as they are.",
   actions: [],
   params: byPlan,
   body: planUpdateBody,
@@ -145,6 +150,66 @@ export const listPlanRuns = defineRoute({
           debit: null,
           eventId: null,
           automatic: false,
+          budget: "224.75",
+          carryIn: "24.75",
+          carryOut: null,
+          lines: [
+            {
+              assetId: "091a2b3c-4d5e-4f60-9172-1a2b3c4d5e6f",
+              name: "An ETF",
+              weight: "100",
+              price: "37.12",
+              priceCurrency: "EUR",
+              priceOn: "2026-11-05",
+              fxRate: null,
+              target: "224.75",
+              quantity: "6",
+              spent: "222.72",
+              state: "buy",
+              eventId: null,
+            },
+          ],
+        },
+      ],
+    },
+  },
+});
+
+export const previewPlanRun = defineRoute({
+  id: "preview_investment_plan_run",
+  method: "POST",
+  path: "/investments/{accountId}/plans/{planId}/runs/{runId}/preview",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "A basket's proposal with the prices and the shares typed (PERS-681 §2.4): a price typed alone gives the " +
+    "whole shares its part buys at it; shares typed win. The one place of the computation; nothing is " +
+    "written. `not_editable` on an execution that is not proposed or on a plan of R5d.",
+  actions: [],
+  params: byRun,
+  body: previewBody,
+  response: previewOut,
+  errors: INVESTMENT_ERRORS,
+  example: {
+    params: { accountId: ACCOUNT_ID, planId: PLAN_ID, runId: RUN_ID },
+    body: { lines: [{ assetId: "091a2b3c-4d5e-4f60-9172-1a2b3c4d5e6f", unitPrice: "37.5" }] },
+    response: {
+      runId: RUN_ID,
+      currency: "EUR",
+      budget: "224.75",
+      spent: "187.50",
+      carryOut: "37.25",
+      lines: [
+        {
+          assetId: "091a2b3c-4d5e-4f60-9172-1a2b3c4d5e6f",
+          name: "An ETF",
+          weight: "100",
+          price: "37.5",
+          fxRate: null,
+          target: "224.75",
+          quantity: "5",
+          spent: "187.50",
+          state: "buy",
         },
       ],
     },
@@ -159,18 +224,21 @@ export const confirmPlanRun = defineRoute({
   capability: "investments",
   summary:
     "Confirms a proposed instalment, or one waiting for a price, with the corrections typed: the purchase is " +
-    "written as by hand, never a deposit (P1). `negative_cash` and `quantity_exceeded` as for any purchase " +
-    "(record a deposit first); `not_editable` on an instalment already recorded or skipped.",
+    "written as by hand, never a deposit (P1). A basket's proposal takes `lines` (every line, each once): " +
+    "one purchase a line with shares, all of them or none, and what is not spent goes to the next " +
+    "execution. `negative_cash` and `quantity_exceeded` as for any purchase (record a deposit first; " +
+    "nothing is written); `not_editable` on an instalment already recorded, skipped or expired.",
   actions: [],
   params: byRun,
   body: confirmBody,
-  response: z.object({ id: id() }),
+  /** The purchase written (the first of a basket), and every one. */
+  response: z.object({ id: id(), ids: z.array(id()) }),
   status: 201,
   errors: INVESTMENT_ERRORS,
   example: {
     params: { accountId: ACCOUNT_ID, planId: PLAN_ID, runId: RUN_ID },
     body: { unitPrice: "37.05" },
-    response: { id: EVENT_ID },
+    response: { id: EVENT_ID, ids: [EVENT_ID] },
   },
 });
 
@@ -197,7 +265,9 @@ export const skipPlanRun = defineRoute({
   path: "/investments/{accountId}/plans/{planId}/runs/{runId}/skip",
   scope: "write",
   capability: "investments",
-  summary: "Skips an instalment: it stays in the list as skipped, and nothing brings it back by itself.",
+  summary:
+    "Skips an instalment: it stays in the list as skipped, and nothing brings it back by itself. A basket's " +
+    "execution carries its whole budget to the next one.",
   actions: [],
   params: byRun,
   response: null,
@@ -255,7 +325,8 @@ export const backfillPlan = defineRoute({
     `given, at most ${MAX_BACKFILL_RUNS}, all of them or none. A due date already recorded: \`not_editable\`. ` +
     "A date before the portfolio was made moves its start back to that date (with the deposits before " +
     "it); `before_positions` when the portfolio's days before were a value only («Switch to positions», " +
-    "or an account that had a balance).",
+    "or an account that had a balance). A basket plan has no past executions: `invalid` " +
+    "(`plan_model_retired`), a past purchase is recorded by hand.",
   actions: [],
   params: byPlan,
   body: backfillBody,

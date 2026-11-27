@@ -515,6 +515,7 @@ const INVESTMENT_CODES: Record<InvestmentErrorCode | SyncErrorCode, true> = {
   before_positions: true,
   not_a_transfer: true,
   quantity_exceeded: true,
+  plan_model_retired: true,
   unknown_provider: true,
   invalid_credentials: true,
   not_read_only: true,

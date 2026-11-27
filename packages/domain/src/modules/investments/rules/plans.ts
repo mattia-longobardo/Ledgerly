@@ -9,8 +9,8 @@ import {
   monthKey,
 } from "../../../shared/dates";
 import type { Cents } from "../../../shared/money";
-import { PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE, positionCents } from "./vocabulary";
-import type { PlanFrequency } from "./vocabulary";
+import { atRate, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE, positionCents, WEIGHT_WHOLE } from "./vocabulary";
+import type { PlanFrequency, PlanLineState } from "./vocabulary";
 
 /** At most this many due dates the job adds after a stop (§11.3.2): the oldest are left to the person. */
 export const MAX_CATCH_UP = 12;
@@ -31,6 +31,15 @@ export interface PlanSchedule {
 
 /** The k-th date of the schedule from its anchor (k = 0, 1, …), before the start's filter. */
 function nthDate(plan: PlanSchedule, index: number): CivilDate {
+  if (plan.frequency === "day") {
+    // Monday to Friday only (PERS-681): the first working day on or after the start, then every
+    // `interval` working days. Weekdays are counted from Monday (0) to Friday (4).
+    const startDay = dayOfWeek(plan.startOn);
+    const first = addDays(plan.startOn, startDay === 6 ? 2 : startDay === 0 ? 1 : 0);
+    const offset = dayOfWeek(first) - 1;
+    const position = offset + index * plan.interval;
+    return addDays(first, 7 * Math.floor(position / 5) + (position % 5) - offset);
+  }
   if (plan.frequency === "week") {
     // The first `day` of the week on or after the start, then every `interval` weeks.
     const shift = (plan.day % 7) - dayOfWeek(plan.startOn);
@@ -97,4 +106,67 @@ export function instalment(
   const quantity = plan.quantity ?? quantityFor(plan.amountCents ?? 0n, unitPrice, plan.fractions);
   const spentCents = positionCents(quantity, unitPrice);
   return { quantity, spentCents, feeCents: planFee(plan.fee, spentCents) };
+}
+
+/** A line of a basket's execution as the allocation reads it (PERS-681 §2.1). */
+export interface AllocationInput {
+  assetId: string;
+  /** Basis points of the budget (1-10000, all of them 10000). */
+  weightBp: number;
+  /** The close, in the asset's currency at `PRICE_SCALE`; null with no price (or no rate) yet. */
+  unitPrice: bigint | null;
+  /** Units of the plan's currency one unit of the asset's is worth, at `RATE_SCALE`; null: the same currency. */
+  rate: bigint | null;
+}
+
+export interface AllocationLine extends AllocationInput {
+  targetCents: Cents;
+  /** Whole shares, at `QUANTITY_SCALE`. */
+  quantity: bigint;
+  /** What the shares cost, in cents of the plan's currency. */
+  spentCents: Cents;
+  state: PlanLineState;
+}
+
+export interface Allocation {
+  lines: AllocationLine[];
+  spentCents: Cents;
+  carryOutCents: Cents;
+}
+
+/** What `quantity` of an asset costs at `unitPrice`, in cents of the plan's currency (rounded once). */
+export function spentAt(quantity: bigint, unitPrice: bigint, rate: bigint | null): Cents {
+  const native = positionCents(quantity, unitPrice);
+  return rate === null ? native : atRate(native, rate);
+}
+
+/**
+ * The whole shares a budget buys of each instrument of a basket (PERS-681 §2.2): its part of the
+ * budget rounded down, then the shares that part pays rounded down. A share that costs more than
+ * the part skips the line (M2). What is not spent is the carry of the next execution (M1); no
+ * second round in this one. Fees are outside the budget (D1). Never spends more than the budget.
+ */
+export function allocateWholeShares(budgetCents: Cents, lines: readonly AllocationInput[]): Allocation {
+  const budget = budgetCents > 0n ? budgetCents : 0n;
+  const one = 10n ** BigInt(QUANTITY_SCALE);
+  const allocated = lines.map((line): AllocationLine => {
+    const targetCents = (budget * BigInt(line.weightBp)) / BigInt(WEIGHT_WHOLE);
+    if (line.unitPrice === null || line.unitPrice <= 0n) {
+      return { ...line, targetCents, quantity: 0n, spentCents: 0n, state: "price_missing" };
+    }
+    // One share in cents of the plan's currency is unitPrice × rate × 100 / 10^(PRICE + RATE).
+    const rate = line.rate ?? 10n ** BigInt(RATE_SCALE);
+    const shares = (targetCents * 10n ** BigInt(PRICE_SCALE + RATE_SCALE)) / (line.unitPrice * rate * 100n);
+    const quantity = shares * one;
+    if (shares === 0n) return { ...line, targetCents, quantity, spentCents: 0n, state: "too_expensive" };
+    return {
+      ...line,
+      targetCents,
+      quantity,
+      spentCents: spentAt(quantity, line.unitPrice, line.rate),
+      state: "buy",
+    };
+  });
+  const spentCents = allocated.reduce((sum, line) => sum + line.spentCents, 0n);
+  return { lines: allocated, spentCents, carryOutCents: budget - spentCents };
 }

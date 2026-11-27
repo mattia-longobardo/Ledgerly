@@ -127,13 +127,21 @@ export function unitPriceOf(cents: Cents, quantity: bigint): bigint {
 
 // ——— Purchase plans (R5d, step 2; 11-standardization.md §11.3) ———————————————————————————————
 
-export const PLAN_FREQUENCIES = ["week", "month", "quarter"] as const;
+export const PLAN_FREQUENCIES = ["day", "week", "month", "quarter"] as const;
 export type PlanFrequency = (typeof PLAN_FREQUENCIES)[number];
 export const PLAN_MODES = ["propose", "auto"] as const;
 export type PlanMode = (typeof PLAN_MODES)[number];
 export const PLAN_STATES = ["active", "paused", "ended"] as const;
 export type PlanState = (typeof PLAN_STATES)[number];
-export const PLAN_RUN_STATES = ["pending", "waiting_price", "proposed", "recorded", "skipped"] as const;
+/** `expired`: a proposal still open when the next due date came (PERS-681 §4.3). */
+export const PLAN_RUN_STATES = [
+  "pending",
+  "waiting_price",
+  "proposed",
+  "recorded",
+  "skipped",
+  "expired",
+] as const;
 export type PlanRunState = (typeof PLAN_RUN_STATES)[number];
 /** Why the job left an `auto` instalment to the person (P2): a refusal of the purchase. */
 export const PLAN_RUN_REASONS = [
@@ -141,6 +149,19 @@ export const PLAN_RUN_REASONS = [
   "quantity_exceeded",
   "wrong_mode",
   "before_period",
+  // A basket plan (PERS-681): a working day with no close of its own, and a converted plan with no amount.
+  "market_closed",
+  "amount_missing",
 ] as const;
 export type PlanRunReason = (typeof PLAN_RUN_REASONS)[number];
 export const PLAN_RECORDERS = ["person", "job"] as const;
+/** `single`: a plan of R5d, one asset; `basket`: several, by weight, whole shares only (PERS-681). */
+export const PLAN_MODELS = ["single", "basket"] as const;
+export type PlanModel = (typeof PLAN_MODELS)[number];
+/** What a line of a basket's execution buys: shares, none (one costs more than its part), or none yet (no price). */
+export const PLAN_LINE_STATES = ["buy", "too_expensive", "price_missing"] as const;
+export type PlanLineState = (typeof PLAN_LINE_STATES)[number];
+/** A basket plan's weights are basis points: 10000 is the whole amount. */
+export const WEIGHT_WHOLE = 10_000;
+/** A basket plan buys at most this many instruments. */
+export const MAX_PLAN_INSTRUMENTS = 10;

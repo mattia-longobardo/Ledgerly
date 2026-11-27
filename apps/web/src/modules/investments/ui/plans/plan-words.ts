@@ -25,6 +25,7 @@ export const RUN_TONES: Readonly<Record<Run["state"], StatusTone>> = {
   proposed: "accent",
   recorded: "pos",
   skipped: "neutral",
+  expired: "neutral",
 };
 
 /** An amount of the wire («100.00») in its currency, with the person's separators and two decimals. */

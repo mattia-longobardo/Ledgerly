@@ -4,14 +4,21 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
-import { today } from "../../../shared/dates";
+import { type CivilDate, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { civilDate } from "../../../shared/inputs";
 import { PORTFOLIO_PROVIDER } from "../catalog";
 import { PLAN_FREQUENCIES, PLAN_MODES, PLAN_STATES, QUANTITY_SCALE, RATE_SCALE } from "../rules";
-import { investmentEvents, investmentOperations, investmentPlanRuns, investmentPlans } from "../schema";
-import { assetOfInstrument } from "./assets";
+import {
+  investmentEvents,
+  investmentOperations,
+  investmentPlanRunLines,
+  investmentPlanRuns,
+  investmentPlans,
+} from "../schema";
+import { assetOfInstrument, requireAsset } from "./assets";
+import { BASKET_FREQUENCIES, instrumentsSchema, writeInstruments } from "./plan-instruments";
 import { lockInvestmentAccount, requireInvestmentAccount } from "./book";
 import { optionalNote, positive } from "./events";
 import { fromNumeric, InvestmentError, translated, type WriteCtx } from "./types";
@@ -50,8 +57,34 @@ const planInputSchema = z
   .refine((plan) => plan.feeCents === null || plan.feeRate === null, "A fee amount or a rate");
 export type PlanInput = z.input<typeof planInputSchema>;
 
+const basketSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    amountCents: positive,
+    instruments: instrumentsSchema,
+    frequency: z.enum(BASKET_FREQUENCIES),
+    interval: z.number().int().min(1).max(12).default(1),
+    day: z.number().int().min(1).max(31).default(1),
+    startOn: civilDate(),
+    endOn: civilDate().nullable().default(null),
+    runsLimit: z.number().int().min(1).max(600).nullable().default(null),
+    debitAccountId: z.uuid().nullable().default(null),
+    feeCents: z.bigint().nonnegative().nullable().default(null),
+    feeRate: z.bigint().nonnegative().nullable().default(null),
+  })
+  .refine((plan) => plan.endOn === null || plan.runsLimit === null, "An end day or a number of executions")
+  .refine((plan) => plan.frequency !== "week" || plan.day <= 7, "A day of the week is 1-7")
+  .refine((plan) => plan.feeCents === null || plan.feeRate === null, "A fee amount or a rate");
+type BasketInput = z.input<typeof basketSchema>;
+
 const planUpdateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
+  // A basket only (PERS-681): its amount, its instruments and its cadence, from the next execution.
+  amountCents: positive.optional(),
+  instruments: instrumentsSchema.optional(),
+  frequency: z.enum(BASKET_FREQUENCIES).optional(),
+  interval: z.number().int().min(1).max(12).optional(),
+  day: z.number().int().min(1).max(31).optional(),
   mode: z.enum(PLAN_MODES).optional(),
   state: z.enum(PLAN_STATES).optional(),
   endOn: civilDate().nullable().optional(),
@@ -107,6 +140,59 @@ export async function createPlan(
   });
 }
 
+/**
+ * A basket plan (PERS-681 §3.1): 1-10 instruments by weight, an amount of each execution in the
+ * portfolio's currency, whole shares, proposals only (M3). It starts today or later: no execution
+ * in the past for a new plan.
+ */
+export async function createBasketPlan(
+  ctx: WriteCtx,
+  accountId: string,
+  input: BasketInput,
+): Promise<{ id: string }> {
+  const parsed = basketSchema.parse(input);
+  const todayOn = today(ctx.timeZone);
+  if (parsed.startOn < todayOn) throw new RangeError("A plan starts today or later");
+  await requireDebitAccount(ctx, parsed.debitAccountId);
+  return getDb().transaction(async (transaction) => {
+    const investment = await requirePortfolio(ctx, accountId, transaction);
+    await lockInvestmentAccount(ctx, accountId, transaction);
+    const { instruments, feeRate, amountCents, ...schedule } = parsed;
+    // The R5d columns hold the heaviest instrument and the amount: the image before reads every row.
+    const first = await heaviestAsset(ctx, transaction, instruments);
+    const [row] = await transaction
+      .insert(investmentPlans)
+      .values(
+        userScoped(ctx).stamp({
+          ...schedule,
+          feeRate: feeRate === null ? null : fromBigint(feeRate, RATE_SCALE),
+          investmentAccountId: investment.id,
+          assetId: first,
+          amountCents,
+          fractions: false,
+          mode: "propose" as const,
+          model: "basket" as const,
+          executionAmountCents: amountCents,
+          createdOn: todayOn,
+        }),
+      )
+      .returning({ id: investmentPlans.id });
+    await writeInstruments(ctx, transaction, row.id, instruments);
+    return { id: row.id };
+  });
+}
+
+/** The asset of the heaviest instrument typed, made when missing, before the plan exists. */
+async function heaviestAsset(
+  ctx: Pick<Ctx, "userId">,
+  transaction: Tx,
+  instruments: z.output<typeof instrumentsSchema>,
+): Promise<string> {
+  const heaviest = [...instruments].sort((left, right) => right.weightBp - left.weightBp)[0];
+  if ("id" in heaviest.asset) return (await requireAsset(ctx, heaviest.asset.id, transaction)).id;
+  return (await assetOfInstrument(ctx, heaviest.asset.instrument, transaction)).id;
+}
+
 const fromBigint = (value: bigint, scale: number) => {
   const text = value.toString().padStart(scale + 1, "0");
   return `${text.slice(0, -scale)}.${text.slice(-scale)}`;
@@ -146,20 +232,61 @@ export async function updatePlan(
   const endOn = parsed.endOn === undefined ? plan.endOn : parsed.endOn;
   const runsLimit = parsed.runsLimit === undefined ? plan.runsLimit : parsed.runsLimit;
   if (endOn !== null && runsLimit !== null) throw new RangeError("An end day or a number of instalments");
-  const { feeRate, ...rest } = parsed;
-  await getDb()
-    .update(investmentPlans)
-    .set({
-      ...rest,
-      ...(feeRate === undefined
-        ? {}
-        : { feeRate: feeRate === null ? null : fromBigint(feeRate, RATE_SCALE) }),
-      // A fee is an amount or a rate: setting one clears the other.
-      ...(parsed.feeCents !== undefined && parsed.feeCents !== null ? { feeRate: null } : {}),
-      ...(feeRate !== undefined && feeRate !== null ? { feeCents: null } : {}),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(investmentPlans.id, plan.id), userScoped(ctx).owns(investmentPlans)));
+  const { feeRate, amountCents, instruments, frequency, interval, day, ...rest } = parsed;
+  if (
+    plan.model !== "basket" &&
+    [amountCents, instruments, frequency, interval, day].some((one) => one !== undefined)
+  ) {
+    throw new RangeError(
+      "Only a basket plan has instruments, an amount of each execution and a daily cadence",
+    );
+  }
+  if ((frequency ?? plan.frequency) === "week" && (day ?? plan.day) > 7) {
+    throw new RangeError("A day of the week is 1-7");
+  }
+  await getDb().transaction(async (transaction) => {
+    if (instruments !== undefined) await writeInstruments(ctx, transaction, plan.id, instruments);
+    await transaction
+      .update(investmentPlans)
+      .set({
+        ...rest,
+        ...feeChanges(parsed.feeCents, feeRate),
+        ...basketChanges(plan, { amountCents, frequency, interval, day }, today(ctx.timeZone)),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(investmentPlans.id, plan.id), userScoped(ctx).owns(investmentPlans)));
+  });
+}
+
+/** A fee is an amount or a rate: setting one clears the other. */
+function feeChanges(feeCents: bigint | null | undefined, feeRate: bigint | null | undefined) {
+  return {
+    ...(feeRate === undefined ? {} : { feeRate: feeRate === null ? null : fromBigint(feeRate, RATE_SCALE) }),
+    ...(feeCents !== undefined && feeCents !== null ? { feeRate: null } : {}),
+    ...(feeRate !== undefined && feeRate !== null ? { feeCents: null } : {}),
+  };
+}
+
+/**
+ * A basket's amount and cadence. A new cadence, or the first amount of a converted plan, starts from
+ * today: the job makes no execution of the days before (PERS-681 §3.5).
+ */
+function basketChanges(
+  plan: InvestmentPlan,
+  change: { amountCents?: bigint; frequency?: InvestmentPlan["frequency"]; interval?: number; day?: number },
+  todayOn: CivilDate,
+) {
+  const { amountCents, frequency, interval, day } = change;
+  const reschedule = frequency !== undefined || interval !== undefined || day !== undefined;
+  const restart = reschedule || (amountCents !== undefined && plan.executionAmountCents === null);
+  return {
+    ...(frequency === undefined ? {} : { frequency }),
+    ...(interval === undefined ? {} : { interval }),
+    ...(day === undefined ? {} : { day }),
+    ...(amountCents === undefined ? {} : { executionAmountCents: amountCents }),
+    ...(reschedule && plan.startOn < todayOn ? { startOn: todayOn } : {}),
+    ...(restart ? { createdOn: todayOn } : {}),
+  };
 }
 
 /** The schedule and the size of a plan, as the rules read them. */
@@ -212,12 +339,35 @@ export async function eventsOfRuns(
   return new Map(rows.map((row) => [row.runId, row.eventId]));
 }
 
+/** The purchases of basket plans among some events: tied by the line of the execution (PERS-681 §3.4). */
+async function basketPurchases(ctx: Pick<Ctx, "userId">, eventIds: string[]) {
+  if (eventIds.length === 0) return [];
+  const rows = await getDb()
+    .select({
+      eventId: investmentPlanRunLines.eventId,
+      runId: investmentPlanRuns.id,
+      planId: investmentPlans.id,
+      name: investmentPlans.name,
+      recordedBy: investmentPlanRuns.recordedBy,
+    })
+    .from(investmentPlanRunLines)
+    .innerJoin(investmentPlanRuns, eq(investmentPlanRuns.id, investmentPlanRunLines.runId))
+    .innerJoin(investmentPlans, eq(investmentPlans.id, investmentPlanRuns.planId))
+    .where(
+      and(userScoped(ctx).owns(investmentPlanRunLines), inArray(investmentPlanRunLines.eventId, eventIds)),
+    );
+  return rows.flatMap((row) => (row.eventId === null ? [] : [{ ...row, eventId: row.eventId }]));
+}
+
 /** The plan and the instalment of each purchase a plan wrote, by event: the activity's «automatic» mark. */
 export async function plansOfEvents(
   ctx: Pick<Ctx, "userId">,
   eventIds: readonly string[],
 ): Promise<Map<string, { planId: string; runId: string; name: string; automatic: boolean }>> {
-  const rows = await planPurchases(ctx, { eventIds: [...eventIds] });
+  const rows = [
+    ...(await planPurchases(ctx, { eventIds: [...eventIds] })),
+    ...(await basketPurchases(ctx, [...eventIds])),
+  ];
   return new Map(
     rows.map((row) => [
       row.eventId,

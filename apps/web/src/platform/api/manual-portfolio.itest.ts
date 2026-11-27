@@ -252,13 +252,12 @@ async function holdingIdOf(accountId: string): Promise<string> {
   return positions.body.open.rows[0].holdingId;
 }
 
-describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
-  /** A weekly plan due today, proposed for confirmation. */
+describe("the purchase plans on /api/v1 (R5d, step 2; baskets since PERS-681)", () => {
+  /** A weekly basket of one instrument due today: every execution is a proposal. */
   const plan = (over: Record<string, unknown> = {}) => ({
     name: "Weekly ETF",
-    instrumentId,
-    mic: "XMIL",
     amount: "100.00",
+    instruments: [{ instrumentId, mic: "XMIL", weight: "100" }],
     frequency: "week",
     day: dayOfWeek(todayOn) === 0 ? 7 : dayOfWeek(todayOn),
     startOn: todayOn,
@@ -266,7 +265,34 @@ describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
     ...over,
   });
 
-  it("lists a plan as the MCP tool does, and writes its instalment when the person confirms it", async () => {
+  /** The market of `instrument` closes at `close` today, on the instance's source of prices. */
+  async function closeToday(listingId: string, close: string) {
+    await refreshPrices({
+      source: {
+        id: "prices",
+        closes: async (request) => ({
+          bars: request.listings.map((one) => ({ key: one.key, on: todayOn, close, currency: "EUR" })),
+          errors: [],
+        }),
+      },
+      markets: [{ listingId, neededFrom: todayOn }],
+      today: todayOn,
+      cap: 10,
+    });
+  }
+
+  /** Another public example ISIN, with its own market. */
+  async function otherInstrument() {
+    const registers = (async (input: string | URL | Request) => {
+      const answer = await REGISTERS(input);
+      return new Response((await answer.text()).replace("BBG000000001", "BBG000000002"));
+    }) as typeof globalThis.fetch;
+    const [hit] = (await searchInstruments("US5949181045", { fetch: registers, priceSourceId: "prices" }))
+      .items;
+    return { instrumentId: hit.instrumentId, listingId: hit.listings[0].listingId };
+  }
+
+  it("lists a plan as the MCP tool does, and writes its execution when the person confirms it", async () => {
     const accountId = await portfolio();
     const base = `/investments/${accountId}/plans`;
     await send(alice, "POST", `/investments/${accountId}/operations`, {
@@ -274,18 +300,26 @@ describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
       on: todayOn,
       amount: "1000.00",
     });
+    // The body of R5d is refused.
     expect(await send(alice, "POST", base, plan({ quantity: "1" }))).toMatchObject({ status: 400 });
-    const made = await send(alice, "POST", base, plan());
+    const other = await otherInstrument();
+    const priced = [{ instrumentId: other.instrumentId, mic: "XMIL", weight: "100" }];
+    const made = await send(alice, "POST", base, plan({ instruments: priced }));
     expect(made.status).toBe(201);
     const listed = await send(alice, "GET", base);
     expect(listed.body.plans).toMatchObject([
       { id: made.body.id, amount: "100.00", fee: { amount: "1.00", rate: null }, nextDueOn: todayOn },
     ]);
-    expect(listed.body.plans[0]).toMatchObject({ currency: "EUR" });
+    expect(listed.body.plans[0]).toMatchObject({ currency: "EUR", model: "basket", carry: "0.00" });
     const tool = reads.find((one) => one.name === "list_investment_plans")!;
     expect(await tool.run(alice, { account_id: accountId })).toEqual(listed.body);
     // A fee in percent, as the funds' (0,19 %), and no past due date for a plan that starts today.
-    const rated = await send(alice, "POST", base, plan({ name: "Rated", fee: { rate: "0.19" } }));
+    const rated = await send(
+      alice,
+      "POST",
+      base,
+      plan({ name: "Rated", instruments: priced, fee: { rate: "0.19" } }),
+    );
     expect((await send(alice, "GET", base)).body.plans).toContainEqual(
       expect.objectContaining({ id: rated.body.id, fee: { amount: null, rate: "0.19" } }),
     );
@@ -296,25 +330,49 @@ describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
       more: false,
     });
 
-    // No prices plugin: the instalment waits for a price, and the person types it.
+    // No price yet: the execution waits for one; with the close of today it is a proposal.
+    await runDuePlans(alice);
+    const waiting = await send(alice, "GET", `${base}/${made.body.id}/runs`);
+    expect(waiting.body.runs).toMatchObject([
+      { state: "waiting_price", currency: "EUR", proposal: null, automatic: false, lines: [] },
+    ]);
+    await closeToday(other.listingId, "40");
     await runDuePlans(alice);
     const runs = await send(alice, "GET", `${base}/${made.body.id}/runs`);
     expect(runs.body.runs).toMatchObject([
-      { state: "waiting_price", currency: "EUR", proposal: null, automatic: false },
+      { state: "proposed", budget: "100.00", lines: [{ quantity: "2", spent: "80.00", state: "buy" }] },
     ]);
-    const confirm = `${base}/${made.body.id}/runs/${runs.body.runs[0].id}/confirm`;
-    const bought = await send(alice, "POST", confirm, { unitPrice: "40", quantity: "2.5" });
+    const run = `${base}/${made.body.id}/runs/${runs.body.runs[0].id}`;
+    const assetId = runs.body.runs[0].lines[0].assetId;
+    const preview = await send(alice, "POST", `${run}/preview`, { lines: [{ assetId, unitPrice: "30" }] });
+    expect(preview.body).toMatchObject({ spent: "90.00", carryOut: "10.00", lines: [{ quantity: "3" }] });
+    const bought = await send(alice, "POST", `${run}/confirm`, {
+      lines: [{ assetId, quantity: "2", unitPrice: "40" }],
+    });
     expect(bought.status).toBe(201);
-    expect(await send(alice, "POST", confirm, {})).toMatchObject({
+    expect(
+      await send(alice, "POST", `${run}/confirm`, { lines: [{ assetId, quantity: "1", unitPrice: "40" }] }),
+    ).toMatchObject({
       status: 409,
       body: { reason: "not_editable" },
     });
     const activity = await send(alice, "GET", `/investments/${accountId}/activity?period=all`);
     expect(activity.body.rows.find((row: Json) => row.id === bought.body.id)).toMatchObject({
-      leg: { kind: "buy", quantity: "2.500000000000000000" },
+      leg: { kind: "buy", quantity: "2.000000000000000000" },
       plan: { planId: made.body.id, name: "Weekly ETF", automatic: false },
     });
-    expect((await send(alice, "GET", `/investments/${accountId}/holdings`)).body.cash).toBe("899.00");
+    // 1000 in, 80 of shares and 1 of fee out (D1); 20 carried to the next execution.
+    expect((await send(alice, "GET", `/investments/${accountId}/holdings`)).body.cash).toBe("919.00");
+    expect(
+      (await send(alice, "GET", base)).body.plans.find((one: Json) => one.id === made.body.id),
+    ).toMatchObject({
+      carry: "20.00",
+    });
+    expect(
+      await send(alice, "POST", `${base}/${made.body.id}/backfill`, {
+        runs: [{ dueOn: todayOn, on: todayOn, quantity: "1", unitPrice: "40" }],
+      }),
+    ).toMatchObject({ status: 400, body: { reason: "plan_model_retired" } });
 
     const paused = await send(alice, "PATCH", `${base}/${made.body.id}`, { state: "paused" });
     expect(paused.status).toBe(204);
@@ -326,45 +384,34 @@ describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
     });
   });
 
-  it("asks «Da fare» for a deposit when an `auto` instalment finds no cash (P2)", async () => {
-    // Another public example ISIN, on the instance's source of prices: its market closes at 40 today.
-    const registers = (async (input: string | URL | Request) => {
-      const answer = await REGISTERS(input);
-      return new Response((await answer.text()).replace("BBG000000001", "BBG000000002"));
-    }) as typeof globalThis.fetch;
-    const [hit] = (await searchInstruments("US5949181045", { fetch: registers, priceSourceId: "prices" }))
-      .items;
-    await refreshPrices({
-      source: {
-        id: "prices",
-        closes: async (request) => ({
-          bars: request.listings.map((one) => ({ key: one.key, on: todayOn, close: "40", currency: "EUR" })),
-          errors: [],
-        }),
-      },
-      markets: [{ listingId: hit.listings[0].listingId, neededFrom: todayOn }],
-      today: todayOn,
-      cap: 10,
-    });
+  it("asks «Da fare» to confirm a proposal, and writes nothing when the cash is short", async () => {
+    const other = await otherInstrument();
+    await closeToday(other.listingId, "40");
     const accountId = await portfolio();
-    expect(
-      (
-        await send(
-          alice,
-          "POST",
-          `/investments/${accountId}/plans`,
-          plan({ mode: "auto", instrumentId: hit.instrumentId }),
-        )
-      ).status,
-    ).toBe(201);
+    const base = `/investments/${accountId}/plans`;
+    const made = await send(
+      alice,
+      "POST",
+      base,
+      plan({ instruments: [{ instrumentId: other.instrumentId, mic: "XMIL", weight: "100" }] }),
+    );
+    expect(made.status).toBe(201);
     await runDuePlans(alice);
     const todo = await send(alice, "GET", "/todo");
     expect(todo.body.items).toMatchObject([
       {
-        event: "plan_run_no_cash",
+        event: "plan_run_to_confirm",
         params: { date: todayOn },
         target: { page: "investment_plan", id: accountId },
       },
+    ]);
+    const [run] = (await send(alice, "GET", `${base}/${made.body.id}/runs`)).body.runs;
+    const refused = await send(alice, "POST", `${base}/${made.body.id}/runs/${run.id}/confirm`, {
+      lines: [{ assetId: run.lines[0].assetId, quantity: "2", unitPrice: "40" }],
+    });
+    expect(refused).toMatchObject({ status: 409, body: { reason: "negative_cash" } });
+    expect((await send(alice, "GET", `${base}/${made.body.id}/runs`)).body.runs).toMatchObject([
+      { state: "proposed", lines: [{ eventId: null }] },
     ]);
   });
 

@@ -4,6 +4,33 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · Purchase plans of several instruments, whole shares (not additive)
+
+The purchase plans of a manual portfolio are baskets (docs/design/investments-plans-whole-shares.md):
+1-10 instruments by weight, an amount of each execution in the portfolio's currency (fees on top), whole
+shares only, every execution a proposal to confirm; what an execution does not spend, and the whole
+budget of one skipped or left open, goes to the next one. The plans of R5d are converted: their
+instrument at 100 %, the amount to type again.
+
+- Changed: `POST /investments/{accountId}/plans` takes `{ name, amount, instruments: [{ assetId | instrumentId,
+  mic, weight }], frequency: day | week | month, interval, day, startOn, endOn, runsLimit, debitAccountId,
+  fee }`; the weights are percentages that make 100, the start is today or later. The body of R5d
+  (`instrumentId`, `quantity`, `fractions`, `mode`) is `invalid`.
+- Added to `PATCH …/plans/{planId}`: `amount`, `instruments`, `frequency`, `interval`, `day` (a basket only).
+- Added to each plan of `GET …/plans` and `list_investment_plans`: `model`, `instruments[]` (`assetId`,
+  `name`, `instrumentId`, `mic`, `weight`), `carry`. For a basket `amount` is the amount of each execution
+  (`null`: to type) and `currency` the portfolio's.
+- Added to each run of `GET …/runs`: `budget`, `carryIn`, `carryOut`, `lines[]` (`assetId`, `name`,
+  `weight`, `price`, `priceCurrency`, `priceOn`, `fxRate`, `target`, `quantity`, `spent`, `state`:
+  `buy` | `too_expensive` | `price_missing`, `eventId`); the state `expired`; the reasons `market_closed`
+  and `amount_missing`; the frequency `day`.
+- Added: `POST …/runs/{runId}/preview` `{ lines: [{ assetId, unitPrice?, quantity? }] }`: the proposal with
+  the corrections, nothing written.
+- Changed: `POST …/runs/{runId}/confirm` takes `lines: [{ assetId, quantity, unitPrice, fee? }]` for a basket
+  (every line, each once; all purchases or none) and answers `{ id, ids }`.
+- `POST …/plans/{planId}/backfill` on a basket: `invalid` (`plan_model_retired`).
+- Added: the event `plan_amount_missing` of «Da fare» (a converted plan with no amount yet).
+
 ## Unreleased · Payroll by year: gross earned and theoretical gross (not additive)
 
 `GET /payroll/payslips` and `get_payroll` give the KPIs of each year, not of the whole register.
