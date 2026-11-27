@@ -5405,7 +5405,10 @@
         "noneOut": "Nessuno: una spesa",
         "movementOption": "{date} · {payee} · {amount} · {account}",
         "noPayee": "Nessun beneficiario"
-      }
+      },
+      "editTitle": "Modifica operazione · {name}",
+      "currentInstrument": "Ora: {name} ({mic}). Cerca per cambiarlo.",
+      "readFailed": "Impossibile leggere l'operazione."
     },
     "convertForm": {
       "title": "Passa a posizioni · {name}",
