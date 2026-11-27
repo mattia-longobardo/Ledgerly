@@ -1,26 +1,25 @@
 "use client";
 
-// The commands of an instalment (R5d, step 2): «Confirm» and «Skip» while it waits, «Record a deposit»
-// when the job found no cash for it (P2 A), and «Link the movement» the server found on the debit
-// account of a recorded one (E7) — linked only on the person's word.
+// The commands of an execution (PERS-681 §4.3): «Review» a proposal, «Discard» one still open (its
+// whole budget passes to the next, D2), and «Link the movement» the server found on the debit account
+// of a recorded one (E7) — linked only on the person's word.
 import { useTranslations } from "next-intl";
 import { lazy, Suspense, useState } from "react";
 import { formatDate } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import type { ActionResult } from "../../calls";
 import { linkRunDebit, skipRun } from "../../plan-calls";
 import { ConfirmAction, useOutcome } from "../dialog-kit";
 import type { ServicePage } from "../service/service-view";
 import { amountText, isOpen, type Plan, type Run } from "./plan-words";
 
-const ConfirmRunDialog = lazy(() =>
-  import("./confirm-run").then((one) => ({ default: one.ConfirmRunDialog })),
-);
+const ReviewRunDialog = lazy(() => import("./review-run").then((one) => ({ default: one.ReviewRunDialog })));
 const RecordOperationDialog = lazy(() =>
   import("../portfolio/record-operation").then((one) => ({ default: one.RecordOperationDialog })),
 );
 
-type RunDialog = { kind: "confirm" | "skip" | "link" } | { kind: "deposit"; day: string };
+type RunDialog = { kind: "review" | "skip" | "link" } | { kind: "deposit"; day: string };
 
 interface DialogProps {
   page: ServicePage;
@@ -46,7 +45,13 @@ function RunQuestion({ page, plan, run, close, kind }: DialogProps & { kind: "sk
         title={text("skip.title", { date: formatDate(run.dueOn, "long", page.say.locale) })}
         description={text("skip.description")}
         confirm={text("skip.submit")}
-        onConfirm={() => write(skipRun(ref), text("skipped"))}
+        onConfirm={async () => {
+          const result = await skipRun(ref);
+          // A later execution waits while the proposal before it is open: that one goes first.
+          if (!result.ok && result.error === "not_editable") notify(text("skip.blocked"), "error");
+          else outcome(result, text("skipped"));
+          return result.ok;
+        }}
       />
     );
   return (
@@ -83,7 +88,7 @@ function RunDialogs({
           start={{ kind: "deposit", day: open.day }}
         />
       ) : (
-        <ConfirmRunDialog {...props} onClose={close} onDeposit={(day) => setOpen({ kind: "deposit", day })} />
+        <ReviewRunDialog {...props} onClose={close} onDeposit={(day) => setOpen({ kind: "deposit", day })} />
       )}
     </Suspense>
   );
@@ -94,42 +99,33 @@ export function RunActions({ page, plan, run }: { page: ServicePage; plan: Plan;
   const [open, setOpen] = useState<RunDialog | null>(null);
   const day = formatDate(run.dueOn, "long", page.say.locale);
   const linkable = run.state === "recorded" && run.debit !== null && !run.debit.linked;
+  // «Review» a proposal, «Discard» one still open, «Link the movement» of a recorded one (E7).
+  const commands = [
+    {
+      kind: "review",
+      shown: run.state === "proposed",
+      variant: "primary",
+      label: "reviewRun",
+      of: "reviewOf",
+    },
+    { kind: "skip", shown: isOpen(run), variant: "ghost", label: "skipRun", of: "skipOf" },
+    { kind: "link", shown: linkable, variant: "secondary", label: "linkRun", of: "linkOf" },
+  ] as const;
   return (
     <span className="flex flex-wrap justify-end gap-2">
-      {run.reason === "negative_cash" && (
-        <Button size="xs" onClick={() => setOpen({ kind: "deposit", day: run.proposal?.on ?? run.dueOn })}>
-          {text("recordDeposit")}
-        </Button>
-      )}
-      {isOpen(run) && (
-        <>
+      {commands
+        .filter((command) => command.shown)
+        .map((command) => (
           <Button
+            key={command.kind}
             size="xs"
-            variant="primary"
-            aria-label={text("confirmOf", { date: day })}
-            onClick={() => setOpen({ kind: "confirm" })}
+            variant={command.variant}
+            aria-label={text(command.of, { date: day })}
+            onClick={() => setOpen({ kind: command.kind })}
           >
-            {text("confirmRun")}
+            {text(command.label)}
           </Button>
-          <Button
-            size="xs"
-            variant="ghost"
-            aria-label={text("skipOf", { date: day })}
-            onClick={() => setOpen({ kind: "skip" })}
-          >
-            {text("skipRun")}
-          </Button>
-        </>
-      )}
-      {linkable && (
-        <Button
-          size="xs"
-          aria-label={text("linkOf", { date: day })}
-          onClick={() => setOpen({ kind: "link" })}
-        >
-          {text("linkRun")}
-        </Button>
-      )}
+        ))}
       {open && <RunDialogs page={page} plan={plan} run={run} open={open} setOpen={setOpen} />}
     </span>
   );

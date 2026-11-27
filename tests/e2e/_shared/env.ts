@@ -85,9 +85,9 @@ export const USERS = {
   // PERS-693: a manual portfolio with three deposits written out of date order and two accounts of
   // its own, for «Edit» of an operation and the order of the Activity.
   editOps: { email: "edit-ops@example.test", name: "Edit Ops" },
-  // R5d, step 2: two manual portfolios with purchase plans and an instalment of today proposed — one
-  // with its bank transaction found, one with no cash (P2) — for the screen check; `plansJourney` has the
-  // same and the journey writes on it.
+  // PERS-681: manual portfolios with basket plans in every state — proposals of today, one with a
+  // price to type, one waiting for its price, a converted plan with no amount, a portfolio with no cash
+  // and one with no plan — for the screen check; `plansJourney` has the same and the journey writes on it.
   plans: { email: "plans@example.test", name: "Plans" },
   plansJourney: {
     email: "plans-journey@example.test",

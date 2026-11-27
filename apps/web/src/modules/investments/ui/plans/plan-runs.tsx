@@ -1,37 +1,35 @@
 "use client";
 
-// The instalments of one plan, newest first (R5d, step 2; §11.3.2): due, waiting for a price, proposed,
-// recorded or skipped, with the purchase the server proposes at its price, why the job left it to the
-// person (P2), and the bank movement it found for it (E7). Read from `…/plans/{planId}/runs`.
+// The executions of one plan, newest first (PERS-681 §7): waiting for prices, proposed, recorded,
+// discarded or expired, with the shares of each line, the budget and the carry to the next, why it
+// waits, and the bank movement found for it (E7). Read from `…/plans/{planId}/runs`; every figure is
+// the server's, none is summed here.
 import { useTranslations } from "next-intl";
-import { priceText, quantityText } from "@ledgerly/domain/investments/client";
+import { quantityText } from "@ledgerly/domain/investments/client";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
-import { Badge } from "@ledgerly/ui/badge";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { useApi } from "@ledgerly/ui/data";
 import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { Loaded } from "@ledgerly/ui/loaded";
+import { Link } from "@ledgerly/ui/router";
 import { StatusBadge } from "@ledgerly/ui/status-badge";
 import { plans } from "@ledgerly/api-contract/investments";
 import type { ServicePage } from "../service/service-view";
 import { RunActions } from "./run-actions";
 import { amountText, type Plan, type PlansText, type Run, RUN_TONES } from "./plan-words";
 
-/** The state, and what the person has to know about it: why it waits, or that the job wrote it. */
-function RunState({ run, text, page }: { run: Run; text: PlansText; page: ServicePage }) {
+/** The state, and what the person has to know about it: why it waits, or why it bought nothing. */
+function RunState({ run, text }: { run: Run; text: PlansText }) {
   const note = run.reason
     ? text(`reasons.${run.reason}`)
-    : run.state === "waiting_price" && run.waitingSince
-      ? text("waitingSince", { date: formatDate(run.waitingSince, "long", page.say.locale) })
+    : run.state === "waiting_price"
+      ? text("waitingPrices")
       : null;
   return (
     <span className="flex flex-col items-start gap-1">
-      <span className="flex flex-wrap gap-1">
-        <StatusBadge status={run.state} tones={RUN_TONES}>
-          {text(`runStates.${run.state}`)}
-        </StatusBadge>
-        {run.automatic && <Badge tone="neutral">{text("automatic")}</Badge>}
-      </span>
+      <StatusBadge status={run.state} tones={RUN_TONES}>
+        {text(`runStates.${run.state}`)}
+      </StatusBadge>
       {note && (
         <span data-testid="run-reason" className="text-xs text-muted">
           {note}
@@ -41,19 +39,49 @@ function RunState({ run, text, page }: { run: Run; text: PlansText; page: Servic
   );
 }
 
-/** The purchase proposed: a quantity at a price, what it spends and its fee; or the close found. */
-function proposalText(run: Run, text: PlansText, page: ServicePage): string {
-  const { format } = page.say;
-  if (run.proposal)
-    return text("proposal", {
-      quantity: quantityText(run.proposal.quantity, null, format),
-      price: priceText(run.proposal.unitPrice, run.currency, format),
-      amount: amountText(run.proposal.amount, run.currency, format),
-      fee: amountText(run.proposal.fee, run.currency, format),
-    });
-  return run.price === null
-    ? NULL_DISPLAY
-    : text("priceOnly", { price: priceText(run.price, run.currency, format) });
+/**
+ * What the execution buys: the shares of each line («A: 2 shares · 82,60 €») or why it buys none, its
+ * budget and, once closed, what passes to the next one (M1, D2); a recorded one links to Activity.
+ */
+function Purchase({ run, text, page }: { run: Run; text: PlansText; page: ServicePage }) {
+  const money = (amount: string) => amountText(amount, run.currency, page.say.format);
+  const budget = run.budget === null ? null : money(run.budget);
+  return (
+    <span className="flex flex-col items-start gap-1">
+      {run.lines.length === 0 ? (
+        NULL_DISPLAY
+      ) : (
+        <ul className="flex flex-col gap-0.5">
+          {run.lines.map((line) => (
+            <li key={line.assetId}>
+              {line.state === "buy"
+                ? text("line", {
+                    name: line.name,
+                    quantity: quantityText(line.quantity, null, page.say.format),
+                    spent: money(line.spent),
+                  })
+                : text("lineNone", { name: line.name, why: text(`lineStates.${line.state}`) })}
+            </li>
+          ))}
+        </ul>
+      )}
+      {budget !== null && (
+        <span data-testid="run-budget" className="text-xs text-muted">
+          {run.carryOut === null
+            ? text("budget", { budget })
+            : text("budgetCarry", { budget, carry: money(run.carryOut) })}
+        </span>
+      )}
+      {run.state === "recorded" && (
+        <Link
+          href={page.href("activity")}
+          className="focus-ring rounded-sm text-xs underline hover:no-underline"
+        >
+          {text("toActivity")}
+        </Link>
+      )}
+    </span>
+  );
 }
 
 function debitText(run: Run, text: PlansText, page: ServicePage): string {
@@ -79,13 +107,13 @@ function useColumns(page: ServicePage, plan: Plan): DataColumn<Run>[] {
     {
       key: "state",
       header: text("columns.state"),
-      cell: (run) => <RunState run={run} text={text} page={page} />,
+      cell: (run) => <RunState run={run} text={text} />,
     },
     {
       key: "proposal",
       header: text("columns.purchase"),
       card: "labelled",
-      cell: (run) => proposalText(run, text, page),
+      cell: (run) => <Purchase run={run} text={text} page={page} />,
     },
     {
       key: "debit",

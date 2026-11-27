@@ -114,10 +114,10 @@ test.describe("«Edit» of an operation (PERS-693)", () => {
   });
 });
 
-test.describe("the purchase plans (R5d, step 2)", () => {
+test.describe("the purchase plans (PERS-681)", () => {
   test.use({ storageState: sessionState("plans") });
 
-  test("an instalment's «Confirm» opens from the keyboard, and Escape gives the focus back", async ({
+  test("an execution's «Review» opens from the keyboard, and Escape gives the focus back", async ({
     page,
   }) => {
     await page.goto("/investments");
@@ -127,17 +127,33 @@ test.describe("the purchase plans (R5d, step 2)", () => {
       .first();
     await page.goto(`${await service.getAttribute("href")}/plans`);
     const confirm = page
-      .getByRole("button", { name: /^Confirm the instalment of/ })
+      .getByRole("button", { name: /^Review the proposal of/ })
       .filter({ visible: true })
       .first();
     await focusOn(confirm);
     expect(await focusIsVisible(page), "the button draws no ring").toBe(true);
     await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog", { name: /^Confirm the instalment of/ });
+    const dialog = page.getByRole("dialog", { name: /^Review the proposal of/ });
     await expect(dialog).toBeVisible();
     await dialogHasFocus(page);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(confirm).toBeFocused();
+  });
+
+  test("«New plan» opens from the keyboard, and Escape gives the focus back", async ({ page }) => {
+    await page.goto("/investments");
+    const service = page.getByRole("link", { name: "Piani", exact: true }).filter({ visible: true }).first();
+    await page.goto(`${await service.getAttribute("href")}/plans`);
+    const opener = page.getByRole("button", { name: "New plan" });
+    await focusOn(opener);
+    expect(await focusIsVisible(page), "the button draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "New purchase plan · Piani" });
+    await expect(dialog).toBeVisible();
+    await dialogHasFocus(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
   });
 });
