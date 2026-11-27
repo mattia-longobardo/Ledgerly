@@ -13,6 +13,7 @@ vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 const { adapters } = await import("@/app/api/v1/[[...route]]/composition");
 const { apiRoutes } = await import("@ledgerly/api");
 const cases = await import("./cases");
+const { withJobLock } = await import("@domain/platform/jobs/lock");
 
 let ctx: Ctx;
 
@@ -67,5 +68,13 @@ describe("the steps of a bank, old action = new call", () => {
     expect(await viaRoute("DELETE", `/connections/${missing}`)).toEqual(
       await old(cases.cancelBankConnection(ctx, missing)),
     );
+  });
+
+  it("refuses «Try the reading again» while a reading of the connection is in progress: busy", async () => {
+    const connectionId = "0b6c3f9e-2d41-4a7b-9c8e-5f1a2b3c4d5e";
+    const held = await withJobLock(`plugin-sync:${connectionId}`, () =>
+      cases.retryBankReading(ctx, connectionId, null),
+    );
+    expect(held).toEqual({ ran: true, value: { ok: false, error: "busy" } });
   });
 });

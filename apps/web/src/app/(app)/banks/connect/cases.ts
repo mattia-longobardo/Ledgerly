@@ -4,6 +4,7 @@
 // access is bound to the browser's session that starts it (the return checks it).
 import "server-only";
 import { revalidatePath } from "next/cache";
+import type { CONNECTION_REFUSALS } from "@ledgerly/api-contract";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
@@ -106,10 +107,24 @@ export async function renewBankAccess(
   }
 }
 
+/** A reading the host refused, as a code of the contract's closed list (`CONNECTION_REFUSALS`). */
+export type ReadingRefusal = { ok: false; error: (typeof CONNECTION_REFUSALS)[number] };
+
+const REFUSAL_OF_READING: Record<string, ReadingRefusal["error"]> = {
+  plugin_down: "unavailable",
+  not_chosen: "pending",
+};
+
 /** A reading of the bank now; a reading that brought movements starts what follows a sync. */
-async function readNow(ctx: Ctx, connectionId: string, presence: Presence | null): Promise<void> {
+async function readNow(
+  ctx: Ctx,
+  connectionId: string,
+  presence: Presence | null,
+): Promise<ReadingRefusal | null> {
   const outcome = await readBank(ctx, { pluginId: BANK_PLUGIN_ID, connectionId, presence }, bankSink);
-  if (outcome.ok && outcome.created + outcome.updated > 0) await enqueue(tasks.afterSync("manual"));
+  if (!outcome.ok) return { ok: false, error: REFUSAL_OF_READING[outcome.error] ?? outcome.error };
+  if (outcome.created + outcome.updated > 0) await enqueue(tasks.afterSync("manual"));
+  return null;
 }
 
 /** The accounts chosen, then the first reading at once. */
@@ -134,9 +149,10 @@ export async function retryBankReading(
   ctx: Ctx,
   connectionId: string,
   presence: Presence | null,
-): Promise<{ ok: true } | BankRefusal> {
+): Promise<{ ok: true } | BankRefusal | ReadingRefusal> {
   try {
-    await readNow(ctx, connectionId, presence);
+    const refused = await readNow(ctx, connectionId, presence);
+    if (refused) return refused;
   } catch (error) {
     return bankRefusal(error);
   }
