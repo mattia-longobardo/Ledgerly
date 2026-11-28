@@ -15,14 +15,14 @@
     {
       "id": "trek",
       "image": "ledgerly-plugin-trek",
-      "digest": "sha256:7af0eb6716fc99a8a7b92699b5693d9d446812fb2b402295eec386e504a17dbe",
+      "digest": "sha256:3246e5bca5db7d720582191b8a92313030ddfbdf830bd7e1a23fa95b7caa7423",
       "egress": [],
       "dynamicHost": { "credential": "baseUrl" }
     },
     {
       "id": "wallet",
       "image": "ledgerly-plugin-wallet",
-      "digest": "sha256:d3dccb905de0497381b522ca34ccad56f4729aff94353d92236956dd8bc5b5ef",
+      "digest": "sha256:f1bbefa325f32129da5d6fa2c18bba961e9b7801dd9588d62072492df675ded1",
       "egress": ["rest.budgetbakers.com"]
     }
   ]
