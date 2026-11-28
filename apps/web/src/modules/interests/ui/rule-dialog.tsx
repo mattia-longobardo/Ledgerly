@@ -32,6 +32,8 @@ export interface RuleDraft {
   payeeMatch: string;
   /** The rule still has the retired mode «Publish to {source}» (decision H37); saving drops it. */
   retiredMode: boolean;
+  /** Each settlement is written as a movement on the account (`credit_account`, manual accounts). */
+  credit: boolean;
   /** The category the rule has; kept as it is, the dialog no longer chooses it. */
   categoryId: string | null;
   active: boolean;
@@ -45,6 +47,7 @@ const KNOWN = [
   "not_synced",
   "invalid_category",
   "mode_retired",
+  "not_manual",
 ];
 
 /**
@@ -89,6 +92,7 @@ export function RuleDialog({
       settlement: text("settlement"),
       payeeMatch: text("match"),
       categoryId: draft.categoryId ?? "",
+      credit: data.get("credit") === "on",
       active: data.get("active") === "on",
     };
     startTransition(async () => {
@@ -283,6 +287,15 @@ export function RuleDialog({
               {t("form.retiredMode")}
             </p>
           )}
+          <Checkbox
+            name="credit"
+            defaultChecked={draft.credit}
+            label={t("form.credit")}
+            aria-describedby={`${id}-credit-hint`}
+          />
+          <p id={`${id}-credit-hint`} className="text-xs text-muted">
+            {t("form.creditHint")}
+          </p>
           <Checkbox name="active" defaultChecked={draft.active} label={t("form.active")} />
         </div>
         {error && (

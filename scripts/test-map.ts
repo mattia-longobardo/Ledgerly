@@ -283,6 +283,7 @@ export const MODULES: Module[] = [
     files: [
       "apps/web/src/modules/interests/**",
       "packages/domain/src/modules/interests/**",
+      "apps/web/src/app/interest-credit.ts",
       page("interests"),
     ],
     integration: ["apps/web/src/modules/interests", "packages/domain/src/modules/interests"],

@@ -23,6 +23,8 @@ import { bankSink } from "./(app)/banks/sink";
 import "./plugin-wiring";
 // Registers the readers of the documents before a reading or the sweep asks for one.
 import "./document-kinds";
+// Registers the credit of the interest settlements before the accrual job runs.
+import "./interest-credit";
 
 export { tasks } from "@/platform/jobs/queue";
 export { SCHEDULE, SCHEDULE_TIME_ZONE, SCHEDULED_TIERS } from "@/platform/jobs/registry";

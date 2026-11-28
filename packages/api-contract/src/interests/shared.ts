@@ -13,7 +13,7 @@ export const PERIOD_ANCHORS = ["calendar"] as const;
 /** The longest payment window, in days after the settlement date. */
 export const MAX_PAYMENT_WINDOW_DAYS = 90;
 export const SETTLEMENTS = ["daily", "monthly", "quarterly", "annual"] as const;
-export const RULE_MODES = ["analyze_only", "post_to_provider"] as const;
+export const RULE_MODES = ["analyze_only", "post_to_provider", "credit_account"] as const;
 export const RULE_STATES = ["active", "paused"] as const;
 export const ACCRUAL_STATUSES = ["accrued", "negative_balance", "no_balance"] as const;
 export const POSTING_STATES = ["none", "claimed", "posted", "indeterminate"] as const;
@@ -32,7 +32,8 @@ export const MAX_DAYS = 90;
 
 /**
  * A refusal of the interests' use cases (`InterestError`): `invalid` (`reason` `invalid`,
- * `invalid_account`, `invalid_tiers`, `invalid_category`), `conflict` (`reason` `not_synced`: no
+ * `invalid_account`, `invalid_tiers`, `invalid_category`, `not_manual`: `credit_account` on an
+ * account that is not manual), `conflict` (`reason` `not_synced`: no
  * longer given since R5c), `not_found`, `mode_retired` (422: a rule that publishes on its source,
  * `post_to_provider`, is no longer taken since R5c, decision H37).
  */

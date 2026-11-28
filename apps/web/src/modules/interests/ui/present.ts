@@ -69,6 +69,7 @@ export function draftOf(rule: Rule, format: NumberFormat): RuleDraft {
     settlement: rule.settlement,
     payeeMatch: rule.payeeMatch ?? "",
     retiredMode: rule.mode === "post_to_provider",
+    credit: rule.mode === "credit_account",
     categoryId: rule.categoryId,
     active: rule.state === "active",
   };
@@ -97,6 +98,7 @@ export function newDraft(
     settlement: "monthly",
     payeeMatch: "",
     retiredMode: false,
+    credit: false,
     categoryId: null,
     active: true,
   };

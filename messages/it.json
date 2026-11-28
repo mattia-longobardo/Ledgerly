@@ -3522,6 +3522,8 @@
       "match": "L'interesse pagato si riconosce da",
       "matchHint": "Testo nel beneficiario, nella categoria o nella nota del pagamento degli interessi della banca, es. \"interessi\". Vuoto per non controllare.",
       "retiredMode": "Questa regola pubblicava ogni liquidazione sulla sua sorgente. Questa opzione non esiste più: ora Ledgerly calcola soltanto gli interessi. Salva la regola per tenerla in sola analisi e registra tu ogni liquidazione sulla sorgente.",
+      "credit": "Accredita gli interessi sul conto",
+      "creditHint": "Solo per un conto manuale: ogni liquidazione diventa un movimento di entrata sul conto, nel giorno della liquidazione. Le liquidazioni già chiuse e non ancora accreditate sono scritte al prossimo passaggio.",
       "active": "Regola attiva",
       "cancel": "Annulla",
       "save": "Salva regola",
@@ -3545,7 +3547,8 @@
       "not_synced": "Si pubblica su Wallet solo da un conto sincronizzato.",
       "invalid_category": "Scegli una delle tue categorie attive.",
       "failed": "Salvataggio non riuscito. Riprova.",
-      "mode_retired": "La pubblicazione sulla sorgente non esiste più. Salva la regola in sola analisi."
+      "mode_retired": "La pubblicazione sulla sorgente non esiste più. Salva la regola in sola analisi.",
+      "not_manual": "Gli interessi si accreditano solo su un conto manuale: su un conto collegato a una banca l'accredito lo porta la banca."
     },
     "detail": {
       "back": "Interessi",
@@ -3556,7 +3559,8 @@
       "mode": "Modalità",
       "modes": {
         "analyze_only": "Solo analisi",
-        "post_to_provider": "Pubblicata su Wallet"
+        "post_to_provider": "Pubblicata su Wallet",
+        "credit_account": "Accreditata sul conto"
       },
       "noCategory": "Nessuna categoria",
       "balance": {

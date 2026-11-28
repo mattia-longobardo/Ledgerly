@@ -219,7 +219,8 @@ export const createInterestRule = defineRoute({
   summary:
     "Creates a rule and accrues it at once up to yesterday, settling the periods that have closed. " +
     "Rates are percentages; `mode_retired` (422) for `mode: post_to_provider`: no rule publishes on its " +
-    "source since R5c.",
+    "source since R5c. `mode: credit_account` writes each settlement as an income movement on the " +
+    "account, a manual one only (`invalid`, reason `not_manual`).",
   actions: [],
   body: ruleBody,
   response: z.object({ id: id() }),

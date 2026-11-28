@@ -4,7 +4,7 @@
  * "Undo switch" gives no rule its publishing back: no rule publishes since R5c (decision H37). Every
  * write takes the caller's transaction.
  */
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import type { Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
@@ -12,7 +12,10 @@ import { interestRules } from "../schema";
 
 type Who = Pick<Ctx, "userId">;
 
-/** The rules of an account that publish, turned to "analysis only"; returns what each was. */
+/**
+ * The rules of an account that publish or credit, turned to "analysis only"; returns what each was.
+ * A rule that credits stops too: on the new source the bank brings the credit.
+ */
 export async function stopPublishing(
   tx: Tx,
   ctx: Who,
@@ -24,7 +27,7 @@ export async function stopPublishing(
     .where(
       and(
         eq(interestRules.accountId, accountId),
-        eq(interestRules.mode, "post_to_provider"),
+        ne(interestRules.mode, "analyze_only"),
         userScoped(ctx).owns(interestRules),
       ),
     )

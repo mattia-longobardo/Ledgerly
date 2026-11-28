@@ -13,7 +13,7 @@ import { ACCRUAL_READING_MAX_AGE_HOURS } from "@ledgerly/domain/interests";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { connectionsThatCan, isSyncBusy, syncSourceNow } from "@ledgerly/plugin-host";
 import { runsAt } from "@ledgerly/domain/interests";
-import { bringUpToDate } from "@ledgerly/domain/interests";
+import { bringUpToDate, creditSettlements } from "@ledgerly/domain/interests";
 
 // ——— Sync, then accrue (audit INT-2) ———————————————————————————————————————————————————————————
 /*
@@ -230,7 +230,8 @@ function manualReadings(wanted: ReadonlySet<string>, before: ReadonlyMap<string,
  * What it does for a rule is unchanged: accrued up to yesterday — the day whose balance is closed
  * — and the periods that have ended settled, a missed day caught up on the next pass, in order.
  * One row per rule and day, so a second pass in the same hour (or the same day) writes nothing
- * twice. Nothing is published on the source any more (decision H37, release R5c).
+ * twice. Nothing is published on the source any more (decision H37, release R5c); a rule in
+ * `credit_account` has its settlements written as movements on its manual account.
  *
  * The hourly tick is Europe/Rome (`SCHEDULE` of the jobs registry): the hour a zone skips when it springs forward has
  * no pass of its own, and the hour it repeats when it falls back has two — harmless, being
@@ -250,7 +251,21 @@ interface AccrualPass {
   rules: number;
   /** Rules left alone because their balance was not one to accrue on. */
   stale: number;
+  /** Settlements written as movements on their account (`credit_account`). */
+  credited: number;
+  /** Rules whose settlements could not be written this pass. */
+  creditFailed: number;
   reasons: StaleReason[];
+}
+
+/** Writes the rule's settlements to credit; a failure is logged and the next pass tries again. */
+async function credit(ctx: Ctx, ruleId: string, now: Date): Promise<{ credited: number; failed: boolean }> {
+  try {
+    return { credited: await creditSettlements(ctx, ruleId, now), failed: false };
+  } catch (error) {
+    console.error("[interests] writing a settlement on its account failed", redactForLog(error));
+    return { credited: 0, failed: true };
+  }
 }
 
 /** The active rules of one user whose hour is now in their own zone. */
@@ -279,7 +294,7 @@ export async function accrueDueRules(
   now: Date,
   options: FreshnessOptions = {},
 ): Promise<AccrualPass> {
-  const pass: AccrualPass = { rules: 0, stale: 0, reasons: [] };
+  const pass: AccrualPass = { rules: 0, stale: 0, credited: 0, creditFailed: 0, reasons: [] };
   const due = await dueRules(ctx, now);
   if (due.length === 0) return pass;
 
@@ -300,6 +315,9 @@ export async function accrueDueRules(
     }
     await bringUpToDate(ctx, rule.id, now);
     pass.rules += 1;
+    const credited = await credit(ctx, rule.id, now);
+    pass.credited += credited.credited;
+    if (credited.failed) pass.creditFailed += 1;
   }
   return pass;
 }
@@ -324,6 +342,8 @@ export const interestsAccrualJob: JobDefinition = {
     const now = new Date();
     let rules = 0;
     let stale = 0;
+    let credited = 0;
+    let creditFailed = 0;
     const reasons = new Set<StaleReason>();
     const counts = await forEachUser(
       "interests-accrual",
@@ -331,6 +351,8 @@ export const interestsAccrualJob: JobDefinition = {
         const pass = await accrueDueRules(ctx, now);
         rules += pass.rules;
         stale += pass.stale;
+        credited += pass.credited;
+        creditFailed += pass.creditFailed;
         for (const reason of pass.reasons) reasons.add(reason);
       },
       { addon: "interests" },
@@ -341,6 +363,8 @@ export const interestsAccrualJob: JobDefinition = {
       ...counts,
       rules,
       stale,
+      credited,
+      creditFailed,
       // Why the skipped ones were skipped, once each: the run's own account of a pass that found
       // nothing fresh to accrue on, without a row per rule in a job detail.
       staleReasons: reasons.size === 0 ? null : [...reasons].sort().join(", "),

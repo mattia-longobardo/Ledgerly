@@ -27241,7 +27241,8 @@
                             "type": "string",
                             "enum": [
                               "analyze_only",
-                              "post_to_provider"
+                              "post_to_provider",
+                              "credit_account"
                             ]
                           },
                           "categoryId": {
@@ -27408,7 +27409,7 @@
       },
       "post": {
         "operationId": "create_interest_rule",
-        "summary": "Creates a rule and accrues it at once up to yesterday, settling the periods that have closed. Rates are percentages; `mode_retired` (422) for `mode: post_to_provider`: no rule publishes on its source since R5c.",
+        "summary": "Creates a rule and accrues it at once up to yesterday, settling the periods that have closed. Rates are percentages; `mode_retired` (422) for `mode: post_to_provider`: no rule publishes on its source since R5c. `mode: credit_account` writes each settlement as an income movement on the account, a manual one only (`invalid`, reason `not_manual`).",
         "tags": [
           "interests"
         ],
@@ -27528,7 +27529,8 @@
                     "type": "string",
                     "enum": [
                       "analyze_only",
-                      "post_to_provider"
+                      "post_to_provider",
+                      "credit_account"
                     ]
                   },
                   "categoryId": {
@@ -27820,7 +27822,8 @@
                           "type": "string",
                           "enum": [
                             "analyze_only",
-                            "post_to_provider"
+                            "post_to_provider",
+                            "credit_account"
                           ]
                         },
                         "categoryId": {
@@ -28270,7 +28273,8 @@
                     "type": "string",
                     "enum": [
                       "analyze_only",
-                      "post_to_provider"
+                      "post_to_provider",
+                      "credit_account"
                     ]
                   },
                   "categoryId": {

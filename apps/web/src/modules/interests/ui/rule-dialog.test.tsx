@@ -35,7 +35,8 @@ beforeEach(() => {
 describe("RuleDialog, the retired «Publish to {source}»", () => {
   it("draws no option to publish and no category of the source", () => {
     renderDialog(false);
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    // «Credit the interest to the account» and «Rule is active»: no box to publish.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
@@ -51,6 +52,24 @@ describe("RuleDialog, the retired «Publish to {source}»", () => {
     renderDialog(false);
     await userEvent.click(screen.getByRole("button", { name: T.save }));
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.interests.errors.mode_retired);
+  });
+});
+
+describe("RuleDialog, the credit to the account", () => {
+  it("sends the credit ticked, and leaves it off by default", async () => {
+    renderDialog(false);
+    await userEvent.click(screen.getByRole("button", { name: T.save }));
+    expect(update).toHaveBeenLastCalledWith("r1", expect.objectContaining({ credit: false }));
+    await userEvent.click(screen.getByRole("checkbox", { name: T.credit }));
+    await userEvent.click(screen.getByRole("button", { name: T.save }));
+    expect(update).toHaveBeenLastCalledWith("r1", expect.objectContaining({ credit: true }));
+  });
+
+  it("shows the refusal of a credit on an account that is not manual in words", async () => {
+    update.mockResolvedValue({ ok: false, error: "not_manual" });
+    renderDialog(false);
+    await userEvent.click(screen.getByRole("button", { name: T.save }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(messages.interests.errors.not_manual);
   });
 });
 

@@ -1,11 +1,15 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { removeAccount, saveBalanceEntry } from "../accounts/service";
+import { applyProviderAccounts, removeAccount, saveBalanceEntry } from "../accounts/service";
+import { listAccounts } from "../accounts/queries";
+import { listTransactions } from "../transactions/queries";
 import { upsertFromProvider } from "../transactions/service";
 import type { Ctx } from "../../platform/context";
 import { monthKey, startOfDayIn, today } from "../../shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { interestsAccrualJob } from "../../../../../apps/web/src/modules/interests/jobs";
+// Registers the writer of the credits, as the worker does.
+import "../../../../../apps/web/src/app/interest-credit";
 import { interestsView, ruleDetail, rulesOnAccount } from "./queries";
 import { accruedInterest, createRule, InterestError, setRuleState, updateRule } from "./service";
 import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
@@ -254,6 +258,20 @@ describe("the rest of the page", () => {
     await expect(
       createRule(ctx, rule({ postingCategoryId: "00000000-0000-4000-8000-000000000000" })),
     ).rejects.toMatchObject({ code: "invalid_category" });
+    // The credit is written on a manual account only: on a synced one the bank brings it.
+    await applyProviderAccounts(ctx, WALLET_PROVIDER, [
+      {
+        provider: WALLET_PROVIDER,
+        providerAccountId: "wa-1",
+        name: "Synced",
+        type: "savings",
+        currency: "EUR",
+      },
+    ]);
+    const synced = (await listAccounts(ctx)).find((account) => account.name === "Synced");
+    await expect(
+      createRule(ctx, rule({ accountId: synced?.id, mode: "credit_account" })),
+    ).rejects.toMatchObject({ code: "not_manual" });
     await createRule(ctx, rule());
     await expect(removeAccount(ctx, accountId)).rejects.toMatchObject({ code: "in_use" });
   });
@@ -333,6 +351,36 @@ describe("the accrual pass and the hour a rule runs at (spec §10.2)", () => {
     expect(await interestsAccrualJob.hasWork?.()).toBe(true);
     expect(await interestsAccrualJob.run()).toMatchObject({ rules: 1 });
     expect(await daysOf(created.id)).toBe(41);
+  });
+
+  it("credits each closed settlement once as an income on the manual account (credit_account)", async () => {
+    clockAt(at("2026-02-10", 8));
+    const created = await createRule(ctx, rule({ mode: "credit_account" }));
+
+    clockAt(at("2026-02-11", 12));
+    expect(await interestsAccrualJob.run()).toMatchObject({ rules: 1, credited: 1, creditFailed: 0 });
+    const credits = async () => (await listTransactions(ctx)).filter((row) => row.origin === "manual");
+    expect(await credits()).toMatchObject([
+      { accountId, type: "income", amountCents: 3_100n, payee: "interessi", on: "2026-02-01" },
+    ]);
+    const january = (await ruleDetail(ctx, created.id)).settlements.find(
+      (row) => row.entry.periodFrom === "2026-01-01",
+    );
+    expect(january).toMatchObject({ entry: { posting: "posted" }, paidCents: 3_100n });
+
+    // The next day's pass, and another in the same hour, write nothing twice.
+    await interestsAccrualJob.run();
+    clockAt(at("2026-02-12", 12));
+    expect(await interestsAccrualJob.run()).toMatchObject({ credited: 0 });
+    expect(await credits()).toHaveLength(1);
+  });
+
+  it("credits nothing for a rule in analysis only", async () => {
+    clockAt(at("2026-02-10", 8));
+    await createRule(ctx, rule());
+    clockAt(at("2026-02-11", 12));
+    expect(await interestsAccrualJob.run()).toMatchObject({ credited: 0 });
+    expect(await listTransactions(ctx)).toHaveLength(0);
   });
 
   it("keeps the hour the rule was saved with, and changing it moves the pass", async () => {
