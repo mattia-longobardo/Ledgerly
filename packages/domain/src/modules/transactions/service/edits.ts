@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { unlinkEntities } from "../../../platform/integrations/service";
+import { externalIdsOf, resolveExternal, unlinkEntities } from "../../../platform/integrations/service";
 import {
   type MergeableField,
   PROVIDER_OWNED_FIELDS,
@@ -224,6 +224,50 @@ export async function deleteHiddenTransactions(
   // The leg of an Investments operation goes with its operation only (PERS-651).
   const deletable = and(isNotNull(transactions.hiddenAt), ne(transactions.origin, "investments"))!;
   return (await deleteRows(ctx, wanted, deletable)).length;
+}
+
+/**
+ * A source's pending movements of one account that its last complete reading did not give again
+ * (booked meanwhile, under another id, or cancelled) are deleted with their links: a pending
+ * movement is not a fact, and the booked one replaces it. Every day counts, not only the days the
+ * reading asked for: a pending movement older than them would otherwise stay beside its booked one.
+ */
+export async function dropPendingExcept(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  target: { accountId: string; provider: string },
+  kept: readonly string[],
+): Promise<number> {
+  const stay = new Set((await resolveExternal(ctx, target.provider, TRANSACTION_ENTITY, [...kept])).values());
+  const pending = await getDb()
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.accountId, target.accountId),
+        eq(transactions.origin, "provider"),
+        eq(transactions.state, "pending"),
+        userScoped(ctx).owns(transactions),
+      ),
+    )
+    .orderBy(asc(transactions.id));
+  // Only this source's own rows: another source of the account answers for its own.
+  const own = await externalIdsOf(
+    ctx,
+    target.provider,
+    TRANSACTION_ENTITY,
+    pending.map((row) => row.id),
+  );
+  const ids = [...own.keys()].filter((id) => !stay.has(id));
+  if (ids.length === 0) return 0;
+  // Their written legs stay, as legs kept by hand: the booked movement pairs with them (as in
+  // `purgeRemovedUpstream`).
+  await getDb()
+    .update(transactions)
+    .set({ twinOf: null })
+    .where(and(inArray(transactions.twinOf, ids), userScoped(ctx).owns(transactions)));
+  const deleted = await deleteRows(ctx, ids, eq(transactions.state, "pending"));
+  if (deleted.length > 0) await unlinkEntities(ctx, target.provider, TRANSACTION_ENTITY, deleted);
+  return deleted.length;
 }
 
 /**

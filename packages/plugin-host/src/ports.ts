@@ -36,8 +36,10 @@ interface IbanOwner {
   manual: boolean;
 }
 
-/** One booked movement of a bank, ready for the domain: its identity is already decided. */
+/** One movement of a bank, ready for the domain: its identity is already decided. */
 export interface ReadingMovement {
+  /** Not booked yet: the bank holds the money, and the movement may still change or go. */
+  pending?: true;
   /** Unique for the person and the provider, and the same at every reading. */
   externalId: string;
   /** The booking day: what the identity and the cut of a switch go by. */
@@ -99,6 +101,12 @@ export interface BankSink {
     movements: readonly ReadingMovement[],
     now: Date,
   ): Promise<MovementsWritten>;
+  /** After a complete reading of an account: its pending movements the reading did not give again go. */
+  dropPending(
+    ctx: Who,
+    target: { accountId: string; provider: string },
+    kept: readonly string[],
+  ): Promise<number>;
   /** For each number given, the open account that has it as its IBAN; numbers that are no IBAN are left out. */
   ibanOwners(ctx: Who, numbers: readonly (string | null)[]): Promise<Map<string, IbanOwner>>;
   /** The numbers the bank gives for the tied accounts: the domain keeps those that are an IBAN. */
