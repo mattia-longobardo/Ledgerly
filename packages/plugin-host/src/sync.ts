@@ -328,7 +328,6 @@ async function reading(
   let cursor: string | null = null;
   const started = Date.now();
   const budget = input.presence === null ? AUTOMATIC_BUDGET_MS : PRESENT_BUDGET_MS;
-  const from = coveredTo === null || freshTied.length > 0 ? null : addDays(coveredTo, -REREAD_DAYS);
   try {
     do {
       const batch: SyncResponse = await callPlugin(plugin.config, PLUGIN_PATHS.sync, syncResponseSchema, {
@@ -336,7 +335,7 @@ async function reading(
           credentials,
           session: { id: bag.sessionId },
           accounts: accounts.map((account) => account.externalId),
-          from,
+          from: coveredTo === null || freshTied.length > 0 ? null : addDays(coveredTo, -REREAD_DAYS),
           cursor,
           userPresent: input.presence,
         },
@@ -387,7 +386,7 @@ async function reading(
     // Written while the run is held: a reading stopped meanwhile, or whose source was turned off,
     // writes nothing (SEC-08).
     written = await holdingRun(ctx, run.id, async () => {
-      const done = await write(ctx, { connection, accounts, linked, batches, complete, from }, sink, now);
+      const done = await write(ctx, { connection, accounts, linked, batches, complete }, sink, now);
       // The bank gives the number of each account with the access: the domain keeps the IBANs (H39).
       await sink.saveIbans(
         ctx,
@@ -449,9 +448,8 @@ async function write(
     accounts: readonly PluginAccount[];
     linked: Map<string, { id: string; name: string }>;
     batches: readonly SyncResponse[];
-    /** The reading ended, from the day it asked for (`null`: everything the bank gives). */
+    /** The reading gave everything it asked for. */
     complete: boolean;
-    from: CivilDate | null;
   },
   sink: BankSink,
   now: Date,
@@ -492,7 +490,7 @@ async function write(
     );
     if (read.complete && answered.length > 0 && answered.every((one) => one.error === null)) {
       const kept = movements.flatMap((one) => (one.pending ? [one.externalId] : []));
-      await sink.dropPending(ctx, target, kept, read.from);
+      await sink.dropPending(ctx, target, kept);
     }
     total.created += written.created;
     total.updated += written.updated;

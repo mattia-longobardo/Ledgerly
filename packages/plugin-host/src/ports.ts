@@ -101,15 +101,11 @@ export interface BankSink {
     movements: readonly ReadingMovement[],
     now: Date,
   ): Promise<MovementsWritten>;
-  /**
-   * After a complete reading of an account: its pending movements of `from` on (all, without a
-   * day) that the reading did not give again are deleted — booked meanwhile, or cancelled.
-   */
+  /** After a complete reading of an account: its pending movements the reading did not give again go. */
   dropPending(
     ctx: Who,
     target: { accountId: string; provider: string },
     kept: readonly string[],
-    from: CivilDate | null,
   ): Promise<number>;
   /** For each number given, the open account that has it as its IBAN; numbers that are no IBAN are left out. */
   ibanOwners(ctx: Who, numbers: readonly (string | null)[]): Promise<Map<string, IbanOwner>>;

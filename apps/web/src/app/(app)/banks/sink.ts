@@ -141,8 +141,8 @@ export const bankSink: BankSink = {
     return { created: outcome.created, updated: outcome.updated, skipped: outcome.skipped };
   },
 
-  async dropPending(ctx, target, kept, from) {
-    return dropPendingExcept(ctx, target, kept, from);
+  async dropPending(ctx, target, kept) {
+    return dropPendingExcept(ctx, target, kept);
   },
 
   async afterReading(ctx, accountIds) {
