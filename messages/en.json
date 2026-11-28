@@ -3522,6 +3522,8 @@
       "match": "Paid interest is recognised by",
       "matchHint": "Text in the payee, category or note of the bank's interest payment, e.g. \"interessi\". Leave empty to skip the check.",
       "retiredMode": "This rule posted each payout to its source. That option no longer exists: Ledgerly now only calculates the interest. Save the rule to keep it as analysis only, and record each payout at the source yourself.",
+      "credit": "Credit the interest to the account",
+      "creditHint": "Manual accounts only: each payout becomes an income transaction on the account, on the payout day. Payouts already closed and not credited yet are written on the next pass.",
       "active": "Rule is active",
       "cancel": "Cancel",
       "save": "Save rule",
@@ -3545,7 +3547,8 @@
       "not_synced": "Only a synced Wallet account can be posted to.",
       "invalid_category": "Pick one of your open categories.",
       "failed": "Couldn't save. Try again.",
-      "mode_retired": "Posting to the source no longer exists. Save the rule as analysis only."
+      "mode_retired": "Posting to the source no longer exists. Save the rule as analysis only.",
+      "not_manual": "Interest is credited to a manual account only: on an account linked to a bank, the bank brings the credit."
     },
     "detail": {
       "back": "Interests",
@@ -3556,7 +3559,8 @@
       "mode": "Mode",
       "modes": {
         "analyze_only": "Analysis only",
-        "post_to_provider": "Posted to Wallet"
+        "post_to_provider": "Posted to Wallet",
+        "credit_account": "Credited to the account"
       },
       "noCategory": "No category",
       "balance": {

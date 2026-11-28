@@ -108,7 +108,7 @@ function Kpis({ detail, format }: Props) {
       <KpiTile
         label={text("detail.mode")}
         value={text(`detail.modes.${rule.mode}`)}
-        note={rule.mode === "post_to_provider" ? (detail.category ?? text("detail.noCategory")) : undefined}
+        note={rule.mode !== "analyze_only" ? (detail.category ?? text("detail.noCategory")) : undefined}
       />
       <KpiTile label={text("columns.status")} value={text(`state.${rule.state}`)} />
     </div>

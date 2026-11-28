@@ -1,5 +1,5 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
-export { markPosted, postEntry } from "./service/posting";
+export { creditSettlements, markPosted, postEntry, registerCreditWriter } from "./service/posting";
 export { interestsView, publishingRulesOn, ruleAccounts, ruleDetail, rulesOnAccount } from "./queries";
 export type { RuleRow } from "./queries";
 export { ACCRUAL_READING_MAX_AGE_HOURS, fractionToPercent, ruleInputOf, runsAt, SETTLEMENTS } from "./rules";

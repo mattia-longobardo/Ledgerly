@@ -1,0 +1,2 @@
+ALTER TABLE "interest_rules" DROP CONSTRAINT "interest_rules_mode_ck";--> statement-breakpoint
+ALTER TABLE "interest_rules" ADD CONSTRAINT "interest_rules_mode_ck" CHECK ("interest_rules"."mode" in ('analyze_only', 'post_to_provider', 'credit_account'));

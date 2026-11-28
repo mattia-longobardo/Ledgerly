@@ -19,10 +19,17 @@ export type { InterestAccrual, InterestEntry, InterestRule } from "./records";
 /**
  * The account a rule is on: one of this user's, not archived. A rule no longer publishes on its
  * source (decision H37, ST-14): `post_to_provider` is refused, for a new rule and a changed one.
+ * `credit_account` writes each settlement as a movement on the account: a manual account only.
  */
 async function checkAccount(ctx: Pick<Ctx, "userId">, accountId: string, mode: string): Promise<void> {
   if (mode === "post_to_provider") throw new InterestError("mode_retired");
-  await requireOpenAccount(ctx, accountId, () => new InterestError("invalid_account"));
+  const account = await requireOpenAccount(ctx, accountId, () => new InterestError("invalid_account"));
+  if (mode === "credit_account" && !creditable(account)) throw new InterestError("not_manual");
+}
+
+/** Only a manual account takes the credit: on any other the bank brings it (decision H37). */
+function creditable(account: { origin: string; providerAccountId: string | null }): boolean {
+  return account.origin === "manual" && account.providerAccountId === null;
 }
 
 /**
@@ -140,11 +147,18 @@ export async function moveRuleAccount(
     .from(interestRules)
     .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
   if (!rule) throw new InterestError("not_found");
-  await checkAccount(ctx, accountId, rule.mode);
+  // A rule that credits keeps crediting on a manual account; on any other it only computes.
+  const mode =
+    rule.mode === "credit_account" && !(await creditableId(ctx, accountId)) ? "analyze_only" : rule.mode;
+  await checkAccount(ctx, accountId, mode);
   await getDb()
     .update(interestRules)
-    .set({ accountId })
+    .set({ accountId, mode })
     .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
+}
+
+async function creditableId(ctx: Pick<Ctx, "userId">, accountId: string): Promise<boolean> {
+  return creditable(await requireOpenAccount(ctx, accountId, () => new InterestError("invalid_account")));
 }
 
 /** Whether an interest rule files its settlements under one of some categories (§3.5). */

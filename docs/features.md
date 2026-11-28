@@ -203,9 +203,10 @@ payout frequency and a validity period.
 - Each closed period becomes a payout. The app compares it with what the bank paid: matched,
   missing, awaited, anomalous or no data.
 - Changing a rule recalculates only what was not paid out yet.
-- **Post to Wallet** is off by default. When it is on, each payout is posted once. If the result of
-  a post is not known, the app does not retry by itself: the rule's page has **Retry** and
-  **Mark as posted**.
+- Nothing is posted to a bank's source (since R5c): the bank brings the credit.
+- **Credit the interest to the account** (manual accounts only) is off by default. When it is on,
+  the accrual pass writes each payout once as an income transaction on the account, on the payout
+  day, with the rule's match text as payee. Payouts closed before it was turned on are written too.
 
 ## Pockets
 

@@ -31,6 +31,8 @@ interface RuleFormInput {
   payeeMatch: string;
   /** The category the rule has, sent back as it is; empty is none. */
   categoryId: string;
+  /** Each settlement written as a movement on the account. */
+  credit: boolean;
   active: boolean;
 }
 
@@ -68,7 +70,7 @@ async function bodyOf(input: RuleFormInput) {
     settlement: SETTLEMENTS.find((settlement) => settlement === input.settlement) ?? "monthly",
     payeeMatch: input.payeeMatch,
     // No rule publishes on its source any more (decision H37): the route refuses that mode.
-    mode: "analyze_only" as const,
+    mode: input.credit ? ("credit_account" as const) : ("analyze_only" as const),
     categoryId: input.categoryId === "" ? null : input.categoryId,
     state: input.active ? ("active" as const) : ("paused" as const),
   };

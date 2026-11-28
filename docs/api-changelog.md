@@ -4,6 +4,13 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · An interest rule credits its manual account (additive)
+
+- Added to `RULE_MODES` of `POST /interests` and `PUT /interests/{id}`: `credit_account`. The accrual
+  pass writes each closed settlement of the rule once as an income movement on its account, on the
+  settlement day; the settlement's `posting` becomes `posted`. A manual account only: any other is
+  `invalid` with `reason` `not_manual`. `analyze_only` stays the default.
+
 ## Unreleased · A giroconto with a manual account writes its other leg (additive)
 
 - Added to `POST /transactions/manual` and `PUT /transactions/manual/{id}`: the optional

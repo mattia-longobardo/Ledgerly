@@ -229,7 +229,8 @@ async function paidBySettlement(
 }
 
 /**
- * Each settlement reconciled with what was really paid (spec §7.6). In `post_to_provider` the paid
+ * Each settlement reconciled with what was really paid (spec §7.6). In `post_to_provider` and
+ * `credit_account` the paid
  * amount is the posted settlement; otherwise what the bank paid, `null` without a match text.
  */
 async function settlementRows(
@@ -238,7 +239,8 @@ async function settlementRows(
   entries: readonly InterestEntry[],
   todayOn: CivilDate,
 ): Promise<SettlementRow[]> {
-  const publishes = rule.mode === "post_to_provider";
+  // A credited settlement is paid by the movement written for it, as a published one was.
+  const publishes = rule.mode !== "analyze_only";
   const looked = !publishes && payeeKeyOf(rule.payeeMatch) !== null;
   const [counts, paid] = await Promise.all([
     dayCounts(ctx, rule.id),
