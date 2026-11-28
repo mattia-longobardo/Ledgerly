@@ -17,7 +17,11 @@ import {
 } from "@ledgerly/domain/accounts";
 import type { IncomingTransaction } from "@ledgerly/domain/transactions";
 import { categorise } from "@ledgerly/domain/transactions";
-import { categorisableAccountIds, upsertFromProvider } from "@ledgerly/domain/transactions";
+import {
+  categorisableAccountIds,
+  dropPendingExcept,
+  upsertFromProvider,
+} from "@ledgerly/domain/transactions";
 import { addSwitchCounts, openSwitches, openSwitchOf } from "@ledgerly/domain/accounts";
 import { planTransfers } from "@ledgerly/domain/transactions";
 import { transferCandidates, writeTransferPairs } from "@ledgerly/domain/transactions";
@@ -57,7 +61,7 @@ function toIncoming(movement: ReadingMovement, timeZone: string): IncomingTransa
     amountCents: credit ? cents : -cents,
     currency: movement.currency,
     type: credit ? "income" : "expense",
-    state: "cleared",
+    state: movement.pending ? "pending" : "cleared",
     payee: movement.payee,
     note: movement.note,
     // A bank gives no category: the cascade gives one after the reading (`afterReading`).
@@ -135,6 +139,10 @@ export const bankSink: BankSink = {
       { provider: target.provider, now },
     );
     return { created: outcome.created, updated: outcome.updated, skipped: outcome.skipped };
+  },
+
+  async dropPending(ctx, target, kept, from) {
+    return dropPendingExcept(ctx, target, kept, from);
   },
 
   async afterReading(ctx, accountIds) {

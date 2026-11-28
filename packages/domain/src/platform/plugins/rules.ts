@@ -221,17 +221,19 @@ function normalized(text: string): string {
  * two coffees at the same bar on the same day are two movements.
  *
  * The id starts with a digest of the account, so the same reference at two accounts stays two
- * ids. Pending movements are left out: only a booked movement is a fact.
+ * ids. One status at a time: a pending movement has ids of its own (`:p:`), because the bank can
+ * give it another reference once booked; the pending row then goes and the booked one comes.
  */
 export function movementIds(
   accountKey: string,
   transactions: readonly PluginTransaction[],
+  status: PluginTransaction["status"] = "booked",
 ): { transaction: PluginTransaction; externalId: string }[] {
-  const account = digest(accountKey, 16);
+  const account = `${digest(accountKey, 16)}${status === "pending" ? ":p" : ""}`;
   const seen = new Map<string, number>();
   const identified: { transaction: PluginTransaction; externalId: string }[] = [];
   for (const transaction of transactions) {
-    if (transaction.status !== "booked") continue;
+    if (transaction.status !== status) continue;
     if (transaction.externalId !== null) {
       const reference = transaction.externalId;
       const own = reference.length <= 120 ? reference : `h:${digest(reference, 40)}`;

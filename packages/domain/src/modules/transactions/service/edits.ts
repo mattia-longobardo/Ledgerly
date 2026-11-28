@@ -1,8 +1,9 @@
-import { and, asc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { unlinkEntities } from "../../../platform/integrations/service";
+import { resolveExternal, unlinkEntities } from "../../../platform/integrations/service";
+import type { CivilDate } from "../../../shared/dates";
 import {
   type MergeableField,
   PROVIDER_OWNED_FIELDS,
@@ -13,6 +14,7 @@ import {
 import { retypeMovements } from "../macro";
 import type { TransactionsProvider } from "../ports";
 import { type Transaction, transactionsByIds } from "../queries";
+import { dayStart } from "../queries/filters";
 import { transactions } from "../schema";
 import { rebuildTwinBalances, twinAccountsOf } from "./twins";
 import {
@@ -224,6 +226,37 @@ export async function deleteHiddenTransactions(
   // The leg of an Investments operation goes with its operation only (PERS-651).
   const deletable = and(isNotNull(transactions.hiddenAt), ne(transactions.origin, "investments"))!;
   return (await deleteRows(ctx, wanted, deletable)).length;
+}
+
+/**
+ * A source's pending movements of one account that its last complete reading did not give again
+ * (booked meanwhile, under another id, or cancelled) are deleted with their links, from `from` on
+ * (all, with `null`): a pending movement is not a fact, and the booked one replaces it.
+ */
+export async function dropPendingExcept(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  target: { accountId: string; provider: string },
+  kept: readonly string[],
+  from: CivilDate | null,
+): Promise<number> {
+  const stay = new Set((await resolveExternal(ctx, target.provider, TRANSACTION_ENTITY, [...kept])).values());
+  const pending = await getDb()
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.accountId, target.accountId),
+        eq(transactions.origin, "provider"),
+        eq(transactions.state, "pending"),
+        from === null ? undefined : gte(transactions.occurredAt, dayStart(from, ctx.timeZone)),
+        userScoped(ctx).owns(transactions),
+      ),
+    )
+    .orderBy(asc(transactions.id));
+  const ids = pending.map((row) => row.id).filter((id) => !stay.has(id));
+  const deleted = await deleteRows(ctx, ids, eq(transactions.state, "pending"));
+  if (deleted.length > 0) await unlinkEntities(ctx, target.provider, TRANSACTION_ENTITY, deleted);
+  return deleted.length;
 }
 
 /**

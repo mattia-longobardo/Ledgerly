@@ -34,6 +34,7 @@ export {
   restoreTransactions,
   deleteHiddenTransactions,
   purgeRemovedUpstream,
+  dropPendingExcept,
   markRemovedUpstream,
   clearRemovedUpstream,
 } from "./edits";

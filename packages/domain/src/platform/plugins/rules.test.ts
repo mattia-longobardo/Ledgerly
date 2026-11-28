@@ -110,8 +110,12 @@ describe("the identity of a movement", () => {
     expect(ids("account-a", [bare])[0]).toBe(twice[0]);
   });
 
-  it("leaves a pending movement out, and counts a repeated reference once", () => {
-    expect(ids("account-a", [{ ...movement, status: "pending" }])).toEqual([]);
+  it("reads one status at a time, a pending movement under ids of its own, and counts a repeated reference once", () => {
+    const pending = { ...movement, status: "pending" as const };
+    expect(ids("account-a", [pending])).toEqual([]);
+    const [id] = movementIds("account-a", [movement, pending], "pending").map((one) => one.externalId);
+    expect(id).toMatch(/^[0-9a-f]{16}:p:ref-1$/);
+    expect(id).not.toBe(ids("account-a", [movement])[0]);
     expect(ids("account-a", [movement, { ...movement, amount: "9.00" }])).toHaveLength(1);
   });
 

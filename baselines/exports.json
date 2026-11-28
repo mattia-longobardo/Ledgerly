@@ -1034,6 +1034,7 @@
     "dismissMergeProposal",
     "displayPayee",
     "doubleMovements",
+    "dropPendingExcept",
     "expensesView",
     "facetCounts",
     "followProviderCategoryName",

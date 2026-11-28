@@ -125,6 +125,7 @@ export {
   listProviderCategories,
   markNotSent,
   purgeRemovedUpstream,
+  dropPendingExcept,
   recordSourceCategories,
   releaseLocalEdits,
   restoreTransactions,

@@ -328,6 +328,7 @@ async function reading(
   let cursor: string | null = null;
   const started = Date.now();
   const budget = input.presence === null ? AUTOMATIC_BUDGET_MS : PRESENT_BUDGET_MS;
+  const from = coveredTo === null || freshTied.length > 0 ? null : addDays(coveredTo, -REREAD_DAYS);
   try {
     do {
       const batch: SyncResponse = await callPlugin(plugin.config, PLUGIN_PATHS.sync, syncResponseSchema, {
@@ -335,7 +336,7 @@ async function reading(
           credentials,
           session: { id: bag.sessionId },
           accounts: accounts.map((account) => account.externalId),
-          from: coveredTo === null || freshTied.length > 0 ? null : addDays(coveredTo, -REREAD_DAYS),
+          from,
           cursor,
           userPresent: input.presence,
         },
@@ -386,7 +387,7 @@ async function reading(
     // Written while the run is held: a reading stopped meanwhile, or whose source was turned off,
     // writes nothing (SEC-08).
     written = await holdingRun(ctx, run.id, async () => {
-      const done = await write(ctx, { connection, accounts, linked, batches }, sink, now);
+      const done = await write(ctx, { connection, accounts, linked, batches, complete, from }, sink, now);
       // The bank gives the number of each account with the access: the domain keeps the IBANs (H39).
       await sink.saveIbans(
         ctx,
@@ -448,6 +449,9 @@ async function write(
     accounts: readonly PluginAccount[];
     linked: Map<string, { id: string; name: string }>;
     batches: readonly SyncResponse[];
+    /** The reading ended, from the day it asked for (`null`: everything the bank gives). */
+    complete: boolean;
+    from: CivilDate | null;
   },
   sink: BankSink,
   now: Date,
@@ -473,16 +477,23 @@ async function write(
     const transactions = read.batches.flatMap((batch) =>
       batch.transactions.filter((one) => one.accountExternalId === account.externalId),
     );
-    const movements = movementIds(key, transactions).flatMap(({ transaction, externalId }) => {
-      const movement = toMovement(externalId, transaction);
-      return movement !== null && movement.currency === account.currency ? [movement] : [];
-    });
-    const written = await sink.writeMovements(
-      ctx,
-      { accountId: local.id, provider: read.connection.provider },
-      movements,
-      now,
+    const movements = (["booked", "pending"] as const).flatMap((status) =>
+      movementIds(key, transactions, status).flatMap(({ transaction, externalId }) => {
+        const movement = toMovement(externalId, transaction);
+        if (movement === null || movement.currency !== account.currency) return [];
+        return [status === "pending" ? { ...movement, pending: true as const } : movement];
+      }),
     );
+    const target = { accountId: local.id, provider: read.connection.provider };
+    const written = await sink.writeMovements(ctx, target, movements, now);
+    // Only a reading that gave all of the account's movements says which pending ones are gone.
+    const answered = read.batches.flatMap((batch) =>
+      batch.accounts.filter((one) => one.externalId === account.externalId),
+    );
+    if (read.complete && answered.length > 0 && answered.every((one) => one.error === null)) {
+      const kept = movements.flatMap((one) => (one.pending ? [one.externalId] : []));
+      await sink.dropPending(ctx, target, kept, read.from);
+    }
     total.created += written.created;
     total.updated += written.updated;
     total.skipped += written.skipped;

@@ -541,15 +541,20 @@ describe("the identity of a movement", () => {
     expect(await rowsOf(ctx)).toHaveLength(3);
   });
 
-  it("leaves a pending movement out until the bank books it", async () => {
+  it("shows a pending movement as pending, and the booked one takes its place, under any reference", async () => {
     const plugin = fakePlugin();
     const { ctx, target } = await chosen(plugin);
-    plugin.gives(answer([movement({ status: "pending", externalId: "ref-9" })]));
-    expect(await read(ctx, target, plugin)).toMatchObject({ ok: true, created: 0 });
+    plugin.gives(answer([movement({ status: "pending", externalId: "ref-8" })]));
+    expect(await read(ctx, target, plugin)).toMatchObject({ ok: true, created: 1 });
+    expect(await rowsOf(ctx)).toMatchObject([{ state: "pending", amountCents: -1230n }]);
+    // Read again still pending: the same row.
+    expect(await read(ctx, target, plugin, later(1))).toMatchObject({ ok: true, created: 0 });
     plugin.gives(answer([movement({ status: "booked", externalId: "ref-9" })]));
-    expect(await read(ctx, target, plugin, later(1))).toMatchObject({ ok: true, created: 1 });
-    const [row] = await rowsOf(ctx);
+    expect(await read(ctx, target, plugin, later(2))).toMatchObject({ ok: true, created: 1 });
+    const [row, ...others] = await rowsOf(ctx);
+    expect(others).toEqual([]);
     expect(row).toMatchObject({
+      state: "cleared",
       amountCents: -1230n,
       type: "expense",
       payee: "Negozio",
@@ -561,6 +566,28 @@ describe("the identity of a movement", () => {
     });
     // Noon of the booking day in the person's zone.
     expect(row.occurredAt).toEqual(new Date("2026-11-10T11:00:00Z"));
+  });
+});
+
+describe("a pending movement", () => {
+  it("goes when the bank no longer gives it, and stays when the reading did not end or the account failed", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target } = await chosen(plugin);
+    plugin.gives(answer([movement({ status: "pending", externalId: "ref-8" })]));
+    await read(ctx, target, plugin);
+    plugin.gives({ ...answer([]), cursor: "more" });
+    await read(ctx, target, plugin, later(1));
+    expect(await rowsOf(ctx)).toHaveLength(1);
+    plugin.gives({
+      ...answer([movement()]),
+      accounts: [{ externalId: "u-1", balances: [], error: "provider_down" }],
+    });
+    await read(ctx, target, plugin, later(2));
+    expect((await rowsOf(ctx)).map((row) => row.state)).toEqual(["pending", "cleared"]);
+    // Cancelled by the bank: the next complete reading does not give it.
+    plugin.gives(answer([movement()]));
+    await read(ctx, target, plugin, later(3));
+    expect((await rowsOf(ctx)).map((row) => row.state)).toEqual(["cleared"]);
   });
 });
 
