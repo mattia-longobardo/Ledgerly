@@ -2459,6 +2459,7 @@
           "bars": "Bars"
         },
         "change": "change",
+        "dayEnd": "end of day {value}",
         "barsSummary": "Month-on-month change for {name}.",
         "grain": "Chart detail",
         "grains": {

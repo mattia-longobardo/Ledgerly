@@ -49,6 +49,8 @@ interface ChartQuery {
 interface Plot {
   labels: string[];
   values: (Cents | null)[];
+  /** At day grain, each day's highest balance: the line draws it, so money in and out the same day shows. */
+  highs?: (Cents | null)[];
   estimated: boolean[];
   /** Each point from the one before, as the API answers it; the first has none. */
   changes: { amount: string | null }[];
@@ -213,6 +215,7 @@ function DayChart({ page, chart }: { page: AccountPage; chart: ChartQuery }) {
           plot={{
             labels: daily.days.map((day) => formatDate(day, "long", page.format.locale)),
             values: daily.values.map(centsOf),
+            highs: daily.highs.map(centsOf),
             estimated: daily.estimated,
             changes: daily.changes,
             xLabels: dayLabels(daily.days, page.format.locale),
@@ -232,6 +235,7 @@ function PlotView({ page, mode, plot }: { page: AccountPage; mode: ChartQuery["m
   const own = { currency: page.account.currency };
   const money = (value: Cents | null, signed = false) => formatMoney(value, numberFormat, { signed, ...own });
   const steps = plot.changes.map((change) => centsOf(change.amount));
+  const line = plot.highs ?? plot.values;
   return (
     <>
       {mode === "bars" ? (
@@ -245,9 +249,13 @@ function PlotView({ page, mode, plot }: { page: AccountPage; mode: ChartQuery["m
         <AreaLine
           hover={plot.labels.map((label, index) => ({
             label,
-            value: money(plot.values[index]),
+            value: money(line[index]),
             note:
               [
+                // The line is the day's high: the end of the day is said when it differs.
+                line[index] === plot.values[index]
+                  ? null
+                  : text("chart.dayEnd", { value: money(plot.values[index]) }),
                 steps[index] === null ? null : `${money(steps[index], true)} ${text("chart.change")}`,
                 // Rebuilt from the movements rather than read (spec §7.1, F2.5).
                 plot.estimated[index] ? accountsText("estimated.short") : null,
@@ -256,8 +264,8 @@ function PlotView({ page, mode, plot }: { page: AccountPage; mode: ChartQuery["m
                 .join(" · ") || undefined,
           }))}
           estimated={plot.estimated}
-          values={asNumbers(plot.values)}
-          yLabels={axisLabels(plot.values, numberFormat, 4, own.currency)}
+          values={asNumbers(line)}
+          yLabels={axisLabels(line, numberFormat, 4, own.currency)}
           xLabels={plot.xLabels}
           summary={text("chart.summary", {
             name: page.account.name,

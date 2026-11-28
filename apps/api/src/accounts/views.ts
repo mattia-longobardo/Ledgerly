@@ -15,6 +15,7 @@ import {
   windowChangeOf,
 } from "@ledgerly/domain/accounts";
 import { syncedServicesOf } from "@ledgerly/domain/investments";
+import { dailyOutflows } from "@ledgerly/domain/transactions";
 import { addDays, type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
@@ -126,10 +127,16 @@ export function serveViews(app: Hono<ApiEnv>, guard: Guard): void {
     const todayOn = today(ctx.timeZone);
     const to: CivilDate = query.to < todayOn ? query.to : todayOn;
     if (query.from > to || addDays(query.from, MAX_DAYS - 1) < to) throw new ApiRefusal("invalid");
-    const daily = await refusing(accountReconstructedBalances(ctx, params.id, { from: query.from, to }));
+    const [daily, outflows] = await Promise.all([
+      refusing(accountReconstructedBalances(ctx, params.id, { from: query.from, to })),
+      dailyOutflows(ctx, params.id, { from: query.from, to }),
+    ]);
     return {
       days: daily.days,
       values: daily.values.map(money),
+      highs: daily.values.map((value, index) =>
+        money(value === null ? null : value - (outflows.get(daily.days[index]) ?? 0n)),
+      ),
       estimated: daily.estimated,
       changes: stepsOf(daily.values).map(delta),
     };

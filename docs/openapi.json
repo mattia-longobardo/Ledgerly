@@ -4094,6 +4094,20 @@
                         ]
                       }
                     },
+                    "highs": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
                     "estimated": {
                       "type": "array",
                       "items": {
@@ -4133,6 +4147,7 @@
                   "required": [
                     "days",
                     "values",
+                    "highs",
                     "estimated",
                     "changes"
                   ]

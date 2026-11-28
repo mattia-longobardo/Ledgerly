@@ -67,6 +67,7 @@ export {
   facetCounts,
   getTransaction,
   listTransactions,
+  dailyOutflows,
   manualMovementsByAccount,
   matchMovements,
   monthSpending,

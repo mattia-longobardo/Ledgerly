@@ -4,6 +4,12 @@ Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is ad
 written before it keeps working, with one written exception: R5f.2, which removes what R5g and R5b had
 deprecated (`apiLevel` and `minClientLevel` 2).
 
+## Unreleased · The highest balance of each day (additive)
+
+- Added to `GET /accounts/{id}/daily-balances`: `highs`, per day the highest balance of the day: the
+  end of the day plus what left the account that day, the money in counted before the money out (the
+  order inside a day is not known). The chart of an account at day grain draws it.
+
 ## Unreleased · An interest rule credits its manual account (additive)
 
 - Added to `RULE_MODES` of `POST /interests` and `PUT /interests/{id}`: `credit_account`. The accrual

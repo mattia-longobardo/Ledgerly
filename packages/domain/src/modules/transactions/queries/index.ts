@@ -10,6 +10,7 @@ export {
   transactionIdsOfAccount,
   transactionsInWindow,
   dailyNetByAccount,
+  dailyOutflows,
   manualMovementsByAccount,
   movementsByAccount,
 } from "./movements";

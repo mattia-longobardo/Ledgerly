@@ -144,6 +144,36 @@ export async function dailyNetByAccount(
 }
 
 /**
+ * What left one account on each day of a window, as a negative sum: the movements the balance counts
+ * ({@link dailyNetByAccount}'s and {@link manualMovementsByAccount}'s). The balance at the day's
+ * end minus it is the day's highest balance, with the day's money in before its money out: the order
+ * inside a day is not known.
+ */
+export async function dailyOutflows(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountId: string,
+  window: { from: CivilDate; to: CivilDate },
+): Promise<Map<CivilDate, Cents>> {
+  const day = dayExpression(ctx.timeZone);
+  const rows = await getDb()
+    .select({ on: day, cents: sum(transactions.amountCents) })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        eq(transactions.accountId, accountId),
+        lt(transactions.amountCents, 0n),
+        sql`((${transactions.origin} = 'provider' and ${transactions.removedUpstreamAt} is null) or (${transactions.origin} = 'manual' and ${transactions.hiddenAt} is null))`,
+        gte(transactions.occurredAt, dayStart(window.from, ctx.timeZone)),
+        lt(transactions.occurredAt, dayStart(addDays(window.to, 1), ctx.timeZone)),
+      ),
+    )
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
+  return new Map(rows.map((row) => [row.on, cents(row.cents)]));
+}
+
+/**
  * The movements a person wrote by hand, by account and in date order: what the accounts module
  * works the balance after them out from (rewrite plan, 12-account-modes.md §12.2). A hidden one is
  * out of the balance as it is out of the totals.

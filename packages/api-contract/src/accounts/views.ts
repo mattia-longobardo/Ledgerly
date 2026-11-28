@@ -194,6 +194,11 @@ export const getAccountDailyBalances = defineRoute({
   response: z.object({
     days: z.array(z.string()),
     values: z.array(money().nullable()),
+    /**
+     * Per day, the highest balance of the day: the end of the day plus what left the account that
+     * day (the money in counted before the money out, the order inside a day being unknown).
+     */
+    highs: z.array(money().nullable()),
     /** Per day, whether the value stands on its movements rather than on a reading. */
     estimated: z.array(z.boolean()),
     /** Each day from the one before; the first has none (amount and fraction null). */
@@ -206,6 +211,7 @@ export const getAccountDailyBalances = defineRoute({
     response: {
       days: ["2026-11-01", "2026-11-02"],
       values: ["11302.40", "11250.00"],
+      highs: ["11302.40", "11302.40"],
       estimated: [false, true],
       changes: [
         { amount: null, fraction: null },

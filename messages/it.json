@@ -2459,6 +2459,7 @@
           "bars": "Barre"
         },
         "change": "variazione",
+        "dayEnd": "a fine giornata {value}",
         "barsSummary": "Variazione mese su mese di {name}.",
         "grain": "Dettaglio del grafico",
         "grains": {

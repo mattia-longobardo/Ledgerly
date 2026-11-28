@@ -1027,6 +1027,7 @@
     "createManualTransaction",
     "createRule",
     "csvMapOf",
+    "dailyOutflows",
     "deleteCategory",
     "deleteHiddenTransactions",
     "deleteLabel",

@@ -136,6 +136,7 @@ describe("the balances of an account", () => {
     expect(daily.body).toEqual({
       days: ["2026-01-30", "2026-01-31", "2026-02-01"],
       values: [null, "50.00", "50.00"],
+      highs: [null, "50.00", "50.00"],
       estimated: [false, false, false],
       changes: [
         { amount: null, fraction: null },
@@ -292,6 +293,35 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
     const january = page.months.indexOf("2026-01-01");
     expect(view.change).toEqual(wire(changeBetween(page.total, page.previousTotal)));
     expect(view.yearToDate).toEqual(wire(changeBetween(page.total, page.netWorth[january - 1].total)));
+  });
+
+  it("gives each day's highest balance: money in and out the same day shows", async () => {
+    const account = await newAccount(alice, { openingBalance: { on: "2026-01-31", amount: "100" } });
+    for (const [kind, amount] of [
+      ["income", "1000"],
+      ["expense", "900"],
+    ] as const) {
+      const written = await send(alice, "POST", "/transactions/manual", {
+        kind,
+        amount,
+        on: "2026-02-02",
+        accountId: account.id,
+        categoryId: null,
+        payee: "",
+        note: "",
+        key: crypto.randomUUID(),
+      });
+      expect(written.status, JSON.stringify(written.body)).toBe(201);
+    }
+    const daily = await send(
+      alice,
+      "GET",
+      `/accounts/${account.id}/daily-balances?from=2026-02-01&to=2026-02-03`,
+    );
+    expect(daily.body).toMatchObject({
+      values: ["100.00", "200.00", "200.00"],
+      highs: ["100.00", "1100.00", "200.00"],
+    });
   });
 
   it("gives the charts' changes as the client's `changeOf` worked them out", async () => {
